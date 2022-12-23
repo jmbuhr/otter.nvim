@@ -58,10 +58,10 @@ stateDiagram-v2
     Main --> 🦦1
     Main --> 🦦2
     Main --> 🦦3
-    🦦1 --> Answer
-    🦦2 --> Answer
-    🦦3 --> Answer
-    Answer --> Main: process
+    🦦1 --> response
+    🦦2 --> response
+    🦦3 --> response
+    response --> Main: filter
 ```
 
 ## How do I use otter.nvim?

@@ -13,11 +13,9 @@ jobs:
         with:
           vimdoc: otter
           # the following are defaults on github actions
-          description: ""
+          description: "Just ask an otter!"
           pandoc: "README.md"
           toc: true
-          version: "NVIM v0.8.1"
-          demojify: false
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: 'Auto generate docs'

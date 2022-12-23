@@ -2,6 +2,8 @@
 
 Just ask an otter! 🦦
 
+![An otter eagerly awaiting your lsp requests. Generated with DALL-E 2.](img/2022-12-23-15-59-24.png)
+
 ## What is otter.nvim?
 
 **tldr: Otter.nvim provides lsp features and a code completion source for code embedded in other documents**

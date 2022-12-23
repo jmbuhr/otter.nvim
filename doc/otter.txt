@@ -1,4 +1,4 @@
-*otter.txt*            For NVIM v0.8.1           Last change: 2022 December 23
+*otter.txt*                                                 Just ask an otter!
 
 ==============================================================================
 Table of Contents                                    *otter-table-of-contents*

@@ -98,6 +98,10 @@ The easiest way to get started is try it out in quarto-nvim
 integrate `otter.nvim` in your own plugin or nvim config, check out the
 documentation at `:h otter` in nvim or this `README.md` file.
 
+If you call `require'otter'.dev_setup()` in your nvim configuration you will
+even see code completion and documentation windows for the lua chunks in this
+readme!
+
 `otter.nvim` provides these user-facing functions:
 
 >
@@ -105,18 +109,6 @@ documentation at `:h otter` in nvim or this `README.md` file.
     otter.activate_otters(languages, completion)
     otter.sync_raft(main_nr)
     otter.send_request()
-<
-
-
-`queries` is a list of treesitter queries and filetypes to find the embedded
-languages for the document type of `mainbufnr`. Some are included in
-`otter.nvim` already.
-
-To create a raft of otters for a quarto / markdown document we would pass
-
->
-    myqueries = {otter.queries.markdown.r, otter.queries.markdown.python, otter.queries.markdown.julia}
-    otter.create_raft(mainbufnr, myqueries)
 <
 
 

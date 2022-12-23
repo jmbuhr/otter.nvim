@@ -2,8 +2,6 @@
 
 Just ask an otter! 🦦
 
-![An otter eagerly awaiting your lsp requests. Generated with DALL-E 2.](img/2022-12-23-15-59-24.png)
-
 ## What is otter.nvim?
 
 **tldr: Otter.nvim provides lsp features and a code completion source for code embedded in other documents**
@@ -81,6 +79,9 @@ code completion and documentation windows for the lua chunks in this readme!
 otter = require'otter'
 otter.activate_otters(languages, completion)
 otter.sync_raft(main_nr)
-otter.send_request()
+otter.send_request(main_nr, request, filter)
 ```
+
+![An otter eagerly awaiting your lsp requests. Generated with DALL-E 2.](img/2022-12-23-15-59-24.png)
+
 

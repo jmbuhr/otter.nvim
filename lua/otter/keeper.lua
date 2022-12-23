@@ -1,7 +1,6 @@
 local M = {}
 local lines = require 'otter.tools.functions'.lines
 local spaces = require 'otter.tools.functions'.spaces
-local otterpath_to_path = require 'otter.tools.functions'.otterpath_to_path
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
@@ -122,8 +121,8 @@ end
 
 
 
-M.send_request = function(main_bufnr, request, filter)
-  local otter_nrs = M.sync_raft(main_bufnr)
+M.send_request = function(main_nr, request, filter)
+  local otter_nrs = M.sync_raft(main_nr)
   for _, otter_nr in ipairs(otter_nrs) do
     local uri = vim.uri_from_bufnr(otter_nr)
     local position_params = vim.lsp.util.make_position_params(0)

@@ -18,7 +18,7 @@ M.setup_source = function(main_nr, otter_nr)
 end
 
 ---Refresh sources on InsertEnter.
--- adds a source for the hidden language buffer
+-- adds a source for the hidden language buffers
 M.cmp_on_insert_enter = function(main_nr, otter_nr)
   local cmp = require('cmp')
   local allowed_clients = {}
@@ -30,18 +30,7 @@ M.cmp_on_insert_enter = function(main_nr, otter_nr)
       local s = source.new(client, main_nr, otter_nr, require 'otter.keeper'.sync_this_raft)
       if s:is_available() then
         P('register source for ' .. s.client.name)
-        M.cmp_client_source_map[client.id] = cmp.register_source('quarto', s)
-      end
-    end
-  end
-
-  -- register all buffer clients (early register before activation)
-  for _, client in ipairs(vim.lsp.get_active_clients({bufnr = otter_nr})) do
-    allowed_clients[client.id] = client
-    if not M.cmp_client_source_map[client.id] then
-      local s = source.new(client, main_nr, otter_nr, require 'otter.keeper'.sync_this_raft)
-      if s:is_available() then
-        M.cmp_client_source_map[client.id] = cmp.register_source('quarto', s)
+        M.cmp_client_source_map[client.id] = cmp.register_source('otter', s)
       end
     end
   end

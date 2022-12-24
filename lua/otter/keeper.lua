@@ -87,7 +87,7 @@ M.sync_this_raft = function()
 end
 
 
-M.activate_otters = function(languages, completion)
+M.activate = function(languages, completion)
   local main_bufnr = api.nvim_get_current_buf()
 
   M._otters_attached[main_bufnr] = {}

@@ -2,6 +2,8 @@ local M = {}
 local lines = require 'otter.tools.functions'.lines
 local spaces = require 'otter.tools.functions'.spaces
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
+local otterpath_to_path = require'otter.tools.functions'.otterpath_to_path
+local otterpath_to_plain_path = require'otter.tools.functions'.otterpath_to_plain_path
 local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
@@ -152,5 +154,24 @@ M.send_request = function(main_nr, request, filter)
   end
 end
 
+
+M.export_raft = function (force)
+  local main_nr = api.nvim_get_current_buf()
+  local otter_nrs = M.sync_raft(main_nr)
+  for _, otter_nr in ipairs(otter_nrs) do
+    local path = api.nvim_buf_get_name(otter_nr)
+    local lang = api.nvim_buf_get_option(otter_nr, 'filetype')
+    local extension = extensions[lang] or ''
+    path = otterpath_to_plain_path(path) .. extension
+    print('Exporting otter: ' .. lang)
+    local new_path = vim.fn.input('New path: ', path, 'file')
+    if new_path ~= '' then
+      api.nvim_set_current_buf(otter_nr)
+      vim.lsp.buf.format()
+      vim.cmd.write { new_path, bang = force }
+    end
+    api.nvim_set_current_buf(main_nr)
+  end
+end
 
 return M

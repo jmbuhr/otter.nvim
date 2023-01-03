@@ -42,6 +42,13 @@ M.otterpath_to_path = function(path)
   return s
 end
 
+--- @param path string a path
+--- @return string
+M.otterpath_to_plain_path = function(path)
+  local s,_ = path:gsub('%..+', '')
+  return s
+end
+
 --- @param path string
 M.is_otterpath = function(path)
   return path:find('.+-tmp%..+') ~= nil

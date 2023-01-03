@@ -2,5 +2,6 @@ return {
   python = '.py',
   r = '.R',
   julia = '.jl',
-  lua = '.lua'
+  lua = '.lua',
+  haskell = '.hs',
 }

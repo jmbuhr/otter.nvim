@@ -2,8 +2,8 @@ local M = {}
 local lines = require 'otter.tools.functions'.lines
 local spaces = require 'otter.tools.functions'.spaces
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
-local otterpath_to_path = require'otter.tools.functions'.otterpath_to_path
-local otterpath_to_plain_path = require'otter.tools.functions'.otterpath_to_plain_path
+local otterpath_to_path = require 'otter.tools.functions'.otterpath_to_path
+local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
 local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
@@ -54,29 +54,31 @@ end
 
 M.sync_raft = function(main_nr)
   local all_code_chunks = extract_code_chunks(main_nr)
-  local languages = M._otters_attached[main_nr].languages
   local otter_nrs = {}
-  for _, lang in ipairs(languages) do
-    local code_chunks = all_code_chunks[lang]
-    if code_chunks ~= nil then
-      local nmax = code_chunks[#code_chunks].range['to'][1] -- last code line
-      local main_path = api.nvim_buf_get_name(main_nr)
+  if M._otters_attached[main_nr] ~= nil then
+    local languages = M._otters_attached[main_nr].languages
+    for _, lang in ipairs(languages) do
+      local code_chunks = all_code_chunks[lang]
+      if code_chunks ~= nil then
+        local nmax = code_chunks[#code_chunks].range['to'][1] -- last code line
+        local main_path = api.nvim_buf_get_name(main_nr)
 
-      -- create buffer filled with spaces
-      local extension = extensions[lang]
-      if extension ~= nil then
-        local otter_path = path_to_otterpath(main_path, extension)
-        local otter_uri = 'file://' .. otter_path
-        local otter_nr = vim.uri_to_bufnr(otter_uri)
-        table.insert(otter_nrs, otter_nr)
-        api.nvim_buf_set_name(otter_nr, otter_path)
-        api.nvim_buf_set_option(otter_nr, 'filetype', lang)
-        api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
-        api.nvim_buf_set_lines(otter_nr, 0, nmax, false, spaces(nmax))
+        -- create buffer filled with spaces
+        local extension = extensions[lang]
+        if extension ~= nil then
+          local otter_path = path_to_otterpath(main_path, extension)
+          local otter_uri = 'file://' .. otter_path
+          local otter_nr = vim.uri_to_bufnr(otter_uri)
+          table.insert(otter_nrs, otter_nr)
+          api.nvim_buf_set_name(otter_nr, otter_path)
+          api.nvim_buf_set_option(otter_nr, 'filetype', lang)
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
+          api.nvim_buf_set_lines(otter_nr, 0, nmax, false, spaces(nmax))
 
-        -- write language lines
-        for _, t in ipairs(code_chunks) do
-          api.nvim_buf_set_lines(otter_nr, t.range['from'][1], t.range['to'][1], false, t.text)
+          -- write language lines
+          for _, t in ipairs(code_chunks) do
+            api.nvim_buf_set_lines(otter_nr, t.range['from'][1], t.range['to'][1], false, t.text)
+          end
         end
       end
     end
@@ -139,7 +141,7 @@ M.send_request = function(main_nr, request, filter)
           -- if response is a list of responses, filter every response
           if #response > 0 then
             local responses = {}
-            for _,res in ipairs(response) do
+            for _, res in ipairs(response) do
               table.insert(responses, filter(res))
             end
             response = responses
@@ -155,7 +157,7 @@ M.send_request = function(main_nr, request, filter)
 end
 
 
-M.export_raft = function (force)
+M.export_raft = function(force)
   local main_nr = api.nvim_get_current_buf()
   local otter_nrs = M.sync_raft(main_nr)
   for _, otter_nr in ipairs(otter_nrs) do

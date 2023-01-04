@@ -1,11 +1,14 @@
+local context = require 'cmp.config.context'
 -- derived from <https://github.com/hrsh7th/cmp-nvim-lsp>
 local source = {}
 
 source.new = function(client, main_nr, otter_nr, updater)
   local self = setmetatable({}, { __index = source })
   self.client = client
-  self.bufnr = otter_nr
+  self.otter_nr = otter_nr
   self.main_nr = main_nr
+  local ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
+  self.context = require'otter.tools.contexts'[ft]
   self.id = otter_nr
   self.request_ids = {}
   self.updater = updater
@@ -28,15 +31,20 @@ source.is_available = function(self)
 
   -- don't filter clients from other buffers
   -- client is not attached to current buffer.
-  -- if not vim.lsp.buf_get_clients(vim.api.nvim_get_current_buf())[self.client.id] then
-  --   return false
-  -- end
+
+  -- disable completion outside of language context
+  if self.context ~= nil then
+    if not context.in_treesitter_capture("code_fence_content") then
+      return false
+    end
+  end
 
   -- client has no completion capability.
   if not self:_get(self.client.server_capabilities, { 'completionProvider' }) then
     return false
   end
   return true;
+
 end
 
 ---Get LSP's PositionEncodingKind.
@@ -62,11 +70,11 @@ end
 ---@param params cmp.SourceCompletionApiParams
 ---@param callback function
 source.complete = function(self, params, callback)
-  local bufnrs = self.updater()
+  local otter_nrs = self.updater()
   local win = vim.api.nvim_get_current_win()
   local lsp_params = vim.lsp.util.make_position_params(win, self.client.offset_encoding)
   lsp_params.textDocument = {
-    uri = vim.uri_from_bufnr(self.bufnr)
+    uri = vim.uri_from_bufnr(self.otter_nr)
   }
   lsp_params.context = {}
   lsp_params.context.triggerKind = params.completion_context.triggerKind

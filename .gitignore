@@ -1,2 +1,6 @@
-test/vendor/*/
-wip/
+wip
+.tests
+doc/tags
+debug
+.repro
+*.log

@@ -94,6 +94,8 @@ end
 M.activate = function(languages, completion)
   local main_bufnr = api.nvim_get_current_buf()
 
+  -- test if we have a query for the main language
+  assert(queries[vim.bo[main_bufnr].filetype] ~= nil, 'No query found for this file type')
   M._otters_attached[main_bufnr] = {}
   M._otters_attached[main_bufnr].languages = languages
   local otter_nrs = M.sync_raft(main_bufnr)

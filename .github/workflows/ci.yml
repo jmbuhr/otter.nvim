@@ -33,7 +33,7 @@ jobs:
         with:
           vimdoc: otter.nvim
           version: "Neovim >= 0.8.0"
-          demojify: true
+          demojify: false
           treesitter: true
       - name: Push changes
         uses: stefanzweifel/git-auto-commit-action@v4
@@ -54,7 +54,7 @@ jobs:
         id: release
         with:
           release-type: simple
-          package-name: lazy.nvim
+          package-name: otter.nvim
       - uses: actions/checkout@v2
       - name: tag stable versions
         if: ${{ steps.release.outputs.release_created }}

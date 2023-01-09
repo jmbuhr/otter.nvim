@@ -56,6 +56,7 @@ end
 
 M.sync_raft = function(main_nr)
   local all_code_chunks = extract_code_chunks(main_nr)
+  if #all_code_chunks == 0 then M._otters_attached[main_nr] = nil end
   local otter_nrs = {}
   if M._otters_attached[main_nr] ~= nil then
     local languages = M._otters_attached[main_nr].languages

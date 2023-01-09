@@ -12,12 +12,14 @@ local ts = vim.treesitter
 
 M._otters_attached = {}
 
-
-local function extract_code_chunks(bufnr)
+---Extract code chunks from the specified buffer.
+---@param main_nr integer
+---@return table
+local function extract_code_chunks(main_nr)
   -- get and parse AST
-  local ft = api.nvim_buf_get_option(bufnr, 'filetype')
+  local ft = api.nvim_buf_get_option(main_nr, 'filetype')
   local tsquery = queries[ft]
-  local language_tree = ts.get_parser(bufnr, ft)
+  local language_tree = ts.get_parser(main_nr, ft)
   local syntax_tree = language_tree:parse()
   local root = syntax_tree[1]:root()
 
@@ -26,7 +28,7 @@ local function extract_code_chunks(bufnr)
 
   -- get text ranges
   local code_chunks = {}
-  for pattern, match, metadata in query:iter_matches(root, bufnr) do
+  for pattern, match, metadata in query:iter_matches(root, main_nr) do
     local lang
     for id, node in pairs(match) do
       local name = query.captures[id]
@@ -54,6 +56,9 @@ end
 
 M.sync_raft = function(main_nr)
   local all_code_chunks = extract_code_chunks(main_nr)
+  if next(all_code_chunks) == nil then
+    return {}
+  end
   local otter_nrs = {}
   if M._otters_attached[main_nr] ~= nil then
     local languages = M._otters_attached[main_nr].languages
@@ -123,8 +128,6 @@ M.activate = function(languages, completion)
     end
   end
 end
-
-
 
 
 M.send_request = function(main_nr, request, filter)

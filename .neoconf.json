@@ -1,15 +1,22 @@
 {
   "neodev": {
     "library": {
+      "enabled": true,
       "plugins": [
-        "plenary.nvim"
+        "otter.nvim",
+        "nvim-lspconfig",
+        "lsp",
       ]
     }
   },
-  "lspconfig": {
-    "sumneko_lua": {
-      "Lua.runtime.version": "LuaJIT",
-      "Lua.workspace.checkThirdParty": false
+  "neoconf": {
+    "plugins": {
+      "sumneko_lua": {
+        "enabled": true
+      },
     }
+  },
+  "lspconfig": {
+    "sumneko_lua": {}
   }
 }

@@ -1,4 +1,5 @@
 local context = require 'cmp.config.context'
+local ts = vim.treesitter
 -- derived from <https://github.com/hrsh7th/cmp-nvim-lsp>
 local source = {}
 
@@ -6,14 +7,56 @@ source.new = function(client, main_nr, otter_nr, updater)
   local self = setmetatable({}, { __index = source })
   self.client = client
   self.otter_nr = otter_nr
+  self.otter_ft = vim.api.nvim_buf_get_option(otter_nr, 'filetype')
   self.main_nr = main_nr
-  local ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
-  self.context = require'otter.tools.contexts'[ft]
+  self.main_ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
+  self.context = require 'otter.tools.contexts'[self.main_ft]
   self.id = otter_nr
   self.request_ids = {}
   self.updater = updater
   return self
 end
+
+---Determine if the cursor is in a code context for the otter language.
+---associated with this source.
+---@return boolean
+source.is_otter_context = function(self)
+  local main_tsquery = require('otter.tools.queries')[self.main_ft]
+  local language_tree = ts.get_parser(self.main_nr, self.main_ft)
+  local syntax_tree = language_tree:parse()
+  local root = syntax_tree[1]:root()
+
+  -- create capture
+  local query = ts.parse_query(self.main_ft, main_tsquery)
+
+
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  row = row - 1
+  col = col - 1
+
+  -- get text ranges
+  for pattern, match, metadata in query:iter_matches(root, self.main_nr) do
+    -- each match has two nodes, the language and the code
+    -- the language node is the first one
+    local found = false -- reset found for the next match
+    for id, node in pairs(match) do
+      local name = query.captures[id]
+      local ok, text = pcall(ts.query.get_node_text, node, 0)
+      if not ok then return false end
+      if name == 'lang' and text == self.otter_ft then
+        -- we found a match where the language node matches
+        -- the otter language
+        found = true
+      end
+      -- the corresponding code is in the current range
+      if found and name == 'code' and ts.is_in_node_range(node, row, col) then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 
 ---Get debug name.
 ---@return string
@@ -33,10 +76,8 @@ source.is_available = function(self)
   -- client is not attached to current buffer.
 
   -- disable completion outside of language context
-  if self.context ~= nil then
-    if not context.in_treesitter_capture("code_fence_content") then
-      return false
-    end
+  if not self:is_otter_context() then
+    return false
   end
 
   -- client has no completion capability.

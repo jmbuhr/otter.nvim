@@ -1,18 +1,18 @@
-*otter.nvim.txt*        For Neovim >= 0.8.0       Last change: 2023 January 05
+*otter.nvim.txt*        For Neovim >= 0.8.0       Last change: 2023 January 09
 
 ==============================================================================
 Table of Contents                               *otter.nvim-table-of-contents*
 
 1. otter.nvim                                          |otter.nvim-otter.nvim|
-  - Whatis otter.nvim?                         |otter.nvim-whatis-otter.nvim?|
+  - What is otter.nvim?                       |otter.nvim-what-is-otter.nvim?|
   - How do I use otter.nvim?             |otter.nvim-how-do-i-use-otter.nvim?|
 
 ==============================================================================
 1. otter.nvim                                          *otter.nvim-otter.nvim*
 
-Just ask an otter!
+Just ask an otter! 🦦
 
-WHATIS OTTER.NVIM?                             *otter.nvim-whatis-otter.nvim?*
+WHAT IS OTTER.NVIM?                           *otter.nvim-what-is-otter.nvim?*
 
 **tldr: Otter.nvim provides lsp features and a code completion source for code
 embedded in other documents**
@@ -41,7 +41,7 @@ other buffers (otter buffers).
 Example in a markdown (or quarto markdown) document `index.md`:
 
 >
-     Some markdown
+    # Some markdown
     
     Hello world
     
@@ -86,12 +86,12 @@ otters. The accumulated answers are then displayed in the main buffer.
 
 >mermaid
     stateDiagram-v2
-        Main --> 1
-        Main --> 2
-        Main --> 3
-        1 --> response
-        2 --> response
-        3 --> response
+        Main --> 🦦1
+        Main --> 🦦2
+        Main --> 🦦3
+        🦦1 --> response
+        🦦2 --> response
+        🦦3 --> response
         response --> Main: filter
 <
 

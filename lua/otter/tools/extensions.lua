@@ -4,4 +4,5 @@ return {
   julia = '.jl',
   lua = '.lua',
   haskell = '.hs',
+  bash = '.sh',
 }

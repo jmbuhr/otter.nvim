@@ -29,6 +29,7 @@ source.is_otter_context = function(self)
   -- create capture
   local query = ts.parse_query(self.main_ft, main_tsquery)
 
+
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   row = row - 1
   col = col - 1
@@ -40,7 +41,8 @@ source.is_otter_context = function(self)
     local found = false -- reset found for the next match
     for id, node in pairs(match) do
       local name = query.captures[id]
-      local text = ts.query.get_node_text(node, 0)
+      local ok, text = pcall(ts.query.get_node_text, node, 0)
+      if not ok then return false end
       if name == 'lang' and text == self.otter_ft then
         -- we found a match where the language node matches
         -- the otter language

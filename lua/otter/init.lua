@@ -9,24 +9,40 @@ M.sync_raft = keeper.sync_raft
 M.send_request = keeper.send_request
 M.export = keeper.export_raft
 
+
 -- example implementations to work with the send_request function
 M.ask_definition = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
+
+  local function redirect_definition(res)
+    if res.uri ~= nil then
+      if require 'otter.tools.functions'.is_otterpath(res.uri) then
+        res.uri = main_uri
+      end
+    end
+    if res.targetUri ~= nil then
+      if require 'otter.tools.functions'.is_otterpath(res.targetUri) then
+        res.targetUri = main_uri
+      end
+    end
+    return res
+  end
+
   M.send_request(main_nr, "textDocument/definition", function(response)
+    if #response == 0 then
+      return redirect_definition(response)
+    end
+
     local modified_response = {}
     for _, res in ipairs(response) do
-      if res.uri ~= nil then
-        if require 'otter.tools.functions'.is_otterpath(res.uri) then
-          res.uri = main_uri
-        end
-        table.insert(modified_response, res)
-      end
-      return modified_response
+      table.insert(modified_response, redirect_definition(res))
     end
+    return modified_response
   end
   )
 end
+
 
 local function replace_header_div(response)
   response.contents = response.contents:gsub('<div class="container">', '')

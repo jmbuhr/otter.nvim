@@ -139,25 +139,28 @@ M.send_request = function(main_nr, request, filter)
       uri = uri
     }
     vim.lsp.buf_request(otter_nr, request, position_params, function(err, response, method, ...)
-      if response ~= nil then
-        if filter == nil then
-          vim.lsp.handlers[request](err, response, method, ...)
-        else
-          -- if response is a list of responses, filter every response
-          if #response > 0 then
-            local responses = {}
-            for _, res in ipairs(response) do
-              table.insert(responses, filter(res))
+      if response == nil then return nil end
+      if filter == nil then
+        vim.lsp.handlers[request](err, response, method, ...)
+      else
+        -- if response is a list of responses, filter every response
+        if #response > 0 then
+          local responses = {}
+          for _, res in ipairs(response) do
+            local filtered_res = filter(res)
+            if filtered_res then
+              table.insert(responses, filtered_res)
             end
-            response = responses
-          else
-            -- otherwise apply the filter to the one response
-            response = filter(response)
           end
-          vim.lsp.handlers[request](err, response, method, ...)
+          response = responses
+        else
+          -- otherwise apply the filter to the one response
+          response = filter(response)
         end
+        vim.lsp.handlers[request](err, response, method, ...)
       end
-    end)
+    end
+    )
   end
 end
 

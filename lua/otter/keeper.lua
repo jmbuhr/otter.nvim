@@ -77,6 +77,8 @@ M.sync_raft = function(main_nr)
           table.insert(otter_nrs, otter_nr)
           api.nvim_buf_set_name(otter_nr, otter_path)
           api.nvim_buf_set_option(otter_nr, 'filetype', lang)
+          api.nvim_buf_set_option(otter_nr, 'swapfile', false)
+          -- api.nvim_buf_set_option(otter_nr, 'readonly', true)
           api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
           api.nvim_buf_set_lines(otter_nr, 0, nmax, false, spaces(nmax))
 
@@ -106,16 +108,16 @@ M.activate = function(languages, completion)
   local otter_nrs = M.sync_raft(main_bufnr)
 
   -- auto-close language files on qmd file close
-  api.nvim_create_autocmd({ "QuitPre", "WinClosed" }, {
+  api.nvim_create_autocmd({ "QuitPre", "BufDelete" }, {
     buffer = 0,
     group = api.nvim_create_augroup("OtterAutoclose", {}),
     callback = function(_, _)
       for _, bufnr in ipairs(otter_nrs) do
-        if api.nvim_buf_is_loaded(bufnr) then
-          -- delete tmp file
+        if api.nvim_buf_is_valid(bufnr) then
+          -- delete otter buffer file
           local path = api.nvim_buf_get_name(bufnr)
           vim.fn.delete(path)
-          -- remove buffer
+          -- remove otter buffer
           api.nvim_buf_delete(bufnr, { force = true })
         end
       end

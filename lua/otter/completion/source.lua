@@ -1,5 +1,6 @@
 local context = require 'cmp.config.context'
 local ts = vim.treesitter
+local parsers = require 'nvim-treesitter.parsers'
 -- derived from <https://github.com/hrsh7th/cmp-nvim-lsp>
 local source = {}
 
@@ -8,8 +9,10 @@ source.new = function(client, main_nr, otter_nr, updater)
   self.client = client
   self.otter_nr = otter_nr
   self.otter_ft = vim.api.nvim_buf_get_option(otter_nr, 'filetype')
+  self.otter_parsername = parsers.ft_to_lang(self.otter_ft) or self.otter_ft
   self.main_nr = main_nr
   self.main_ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
+  self.main_parsername = parsers.ft_to_lang(self.main_ft) or self.main_ft
   self.context = require 'otter.tools.contexts'[self.main_ft]
   self.id = otter_nr
   self.request_ids = {}
@@ -22,12 +25,12 @@ end
 ---@return boolean
 source.is_otter_context = function(self)
   local main_tsquery = require('otter.tools.queries')[self.main_ft]
-  local language_tree = ts.get_parser(self.main_nr, self.main_ft)
+  local language_tree = ts.get_parser(self.main_nr, self.main_parsername)
   local syntax_tree = language_tree:parse()
   local root = syntax_tree[1]:root()
 
   -- create capture
-  local query = ts.parse_query(self.main_ft, main_tsquery)
+  local query = ts.parse_query(self.main_parsername, main_tsquery)
 
 
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))

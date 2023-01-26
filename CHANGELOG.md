@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/jmbuhr/otter.nvim/compare/v0.5.0...v0.5.1) (2023-01-26)
+
+
+### Bug Fixes
+
+* also use nvim-treesitter parsername for completion source ([8e257b6](https://github.com/jmbuhr/otter.nvim/commit/8e257b6081cf61191ebc10ec538ddc3713bcc43a))
+
 ## [0.5.0](https://github.com/jmbuhr/otter.nvim/compare/v0.4.0...v0.5.0) (2023-01-26)
 
 

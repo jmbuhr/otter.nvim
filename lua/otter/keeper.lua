@@ -8,6 +8,7 @@ local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
+local parsers = require 'nvim-treesitter.parsers'
 
 
 M._otters_attached = {}
@@ -19,12 +20,13 @@ local function extract_code_chunks(main_nr)
   -- get and parse AST
   local ft = api.nvim_buf_get_option(main_nr, 'filetype')
   local tsquery = queries[ft]
-  local language_tree = ts.get_parser(main_nr, ft)
+  local parsername = parsers.filetype_to_parsername[ft] or ft
+  local language_tree = ts.get_parser(main_nr, parsername)
   local syntax_tree = language_tree:parse()
   local root = syntax_tree[1]:root()
 
   -- create capture
-  local query = ts.parse_query(ft, tsquery)
+  local query = ts.parse_query(parsername, tsquery)
 
   -- get text ranges
   local code_chunks = {}

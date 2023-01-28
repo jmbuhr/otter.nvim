@@ -100,8 +100,11 @@ M.sync_this_raft = function()
 end
 
 
-M.activate = function(languages, completion)
+M.activate = function(languages, completion, tsqueries)
   local main_bufnr = api.nvim_get_current_buf()
+
+  -- merge supplied queries with pre-installed ones
+  queries = vim.tbl_deep_extend('force', queries, tsqueries or {})
 
   -- test if we have a query for the main language
   assert(queries[vim.bo[main_bufnr].filetype] ~= nil, 'No query found for this file type')
@@ -128,7 +131,7 @@ M.activate = function(languages, completion)
 
   if completion then
     for _, otter_nr in ipairs(otter_nrs) do
-      require 'otter.completion'.setup_source(main_bufnr, otter_nr)
+      require 'otter.completion'.setup_source(main_bufnr, otter_nr, queries)
     end
   end
 end

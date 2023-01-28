@@ -65,7 +65,6 @@ end
 M.debug = function()
   local main_nr = api.nvim_get_current_buf()
   M.send_request(main_nr, "textDocument/hover", function(response)
-    P(response)
     return response
   end)
 end

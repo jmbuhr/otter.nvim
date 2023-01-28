@@ -188,4 +188,19 @@ M.export_raft = function(force)
   end
 end
 
+M.export_otter_as = function(language, fname, force)
+  local main_nr = api.nvim_get_current_buf()
+  local otter_nrs = M.sync_raft(main_nr)
+  for _, otter_nr in ipairs(otter_nrs) do
+    local path = api.nvim_buf_get_name(otter_nr)
+    local lang = api.nvim_buf_get_option(otter_nr, 'filetype')
+    if lang ~= language then return end
+    path =  path:match("(.*[/\\])") .. fname
+    api.nvim_set_current_buf(otter_nr)
+    vim.lsp.buf.format()
+    vim.cmd.write { path, bang = force }
+    api.nvim_set_current_buf(main_nr)
+  end
+end
+
 return M

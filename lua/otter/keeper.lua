@@ -56,6 +56,9 @@ local function extract_code_chunks(main_nr)
   return code_chunks
 end
 
+--- Syncronize the raft of otters attached to a buffer
+---@param main_nr integer
+---@return table # list of otter buffer numbers
 M.sync_raft = function(main_nr)
   local all_code_chunks = extract_code_chunks(main_nr)
   if next(all_code_chunks) == nil then
@@ -95,11 +98,17 @@ M.sync_raft = function(main_nr)
   return otter_nrs
 end
 
+--- Syncronize the raft for the current buffer.
 M.sync_this_raft = function()
   M.sync_raft(api.nvim_get_current_buf())
 end
 
 
+--- Activate the current buffer by adding and syncronizing
+--- otter buffers.
+---@param languages table
+---@param completion boolean
+---@param tsqueries table
 M.activate = function(languages, completion, tsqueries)
   local main_bufnr = api.nvim_get_current_buf()
 
@@ -137,6 +146,11 @@ M.activate = function(languages, completion, tsqueries)
 end
 
 
+--- Send a request to the otter buffers and handle the response.
+--- The response can optionally be filtered through a function.
+---@param main_nr integer
+---@param request string
+---@param filter function
 M.send_request = function(main_nr, request, filter)
   local otter_nrs = M.sync_raft(main_nr)
   for _, otter_nr in ipairs(otter_nrs) do
@@ -172,6 +186,9 @@ M.send_request = function(main_nr, request, filter)
 end
 
 
+--- Export the raft of otters as files.
+--- Asks for filename for each language.
+---@param force boolean
 M.export_raft = function(force)
   local main_nr = api.nvim_get_current_buf()
   local otter_nrs = M.sync_raft(main_nr)
@@ -191,6 +208,10 @@ M.export_raft = function(force)
   end
 end
 
+--- Export only one language to a pre-specified filename
+---@param language string
+---@param fname string
+---@param force boolean
 M.export_otter_as = function(language, fname, force)
   local main_nr = api.nvim_get_current_buf()
   local otter_nrs = M.sync_raft(main_nr)
@@ -198,7 +219,7 @@ M.export_otter_as = function(language, fname, force)
     local path = api.nvim_buf_get_name(otter_nr)
     local lang = api.nvim_buf_get_option(otter_nr, 'filetype')
     if lang ~= language then return end
-    path =  path:match("(.*[/\\])") .. fname
+    path = path:match("(.*[/\\])") .. fname
     api.nvim_set_current_buf(otter_nr)
     vim.lsp.buf.format()
     vim.cmd.write { path, bang = force }

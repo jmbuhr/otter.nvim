@@ -76,14 +76,19 @@ or this `README.md` file.
 
 If you call `require'otter'.dev_setup()` in your nvim configuration you will even see
 code completion and documentation windows for the lua chunks in this readme!
-
-`otter.nvim` provides these user-facing functions:
+All this function does is:
 
 ```lua
 otter = require'otter'
-otter.activate_otters(languages, completion)
-otter.sync_raft(main_nr)
-otter.send_request(main_nr, request, filter)
+
+api.nvim_create_autocmd({ "BufEnter" }, {
+  pattern = { "*.md" },
+  callback = function()
+    otter.activate({ 'r', 'python', 'lua' }, true)
+    vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
+    vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
+  end,
+})
 ```
 
 ![An otter eagerly awaiting your lsp requests. Generated with DALL-E 2.](img/2022-12-23-15-59-24.png)

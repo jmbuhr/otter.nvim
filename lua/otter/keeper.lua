@@ -109,7 +109,7 @@ end
 --- otter buffers.
 ---@param languages table
 ---@param completion boolean
----@param tsqueries table
+---@param tsqueries table|nil
 M.activate = function(languages, completion, tsqueries)
   local main_bufnr = api.nvim_get_current_buf()
 

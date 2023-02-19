@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/jmbuhr/otter.nvim/compare/v0.6.0...v0.7.0) (2023-02-19)
+
+
+### Features
+
+* add custom configuration for hover windows ([77b3199](https://github.com/jmbuhr/otter.nvim/commit/77b3199a7923a0b2fbac690473563b8b541b012e))
+
+
+### Bug Fixes
+
+* add custom hover handler ([f29a9f3](https://github.com/jmbuhr/otter.nvim/commit/f29a9f303a956c266c19d36598f3f0edb6a23bbc))
+* correct function signature to make tsqueries optional ([b0e8a95](https://github.com/jmbuhr/otter.nvim/commit/b0e8a95a88a101c52ae97d8e68ac4e053ca8854f))
+
 ## [0.6.0](https://github.com/jmbuhr/otter.nvim/compare/v0.5.1...v0.6.0) (2023-01-28)
 
 

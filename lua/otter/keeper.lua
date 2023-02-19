@@ -2,13 +2,14 @@ local M = {}
 local lines = require 'otter.tools.functions'.lines
 local spaces = require 'otter.tools.functions'.spaces
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
-local otterpath_to_path = require 'otter.tools.functions'.otterpath_to_path
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
 local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
 local parsers = require 'nvim-treesitter.parsers'
+local handlers = require'otter.tools.handlers'
+local config = require'otter.config'.config
 
 
 M._otters_attached = {}
@@ -108,7 +109,7 @@ end
 --- otter buffers.
 ---@param languages table
 ---@param completion boolean
----@param tsqueries table
+---@param tsqueries table|nil
 M.activate = function(languages, completion, tsqueries)
   local main_bufnr = api.nvim_get_current_buf()
 
@@ -178,7 +179,11 @@ M.send_request = function(main_nr, request, filter)
           -- otherwise apply the filter to the one response
           response = filter(response)
         end
-        vim.lsp.handlers[request](err, response, method, ...)
+        if request == 'textDocument/hover' or request == 'textDocument/signatureHelp' then
+          handlers.hover(err, response, method, config.lsp.hover)
+        else
+          vim.lsp.handlers[request](err, response, method, ...)
+        end
       end
     end
     )

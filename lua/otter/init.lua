@@ -1,7 +1,6 @@
 M = {}
 
 local api = vim.api
-
 local keeper = require 'otter.keeper'
 
 M.activate = keeper.activate
@@ -9,6 +8,7 @@ M.sync_raft = keeper.sync_raft
 M.send_request = keeper.send_request
 M.export = keeper.export_raft
 M.export_otter_as = keeper.export_otter_as
+
 
 -- example implementations to work with the send_request function
 M.ask_definition = function()

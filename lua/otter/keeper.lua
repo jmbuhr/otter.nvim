@@ -2,7 +2,6 @@ local M = {}
 local lines = require 'otter.tools.functions'.lines
 local spaces = require 'otter.tools.functions'.spaces
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
-local otterpath_to_path = require 'otter.tools.functions'.otterpath_to_path
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
 local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
@@ -10,6 +9,7 @@ local api = vim.api
 local ts = vim.treesitter
 local parsers = require 'nvim-treesitter.parsers'
 local handlers = require'otter.tools.handlers'
+local config = require'otter.config'.config
 
 
 M._otters_attached = {}
@@ -180,11 +180,7 @@ M.send_request = function(main_nr, request, filter)
           response = filter(response)
         end
         if request == 'textDocument/hover' or request == 'textDocument/signatureHelp' then
-          local default_handler = vim.lsp.handlers[request]
-          -- can I somehow get the config out of the default_handler
-          -- if it has been modified with vim.lsp.with(...)?
-          local config = {}
-          handlers.hover(err, response, method, config)
+          handlers.hover(err, response, method, config.lsp.hover)
         else
           vim.lsp.handlers[request](err, response, method, ...)
         end

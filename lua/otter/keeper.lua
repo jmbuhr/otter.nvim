@@ -3,6 +3,7 @@ local lines = require 'otter.tools.functions'.lines
 local spaces = require 'otter.tools.functions'.spaces
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
+local is_otter_context = require 'otter.tools.functions'.is_otter_context
 local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
@@ -149,11 +150,21 @@ end
 
 --- Send a request to the otter buffers and handle the response.
 --- The response can optionally be filtered through a function.
----@param main_nr integer
----@param request string
----@param filter function
-M.send_request = function(main_nr, request, filter)
+---@param main_nr integer bufnr of main buffer
+---@param request string lsp request
+---@param filter function function to process the response
+---@param fallback function|nil optional funtion to call if not in an otter context
+M.send_request = function(main_nr, request, filter, fallback)
+  fallback = fallback or nil
   local otter_nrs = M.sync_raft(main_nr)
+  local ft = api.nvim_buf_get_option(main_nr, 'filetype')
+  local tsquery = queries[ft]
+
+  if not is_otter_context(main_nr, tsquery) and fallback then
+    fallback()
+    return
+  end
+
   for _, otter_nr in ipairs(otter_nrs) do
     local uri = vim.uri_from_bufnr(otter_nr)
     local position_params = vim.lsp.util.make_position_params(0)

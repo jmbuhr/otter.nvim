@@ -24,7 +24,7 @@ end
 ---Determine if the cursor is in a code context for the otter language.
 ---associated with this source.
 ---@return boolean
-source.is_otter_context = function(self)
+source.is_otter_lang_context = function(self)
   local language_tree = ts.get_parser(self.main_nr, self.main_parsername)
   local syntax_tree = language_tree:parse()
   local root = syntax_tree[1]:root()
@@ -35,7 +35,7 @@ source.is_otter_context = function(self)
 
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   row = row - 1
-  col = col - 1
+  col = col
 
   -- get text ranges
   for pattern, match, metadata in query:iter_matches(root, self.main_nr) do
@@ -79,7 +79,7 @@ source.is_available = function(self)
   -- client is not attached to current buffer.
 
   -- disable completion outside of language context
-  if not self:is_otter_context() then
+  if not self:is_otter_lang_context() then
     return false
   end
 

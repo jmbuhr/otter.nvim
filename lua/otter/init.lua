@@ -40,8 +40,7 @@ M.ask_definition = function()
     end
     return modified_response
   end,
-  vim.lsp.buf.definition
-
+    vim.lsp.buf.definition
   )
 end
 
@@ -60,8 +59,8 @@ M.ask_hover = function()
     else
       return response
     end
-  end, 
-  vim.lsp.buf.hover
+  end,
+    vim.lsp.buf.hover
   )
 end
 

@@ -9,8 +9,8 @@ local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
 local parsers = require 'nvim-treesitter.parsers'
-local handlers = require'otter.tools.handlers'
-local config = require'otter.config'.config
+local handlers = require 'otter.tools.handlers'
+local config = require 'otter.config'.config
 
 
 M._otters_attached = {}

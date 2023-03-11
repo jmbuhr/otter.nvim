@@ -39,7 +39,8 @@ M.ask_definition = function()
       table.insert(modified_response, redirect_definition(res))
     end
     return modified_response
-  end
+  end,
+    vim.lsp.buf.definition
   )
 end
 
@@ -58,7 +59,9 @@ M.ask_hover = function()
     else
       return response
     end
-  end)
+  end,
+    vim.lsp.buf.hover
+  )
 end
 
 

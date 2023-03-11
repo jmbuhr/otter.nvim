@@ -1,4 +1,4 @@
-*otter.nvim.txt*       For Neovim >= 0.8.0       Last change: 2023 February 19
+*otter.nvim.txt*         For Neovim >= 0.8.0        Last change: 2023 March 11
 
 ==============================================================================
 Table of Contents                               *otter.nvim-table-of-contents*
@@ -25,16 +25,16 @@ https://user-images.githubusercontent.com/17450586/209436156-f7f42ea9-471c-478a-
 
 When implementing autocompletion, code diagnostics and the likes for
 quarto-nvim <https://github.com/quarto-dev/quarto-nvim> I realized that a core
-feature would be useful to other plugins and usecases as well.quarto
+feature would be useful to other plugins and usecases as well. quarto
 <https://quarto.org> documents are computational notebooks for scientific
-communication based on pandoc <https://pandoc.org/>s markdown.One key feature
+communication based on pandoc <https://pandoc.org/>s markdown. One key feature
 is that these `qmd` documents can contain exectuable code blocks, with possibly
 different languages such as `R` and `python` mixed in one document.
 
 How do we get all the cool language features we get for a pure e.g. `python`
 file – like code completion, documentation hover windows, diagnostics –
-when the code is just embedded as code blocks in a document?Well, if one
-document can’t give us the answer, we ask an otter (another)!`otter.nvim`
+when the code is just embedded as code blocks in a document? Well, if one
+document can’t give us the answer, we ask an otter (another)! `otter.nvim`
 creates and synchronizes hidden buffers containing a single language each and
 directs requests for completion and lsp requests from the main buffer to those
 other buffers (otter buffers).
@@ -65,8 +65,8 @@ We create a hidden buffer for a file `index.md.tmp.py`
 
 This contains just the python code and blank lines for all other lines (this
 keeps line numbers the same, which comes straight from the trick that the
-quarto dev team uses for the vs code extension as well).Language servers can
-then attach to this hidden buffer.We can do this for all embedded languages
+quarto dev team uses for the vs code extension as well). Language servers can
+then attach to this hidden buffer. We can do this for all embedded languages
 found in a document.
 
 
@@ -78,9 +78,9 @@ the main buffer.
 
   In other words, each buffer can have a raft of otters!
 `otter.nvim` contains a completion source for nvim-cmp
-<https://github.com/hrsh7th/cmp-nvim-lua>.When a completion request is made,
+<https://github.com/hrsh7th/cmp-nvim-lua>. When a completion request is made,
 the whole raft of otters is synchronized and the question is directed to the
-otters.The accumulated answers are then displayed in the main buffer.
+otters. The accumulated answers are then displayed in the main buffer.
 
 >mermaid
     stateDiagram-v2
@@ -97,13 +97,13 @@ otters.The accumulated answers are then displayed in the main buffer.
 HOW DO I USE OTTER.NVIM?      *otter.nvim-otter.nvim-how-do-i-use-otter.nvim?*
 
 The easiest way to get started is try it out in quarto-nvim
-<https://github.com/quarto-dev/quarto-nvim> or look at the usecases there.If
+<https://github.com/quarto-dev/quarto-nvim> or look at the usecases there. If
 you want to integrate `otter.nvim` in your own plugin or nvim config, check out
-the documentation at `:h otter` in nvimor this `README.md` file.
+the documentation at `:h otter` in nvim or this `README.md` file.
 
 If you call `require'otter'.dev_setup()` in your nvim configuration you will
-even seecode completion and documentation windows for the lua chunks in this
-readme!All this function does is:
+even see code completion and documentation windows for the lua chunks in this
+readme! All this function does is:
 
 >lua
     otter = require'otter'

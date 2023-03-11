@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.0](https://github.com/jmbuhr/otter.nvim/compare/v0.7.0...v0.8.0) (2023-03-11)
+
+
+### Features
+
+* pass fallback function to send_request ([2f5f760](https://github.com/jmbuhr/otter.nvim/commit/2f5f7602fc9d8c1427214a3ed4129e257a5c1e3a))
+
+
+### Bug Fixes
+
+* add cmp to test dependencies ([2789556](https://github.com/jmbuhr/otter.nvim/commit/2789556d936fbab89ff9531d5154c9384c8803f7))
+
 ## [0.7.0](https://github.com/jmbuhr/otter.nvim/compare/v0.6.0...v0.7.0) (2023-02-19)
 
 

@@ -74,6 +74,18 @@ The easiest way to get started is try it out in [quarto-nvim](https://github.com
 If you want to integrate `otter.nvim` in your own plugin or nvim config, check out the documentation at `:h otter` in nvim
 or this `README.md` file.
 
+### Dependencies
+
+`otter.nvim` relies on the following plugins:
+
+```lua
+{
+  'hrsh7th/nvim-cmp',
+  'neovim/nvim-lspconfig',
+  'nvim-treesitter/nvim-treesitter'
+}
+```
+
 If you call `require'otter'.dev_setup()` in your nvim configuration you will even see
 code completion and documentation windows for the lua chunks in this readme!
 All this function does is:

@@ -1,4 +1,4 @@
-M = {}
+local M = {}
 
 local api = vim.api
 local keeper = require 'otter.keeper'

@@ -22,13 +22,13 @@ local function extract_code_chunks(main_nr)
   -- get and parse AST
   local ft = api.nvim_buf_get_option(main_nr, 'filetype')
   local tsquery = queries[ft]
-  local parsername = parsers.filetype_to_parsername[ft] or ft
+  local parsername = vim.treesitter.language.get_lang(ft)
   local language_tree = ts.get_parser(main_nr, parsername)
   local syntax_tree = language_tree:parse()
   local root = syntax_tree[1]:root()
 
   -- create capture
-  local query = ts.parse_query(parsername, tsquery)
+  local query = vim.treesitter.query.parse(parsername, tsquery)
 
   -- get text ranges
   local code_chunks = {}
@@ -36,7 +36,7 @@ local function extract_code_chunks(main_nr)
     local lang
     for id, node in pairs(match) do
       local name = query.captures[id]
-      local text = ts.query.get_node_text(node, 0)
+      local text = vim.treesitter.get_node_text(node, 0)
       if name == 'lang' then
         lang = text
       end

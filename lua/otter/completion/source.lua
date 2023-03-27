@@ -9,7 +9,7 @@ source.new = function(client, main_nr, otter_nr, updater, queries)
   self.client = client
   self.otter_nr = otter_nr
   self.otter_ft = vim.api.nvim_buf_get_option(otter_nr, 'filetype')
-  self.otter_parsername = parsers.ft_to_lang(self.otter_ft) or self.otter_ft
+  self.otter_parsername = vim.treesitter.language.get_lang(self.otter_ft)
   self.main_nr = main_nr
   self.main_ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
   self.main_tsquery = queries[self.main_ft]
@@ -30,7 +30,7 @@ source.is_otter_lang_context = function(self)
   local root = syntax_tree[1]:root()
 
   -- create capture
-  local query = ts.parse_query(self.main_parsername, self.main_tsquery)
+  local query = vim.treesitter.query.parse(self.main_parsername, self.main_tsquery)
 
 
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
@@ -44,7 +44,7 @@ source.is_otter_lang_context = function(self)
     local found = false -- reset found for the next match
     for id, node in pairs(match) do
       local name = query.captures[id]
-      local ok, text = pcall(ts.query.get_node_text, node, 0)
+      local ok, text = pcall(vim.treesitter.get_node_text, node, 0)
       if not ok then return false end
       if name == 'lang' and text == self.otter_ft then
         -- we found a match where the language node matches

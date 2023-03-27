@@ -68,7 +68,7 @@ M.is_otter_context = function(main_nr, tsquery)
   local root = syntax_tree[1]:root()
 
   -- create capture
-  local query = ts.parse_query(parsername, tsquery)
+  local query = vim.treesitter.query.parse(parsername, tsquery)
 
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   row = row - 1
@@ -80,7 +80,7 @@ M.is_otter_context = function(main_nr, tsquery)
     -- the language node is the first one
     for id, node in pairs(match) do
       local name = query.captures[id]
-      local ok, text = pcall(ts.query.get_node_text, node, 0)
+      local ok, text = pcall(vim.treesitter.get_node_text, node, 0)
       if not ok then return false end
       if name == 'code' and ts.is_in_node_range(node, row, col) then
         return true

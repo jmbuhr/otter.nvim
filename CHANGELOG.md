@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/jmbuhr/otter.nvim/compare/v0.8.0...v0.8.1) (2023-03-27)
+
+
+### Bug Fixes
+
+* make sure main module is local ([5c6ad47](https://github.com/jmbuhr/otter.nvim/commit/5c6ad47178edb6c3c1a2b111667cbc5e207f4704))
+
 ## [0.8.0](https://github.com/jmbuhr/otter.nvim/compare/v0.7.0...v0.8.0) (2023-03-11)
 
 

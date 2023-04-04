@@ -8,7 +8,6 @@ local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
-local parsers = require 'nvim-treesitter.parsers'
 local handlers = require 'otter.tools.handlers'
 local config = require 'otter.config'.config
 
@@ -61,44 +60,30 @@ end
 
 --- Syncronize the raft of otters attached to a buffer
 ---@param main_nr integer
----@return table # list of otter buffer numbers
 M.sync_raft = function(main_nr)
   local all_code_chunks = extract_code_chunks(main_nr)
   if next(all_code_chunks) == nil then
     return {}
   end
-  local otter_nrs = {}
   if M._otters_attached[main_nr] ~= nil then
     local languages = M._otters_attached[main_nr].languages
     for _, lang in ipairs(languages) do
+      local otter_nr = M._otters_attached[main_nr].buffers[lang]
       local code_chunks = all_code_chunks[lang]
       if code_chunks ~= nil then
         local nmax = code_chunks[#code_chunks].range['to'][1] -- last code line
-        local main_path = api.nvim_buf_get_name(main_nr)
 
-        -- create buffer filled with spaces
-        local extension = extensions[lang]
-        if extension ~= nil then
-          local otter_path = path_to_otterpath(main_path, extension)
-          local otter_uri = 'file://' .. otter_path
-          local otter_nr = vim.uri_to_bufnr(otter_uri)
-          table.insert(otter_nrs, otter_nr)
-          api.nvim_buf_set_name(otter_nr, otter_path)
-          api.nvim_buf_set_option(otter_nr, 'filetype', lang)
-          api.nvim_buf_set_option(otter_nr, 'swapfile', false)
-          -- api.nvim_buf_set_option(otter_nr, 'readonly', true)
-          api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
-          api.nvim_buf_set_lines(otter_nr, 0, nmax, false, spaces(nmax))
+        -- fill buffer with spaces
+        api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
+        api.nvim_buf_set_lines(otter_nr, 0, nmax, false, spaces(nmax))
 
-          -- write language lines
-          for _, t in ipairs(code_chunks) do
-            api.nvim_buf_set_lines(otter_nr, t.range['from'][1], t.range['to'][1], false, t.text)
-          end
+        -- write language lines
+        for _, t in ipairs(code_chunks) do
+          api.nvim_buf_set_lines(otter_nr, t.range['from'][1], t.range['to'][1], false, t.text)
         end
       end
     end
   end
-  return otter_nrs
 end
 
 --- Syncronize the raft for the current buffer.
@@ -113,23 +98,44 @@ end
 ---@param completion boolean
 ---@param tsqueries table|nil
 M.activate = function(languages, completion, tsqueries)
-  local main_bufnr = api.nvim_get_current_buf()
+  local main_nr = api.nvim_get_current_buf()
+  local main_path = api.nvim_buf_get_name(main_nr)
 
   -- merge supplied queries with pre-installed ones
   queries = vim.tbl_deep_extend('force', queries, tsqueries or {})
 
   -- test if we have a query for the main language
-  assert(queries[vim.bo[main_bufnr].filetype] ~= nil, 'No query found for this file type')
-  M._otters_attached[main_bufnr] = {}
-  M._otters_attached[main_bufnr].languages = languages
-  local otter_nrs = M.sync_raft(main_bufnr)
+  assert(queries[vim.bo[main_nr].filetype] ~= nil, 'No query found for this file type')
+  M._otters_attached[main_nr] = {}
+
+  local all_code_chunks = extract_code_chunks(main_nr)
+  M._otters_attached[main_nr].languages = languages
+  M._otters_attached[main_nr].buffers = {}
+
+  -- create otter buffers
+  for _, lang in ipairs(languages) do
+    local extension = extensions[lang]
+    if extension == nil then goto continue end
+    local code_chunks = all_code_chunks[lang]
+    if code_chunks == nil then goto continue end
+    local otter_path = path_to_otterpath(main_path, extension)
+    local otter_uri = 'file://' .. otter_path
+    local otter_nr = vim.uri_to_bufnr(otter_uri)
+    api.nvim_buf_set_name(otter_nr, otter_path)
+    api.nvim_buf_set_option(otter_nr, 'filetype', lang)
+    api.nvim_buf_set_option(otter_nr, 'swapfile', false)
+    M._otters_attached[main_nr].buffers[lang] = otter_nr
+    ::continue::
+  end
+
+  M.sync_raft(main_nr)
 
   -- auto-close language files on qmd file close
   api.nvim_create_autocmd({ "QuitPre", "BufDelete" }, {
     buffer = 0,
     group = api.nvim_create_augroup("OtterAutoclose", {}),
     callback = function(_, _)
-      for _, bufnr in ipairs(otter_nrs) do
+      for _, bufnr in pairs(M._otters_attached[main_nr].buffers) do
         if api.nvim_buf_is_valid(bufnr) then
           -- delete otter buffer file
           local path = api.nvim_buf_get_name(bufnr)
@@ -142,8 +148,8 @@ M.activate = function(languages, completion, tsqueries)
   })
 
   if completion then
-    for _, otter_nr in ipairs(otter_nrs) do
-      require 'otter.completion'.setup_source(main_bufnr, otter_nr, queries)
+    for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
+      require 'otter.completion'.setup_source(main_nr, otter_nr, queries)
     end
   end
 end
@@ -157,7 +163,7 @@ end
 ---@param fallback function|nil optional funtion to call if not in an otter context
 M.send_request = function(main_nr, request, filter, fallback)
   fallback = fallback or nil
-  local otter_nrs = M.sync_raft(main_nr)
+  M.sync_raft(main_nr)
   local ft = api.nvim_buf_get_option(main_nr, 'filetype')
   local tsquery = queries[ft]
 
@@ -166,7 +172,7 @@ M.send_request = function(main_nr, request, filter, fallback)
     return
   end
 
-  for _, otter_nr in ipairs(otter_nrs) do
+  for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
     local uri = vim.uri_from_bufnr(otter_nr)
     local position_params = vim.lsp.util.make_position_params(0)
     position_params.textDocument = {
@@ -208,8 +214,8 @@ end
 ---@param force boolean
 M.export_raft = function(force)
   local main_nr = api.nvim_get_current_buf()
-  local otter_nrs = M.sync_raft(main_nr)
-  for _, otter_nr in ipairs(otter_nrs) do
+  M.sync_raft(main_nr)
+  for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
     local path = api.nvim_buf_get_name(otter_nr)
     local lang = api.nvim_buf_get_option(otter_nr, 'filetype')
     local extension = extensions[lang] or ''
@@ -231,8 +237,8 @@ end
 ---@param force boolean
 M.export_otter_as = function(language, fname, force)
   local main_nr = api.nvim_get_current_buf()
-  local otter_nrs = M.sync_raft(main_nr)
-  for _, otter_nr in ipairs(otter_nrs) do
+  M.sync_raft(main_nr)
+  for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
     local path = api.nvim_buf_get_name(otter_nr)
     local lang = api.nvim_buf_get_option(otter_nr, 'filetype')
     if lang ~= language then return end

@@ -16,9 +16,10 @@ local config = require 'otter.config'.config
 M._otters_attached = {}
 
 ---Extract code chunks from the specified buffer.
----@param main_nr integer
+---@param main_nr integer The main buffer number
+---@param lang string|nil
 ---@return table
-local function extract_code_chunks(main_nr)
+local function extract_code_chunks(main_nr, lang)
   -- get and parse AST
   local ft = api.nvim_buf_get_option(main_nr, 'filetype')
   local tsquery = queries[ft]
@@ -33,24 +34,24 @@ local function extract_code_chunks(main_nr)
   -- get text ranges
   local code_chunks = {}
   for pattern, match, metadata in query:iter_matches(root, main_nr) do
-    local lang
+    local lang_capture
     for id, node in pairs(match) do
       local name = query.captures[id]
       local text = vim.treesitter.get_node_text(node, 0)
       if name == 'lang' then
-        lang = text
+        lang_capture = text
       end
-      if name == 'code' then
-        local row1, col1, row2, col2 = node:range() -- range of the capture
+      if name == 'code' and (lang == nil or lang_capture == lang) then
+        local row1, col1, row2, col2 = node:range()
         local result = {
           range = { from = { row1, col1 }, to = { row2, col2 } },
-          lang = lang,
+          lang = lang_capture,
           text = lines(text)
         }
-        if code_chunks[lang] == nil then
-          code_chunks[lang] = {}
+        if code_chunks[lang_capture] == nil then
+          code_chunks[lang_capture] = {}
         end
-        table.insert(code_chunks[lang], result)
+        table.insert(code_chunks[lang_capture], result)
       end
     end
   end

@@ -122,13 +122,16 @@ M.activate = function(languages, completion, tsqueries)
     local otter_uri = 'file://' .. otter_path
     local otter_nr = vim.uri_to_bufnr(otter_uri)
     api.nvim_buf_set_name(otter_nr, otter_path)
-    api.nvim_buf_set_option(otter_nr, 'filetype', lang)
     api.nvim_buf_set_option(otter_nr, 'swapfile', false)
     M._otters_attached[main_nr].buffers[lang] = otter_nr
     ::continue::
   end
 
   M.sync_raft(main_nr)
+   
+  for lang, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
+    api.nvim_buf_set_option(otter_nr, 'filetype', lang)
+  end
 
   -- auto-close language files on qmd file close
   api.nvim_create_autocmd({ "QuitPre", "BufDelete" }, {

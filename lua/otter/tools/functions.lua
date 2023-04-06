@@ -29,6 +29,15 @@ M.spaces = function(n)
   return s
 end
 
+
+M.empty_lines = function(n)
+  local s = {}
+  for i = 1, n do
+    s[i] = ''
+  end
+  return s
+end
+
 M.if_nil = function(val, default)
   if val == nil then return default end
   return val
@@ -91,8 +100,7 @@ M.is_otter_context = function(main_nr, tsquery)
 end
 
 M.is_otter_language_context = function(lang)
-  vim.b.quarto_is_python_chunk = false
-  local ts = vim.treesitter
+  vim.b['quarto_is_'..lang..'_chunk'] = false
   local ft = vim.api.nvim_buf_get_option(0, 'filetype')
   local parsername = parsers.ft_to_lang(ft) or ft
   local language_tree = ts.get_parser(0, parsername)
@@ -120,7 +128,7 @@ M.is_otter_language_context = function(lang)
       end
       -- the corresponding code is in the current range
       if found and name == 'code' and ts.is_in_node_range(node, row, col) then
-        vim.b.quarto_is_python_chunk = true
+        vim.b['quarto_is_'..lang..'_chunk'] = true
       end
     end
   end

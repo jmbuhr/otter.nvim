@@ -1,6 +1,7 @@
 local M = {}
 local lines = require 'otter.tools.functions'.lines
 local spaces = require 'otter.tools.functions'.spaces
+local empty_lines = require 'otter.tools.functions'.empty_lines
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
 local is_otter_context = require 'otter.tools.functions'.is_otter_context
@@ -61,6 +62,16 @@ end
 --- Syncronize the raft of otters attached to a buffer
 ---@param main_nr integer
 M.sync_raft = function(main_nr)
+  -- return early if buffer content has not changed
+
+  local tick = vim.api.nvim_buf_get_changedtick(main_nr)
+  local ottertick = vim.api.nvim_buf_get_var(main_nr, 'ottertick')
+  if ottertick == tick then
+    return
+  end
+  vim.api.nvim_buf_set_var(main_nr, 'ottertick', tick)
+
+  
   local all_code_chunks = extract_code_chunks(main_nr)
   if next(all_code_chunks) == nil then
     return {}
@@ -73,14 +84,27 @@ M.sync_raft = function(main_nr)
       if code_chunks ~= nil then
         local nmax = code_chunks[#code_chunks].range['to'][1] -- last code line
 
-        -- fill buffer with spaces
-        api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
-        api.nvim_buf_set_lines(otter_nr, 0, nmax, false, spaces(nmax))
+        -- create list with empty lines the lenght of the buffer
+        local ls = empty_lines(nmax)
 
         -- write language lines
         for _, t in ipairs(code_chunks) do
-          api.nvim_buf_set_lines(otter_nr, t.range['from'][1], t.range['to'][1], false, t.text)
+          local start_index = t.range['from'][1]
+          for i, l in ipairs(t.text) do
+            local index = start_index + i
+            table.remove(ls, index)
+            table.insert(ls, index, l)
+          end
         end
+
+        -- vim.print(ls)
+
+        -- clear buffer
+        api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
+
+        -- add language lines
+        api.nvim_buf_set_lines(otter_nr, 0, nmax, false, ls)
+
       end
     end
   end
@@ -127,6 +151,7 @@ M.activate = function(languages, completion, tsqueries)
     ::continue::
   end
 
+  vim.api.nvim_buf_set_var(main_nr, 'ottertick', 0)
   M.sync_raft(main_nr)
    
   for lang, otter_nr in pairs(M._otters_attached[main_nr].buffers) do

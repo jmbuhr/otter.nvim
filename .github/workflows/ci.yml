@@ -17,8 +17,8 @@ jobs:
       - name: Install Neovim
         shell: bash
         run: |
-            wget -q https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.deb -O /tmp/nvim.deb
-            sudo dpkg -i /tmp/nvim.deb
+            wget -q https://github.com/neovim/neovim/releases/download/stable/nvim.appimage -O /usr/bin/nvim
+            sudo 0755 /usr/bin/nvim
       - name: Run Tests
         run: |
           nvim --version
@@ -34,7 +34,7 @@ jobs:
         uses: kdheepak/panvimdoc@main
         with:
           vimdoc: otter.nvim
-          version: "Neovim >= 0.8.0"
+          version: "Neovim >= 0.9.0"
           demojify: false
           treesitter: true
       - name: Push changes

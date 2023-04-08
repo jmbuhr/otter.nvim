@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
             sudo wget -q https://github.com/neovim/neovim/releases/download/stable/nvim.appimage -O /usr/bin/nvim
-            sudo 0755 /usr/bin/nvim
+            sudo chmod 0755 /usr/bin/nvim
       - name: Run Tests
         run: |
           nvim --version

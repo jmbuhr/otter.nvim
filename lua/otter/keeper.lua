@@ -252,8 +252,8 @@ M.export_raft = function(force)
     local new_path = vim.fn.input('New path: ', path, 'file')
     if new_path ~= '' then
       api.nvim_set_current_buf(otter_nr)
-      vim.lsp.buf.format()
-      vim.cmd.write { new_path, bang = force }
+      vim.lsp.buf.format({bufnr = otter_nr})
+      vim.cmd.saveas { new_path, bang = force }
     end
     api.nvim_set_current_buf(main_nr)
   end

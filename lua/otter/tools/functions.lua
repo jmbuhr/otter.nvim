@@ -1,8 +1,6 @@
 local M = {}
 
-local context = require 'cmp.config.context'
 local ts = vim.treesitter
-local parsers = require 'nvim-treesitter.parsers'
 
 M.contains = function(list, x)
   for _, v in pairs(list) do
@@ -71,7 +69,7 @@ end
 ---@return boolean
 M.is_otter_context = function(main_nr, tsquery)
   local ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
-  local parsername = parsers.ft_to_lang(ft) or ft
+  local parsername = vim.treesitter.language.get_lang(ft)
   local language_tree = ts.get_parser(main_nr, parsername)
   local syntax_tree = language_tree:parse()
   local root = syntax_tree[1]:root()
@@ -102,7 +100,7 @@ end
 M.is_otter_language_context = function(lang)
   vim.b['quarto_is_'..lang..'_chunk'] = false
   local ft = vim.api.nvim_buf_get_option(0, 'filetype')
-  local parsername = parsers.ft_to_lang(ft) or ft
+  local parsername = vim.treesitter.language.get_lang(ft)
   local language_tree = ts.get_parser(0, parsername)
   local syntax_tree = language_tree:parse()
   local root = syntax_tree[1]:root()

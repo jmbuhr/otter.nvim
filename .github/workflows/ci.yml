@@ -17,7 +17,7 @@ jobs:
       - name: Install Neovim
         shell: bash
         run: |
-            wget -q https://github.com/neovim/neovim/releases/download/stable/nvim.appimage -O /usr/bin/nvim
+            sudo wget -q https://github.com/neovim/neovim/releases/download/stable/nvim.appimage -O /usr/bin/nvim
             sudo 0755 /usr/bin/nvim
       - name: Run Tests
         run: |

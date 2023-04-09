@@ -71,8 +71,9 @@ stateDiagram-v2
 ## How do I use otter.nvim?
 
 The easiest way to get started is try it out in [quarto-nvim](https://github.com/quarto-dev/quarto-nvim) or look at the usecases there.
-If you want to integrate `otter.nvim` in your own plugin or nvim config, check out the documentation at `:h otter` in nvim
-or this `README.md` file.
+Specifically, you'll want to look at the `lua/plugins/quarto.lua` file
+in the [quarto-nvim-kickstarter](https://github.com/jmbuhr/quarto-nvim-kickstarter)
+configuration.
 
 ### Dependencies
 

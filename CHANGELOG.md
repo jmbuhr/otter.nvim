@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.9.0](https://github.com/jmbuhr/otter.nvim/compare/v0.8.1...v0.9.0) (2023-04-09)
+
+
+### Features
+
+* allow specifying which langueage to update ([3a818b0](https://github.com/jmbuhr/otter.nvim/commit/3a818b096482483e9fab7cf097b51328a0d9a75c))
+* function to determine if within a code chunk of a certain language ([c5e5828](https://github.com/jmbuhr/otter.nvim/commit/c5e5828fc02c8daf3faaa418d1b9014b0765c3e6))
+* use treesitter functions from nvim v0.9.0 nightly! ([6bb1170](https://github.com/jmbuhr/otter.nvim/commit/6bb11702656573ed0c0e0d6ec99cc536e11162ac))
+
+
+### Bug Fixes
+
+* attach lsp server on activation ([d3044fd](https://github.com/jmbuhr/otter.nvim/commit/d3044fd11ac8abce8212953414ab4dd4b7e3d3ac))
+* **CI:** ... ([9cae1f3](https://github.com/jmbuhr/otter.nvim/commit/9cae1f3bc587087a4b93e59c46d3e9c7f0368e7c))
+* CI... ([c31abb0](https://github.com/jmbuhr/otter.nvim/commit/c31abb09712c6433489e1d2c9be1065c7a4a2f9e))
+* update treesitter in remaining places ([9fa88ca](https://github.com/jmbuhr/otter.nvim/commit/9fa88ca1ac18293513edfde7f63abcf576f2026a))
+* use nvim.appimage for CI ([8bf3e54](https://github.com/jmbuhr/otter.nvim/commit/8bf3e5462c29978917621d160e02b0138f4923a9))
+* use save instead of write to export otter buffers ([7ced7e9](https://github.com/jmbuhr/otter.nvim/commit/7ced7e9af49fa6e0d8f9fe9beec60e8ae3bf9a42))
+
+
+### Performance Improvements
+
+* faster otter buffer line updates ([4ff9d1d](https://github.com/jmbuhr/otter.nvim/commit/4ff9d1dd609303beca1e09fd3823dbb88424e718))
+* only set buffer options on activation, not sync ([1159b49](https://github.com/jmbuhr/otter.nvim/commit/1159b49f22ed53352b24a34f34e721eeb50c0b0a))
+* try hover without vim syntax enabled ([a3588f6](https://github.com/jmbuhr/otter.nvim/commit/a3588f64a297e871c506879a4914705b57431ee4))
+
 ## [0.8.1](https://github.com/jmbuhr/otter.nvim/compare/v0.8.0...v0.8.1) (2023-03-27)
 
 

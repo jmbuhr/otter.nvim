@@ -15,7 +15,14 @@ function M.hover(_, result, ctx, config)
     vim.notify('No information available')
     return
   end
-  return util.open_floating_preview(markdown_lines, 'markdown', config)
+
+  -- returns bufnr,winnr buffer and window number of the newly created floating
+  local bufnr, _ = util.open_floating_preview(markdown_lines, 'markdown', config)
+
+  -- local bufnr, _ = util.open_floating_preview(markdown_lines, '', config)
+  -- vim.api.nvim_buf_set_option(bufnr, 'filetype', 'markdown')
+
+  return result
 end
 
 return M

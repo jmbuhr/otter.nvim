@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/jmbuhr/otter.nvim/compare/v0.9.0...v0.10.0) (2023-04-20)
+
+
+### Features
+
+* helper functions to get the current language of a chode chunk and ([9c302e7](https://github.com/jmbuhr/otter.nvim/commit/9c302e7e22656d6aa0ba75c545ecc59291d2a14e))
+
 ## [0.9.0](https://github.com/jmbuhr/otter.nvim/compare/v0.8.1...v0.9.0) (2023-04-09)
 
 

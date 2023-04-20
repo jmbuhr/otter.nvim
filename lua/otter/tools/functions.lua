@@ -133,5 +133,41 @@ M.is_otter_language_context = function(lang)
 end
 
 
+M.get_current_language_context = function ()
+  local ft = vim.api.nvim_buf_get_option(0, 'filetype')
+  local parsername = vim.treesitter.language.get_lang(ft)
+  local language_tree = ts.get_parser(0, parsername)
+  local syntax_tree = language_tree:parse()
+  local root = syntax_tree[1]:root()
+
+  -- create capture
+  local query = vim.treesitter.query.parse(parsername, require 'otter.tools.queries'[parsername])
+
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  row = row - 1
+  col = col
+
+  -- get text ranges
+  for pattern, match, metadata in query:iter_matches(root, 0) do
+    -- each match has two nodes, the language and the code
+    -- the language node is the first one
+    local found = false -- reset found for the next match
+    local lang = nil
+    for id, node in pairs(match) do
+      local name = query.captures[id]
+      local ok, text = pcall(vim.treesitter.get_node_text, node, 0)
+      if not ok then return false end
+      if name == 'lang' then
+        found = true
+        lang = text
+      end
+      -- the corresponding code is in the current range
+      if found and name == 'code' and ts.is_in_node_range(node, row, col) then
+        return lang
+      end
+    end
+  end
+end
+
 
 return M

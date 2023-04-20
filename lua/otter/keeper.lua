@@ -1,10 +1,10 @@
 local M = {}
 local lines = require 'otter.tools.functions'.lines
-local spaces = require 'otter.tools.functions'.spaces
 local empty_lines = require 'otter.tools.functions'.empty_lines
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
 local is_otter_context = require 'otter.tools.functions'.is_otter_context
+local get_current_language_context = require 'otter.tools.functions'.get_current_language_context
 local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
@@ -71,7 +71,7 @@ M.sync_raft = function(main_nr)
   end
   vim.api.nvim_buf_set_var(main_nr, 'ottertick', tick)
 
-  
+
   local all_code_chunks = extract_code_chunks(main_nr)
   if next(all_code_chunks) == nil then
     return {}
@@ -104,7 +104,6 @@ M.sync_raft = function(main_nr)
 
         -- add language lines
         api.nvim_buf_set_lines(otter_nr, 0, nmax, false, ls)
-
       end
     end
   end
@@ -153,7 +152,7 @@ M.activate = function(languages, completion, tsqueries)
 
   vim.api.nvim_buf_set_var(main_nr, 'ottertick', 0)
   M.sync_raft(main_nr)
-   
+
   for lang, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
     api.nvim_buf_set_option(otter_nr, 'filetype', lang)
   end
@@ -252,8 +251,8 @@ M.export_raft = function(force)
     local new_path = vim.fn.input('New path: ', path, 'file')
     if new_path ~= '' then
       api.nvim_set_current_buf(otter_nr)
-      vim.lsp.buf.format({bufnr = otter_nr})
-      vim.cmd.saveas { new_path, bang = force }
+      vim.lsp.buf.format({ bufnr = otter_nr })
+      vim.cmd.write { new_path, bang = force }
     end
     api.nvim_set_current_buf(main_nr)
   end
@@ -277,5 +276,30 @@ M.export_otter_as = function(language, fname, force)
     api.nvim_set_current_buf(main_nr)
   end
 end
+
+M.get_language_lines_to_cursor = function()
+  local main_nr = vim.api.nvim_get_current_buf()
+  M.sync_raft(main_nr)
+  local lang = get_current_language_context()
+  if lang == nil then
+    return
+  end
+  local otter_nr = M._otters_attached[main_nr].buffers[lang]
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  return vim.api.nvim_buf_get_lines(otter_nr, 0, row + 1, false)
+end
+
+
+M.get_language_lines = function()
+  local main_nr = vim.api.nvim_get_current_buf()
+  M.sync_raft(main_nr)
+  local lang = get_current_language_context()
+  if lang == nil then
+    return
+  end
+  local otter_nr = M._otters_attached[main_nr].buffers[lang]
+  return vim.api.nvim_buf_get_lines(otter_nr, 0, -1, false)
+end
+
 
 return M

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/jmbuhr/otter.nvim/compare/v0.10.0...v0.10.1) (2023-04-25)
+
+
+### Bug Fixes
+
+* Set buftype=nowrite for otter buffers. PR[#30](https://github.com/jmbuhr/otter.nvim/issues/30) from yongrenjie/main ([ee2f5f6](https://github.com/jmbuhr/otter.nvim/commit/ee2f5f6d72a2dd8b9c06a9592520e488471f1537))
+
 ## [0.10.0](https://github.com/jmbuhr/otter.nvim/compare/v0.9.0...v0.10.0) (2023-04-20)
 
 

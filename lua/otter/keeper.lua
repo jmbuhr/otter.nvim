@@ -146,6 +146,7 @@ M.activate = function(languages, completion, tsqueries)
     local otter_nr = vim.uri_to_bufnr(otter_uri)
     api.nvim_buf_set_name(otter_nr, otter_path)
     api.nvim_buf_set_option(otter_nr, 'swapfile', false)
+    api.nvim_buf_set_option(otter_nr, 'buftype', 'nowrite')
     M._otters_attached[main_nr].buffers[lang] = otter_nr
     ::continue::
   end
@@ -156,23 +157,6 @@ M.activate = function(languages, completion, tsqueries)
   for lang, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
     api.nvim_buf_set_option(otter_nr, 'filetype', lang)
   end
-
-  -- auto-close language files on qmd file close
-  api.nvim_create_autocmd({ "QuitPre", "BufDelete" }, {
-    buffer = 0,
-    group = api.nvim_create_augroup("OtterAutoclose", {}),
-    callback = function(_, _)
-      for _, bufnr in pairs(M._otters_attached[main_nr].buffers) do
-        if api.nvim_buf_is_valid(bufnr) then
-          -- delete otter buffer file
-          local path = api.nvim_buf_get_name(bufnr)
-          vim.fn.delete(path)
-          -- remove otter buffer
-          api.nvim_buf_delete(bufnr, { force = true })
-        end
-      end
-    end
-  })
 
   if completion then
     for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/jmbuhr/otter.nvim/compare/v0.10.1...v0.11.0) (2023-05-01)
+
+
+### Features
+
+* omit `eval: false` code blocks (for QuartoSend) ([ae3b91b](https://github.com/jmbuhr/otter.nvim/commit/ae3b91b3cd1eb4667c6783979825706c459fb45a))
+
 ## [0.10.1](https://github.com/jmbuhr/otter.nvim/compare/v0.10.0...v0.10.1) (2023-04-25)
 
 

@@ -261,7 +261,49 @@ M.export_otter_as = function(language, fname, force)
   end
 end
 
-M.get_language_lines_to_cursor = function()
+
+local function get_code_chunks_with_eval_true(main_nr, lang, row_from, row_to)
+  local ft = api.nvim_buf_get_option(main_nr, 'filetype')
+  local tsquery = queries[ft]
+  local parsername = vim.treesitter.language.get_lang(ft)
+  local language_tree = ts.get_parser(main_nr, parsername)
+  local syntax_tree = language_tree:parse()
+  local root = syntax_tree[1]:root()
+
+  -- create capture
+  local query = vim.treesitter.query.parse(parsername, tsquery)
+
+  -- get text ranges
+  local code = {}
+  for pattern, match, metadata in query:iter_matches(root, main_nr) do
+    local lang_capture
+    for id, node in pairs(match) do
+      local name = query.captures[id]
+      local text = vim.treesitter.get_node_text(node, 0)
+      if name == 'lang' then
+        lang_capture = text
+      end
+      if name == 'code' and lang_capture == lang then
+        local row1, col1, row2, col2 = node:range()
+        if row_from and row_to then
+          if row1 < row_from or row2 > row_to then
+            goto continue
+          end
+        end
+        if string.find(text, '#| *eval: *false') then
+          goto continue
+        end
+        table.insert(code, text)
+      end
+      ::continue::
+    end
+  end
+
+  return code
+end
+
+
+M.get_language_lines_to_cursor = function(include_eval_false)
   local main_nr = vim.api.nvim_get_current_buf()
   M.sync_raft(main_nr)
   local lang = get_current_language_context()
@@ -270,11 +312,14 @@ M.get_language_lines_to_cursor = function()
   end
   local otter_nr = M._otters_attached[main_nr].buffers[lang]
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  return vim.api.nvim_buf_get_lines(otter_nr, 0, row + 1, false)
+  if include_eval_false then
+    return vim.api.nvim_buf_get_lines(otter_nr, 0, row + 1, false)
+  end
+  return get_code_chunks_with_eval_true(main_nr, lang, 0, row + 1)
 end
 
 
-M.get_language_lines = function()
+M.get_language_lines = function(include_eval_false)
   local main_nr = vim.api.nvim_get_current_buf()
   M.sync_raft(main_nr)
   local lang = get_current_language_context()
@@ -282,7 +327,10 @@ M.get_language_lines = function()
     return
   end
   local otter_nr = M._otters_attached[main_nr].buffers[lang]
-  return vim.api.nvim_buf_get_lines(otter_nr, 0, -1, false)
+  if include_eval_false then
+    return vim.api.nvim_buf_get_lines(otter_nr, 0, -1, false)
+  end
+  return get_code_chunks_with_eval_true(main_nr, lang)
 end
 
 

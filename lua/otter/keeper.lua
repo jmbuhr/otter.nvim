@@ -284,9 +284,9 @@ local function get_code_chunks_with_eval_true(main_nr, lang, row_from, row_to)
         lang_capture = text
       end
       if name == 'code' and lang_capture == lang then
-        local row1, col1, row2, col2 = node:range()
-        if row_from and row_to then
-          if row1 < row_from or row2 > row_to then
+        local row_start, col1, row_end, col2 = node:range()
+        if row_from ~= nil and row_to ~= nil then
+          if (row_start >= row_to and row_to > 0) or row_end < row_from then
             goto continue
           end
         end
@@ -312,10 +312,27 @@ M.get_language_lines_to_cursor = function(include_eval_false)
   end
   local otter_nr = M._otters_attached[main_nr].buffers[lang]
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  row = row - 1
   if include_eval_false then
-    return vim.api.nvim_buf_get_lines(otter_nr, 0, row + 1, false)
+    return vim.api.nvim_buf_get_lines(otter_nr, 0, row + 2, false)
   end
-  return get_code_chunks_with_eval_true(main_nr, lang, 0, row + 1)
+  return get_code_chunks_with_eval_true(main_nr, lang, 0, row + 2)
+end
+
+M.get_language_lines_from_cursor = function(include_eval_false)
+  local main_nr = vim.api.nvim_get_current_buf()
+  M.sync_raft(main_nr)
+  local lang = get_current_language_context()
+  if lang == nil then
+    return
+  end
+  local otter_nr = M._otters_attached[main_nr].buffers[lang]
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  row = row - 1
+  if include_eval_false then
+    return vim.api.nvim_buf_get_lines(otter_nr, row, -1, false)
+  end
+  return get_code_chunks_with_eval_true(main_nr, lang, row, -1)
 end
 
 
@@ -333,5 +350,22 @@ M.get_language_lines = function(include_eval_false)
   return get_code_chunks_with_eval_true(main_nr, lang)
 end
 
+M.get_language_lines_in_visual_selection = function(include_eval_false)
+  local main_nr = vim.api.nvim_get_current_buf()
+  M.sync_raft(main_nr)
+  local lang = get_current_language_context()
+  if lang == nil then
+    return
+  end
+  local otter_nr = M._otters_attached[main_nr].buffers[lang]
+  local row_start, _ = unpack(api.nvim_buf_get_mark(main_nr, '<'))
+  local row_end, _ = unpack(api.nvim_buf_get_mark(main_nr, '>'))
+  row_start = row_start - 1
+  row_end = row_end - 1
+  if include_eval_false then
+    return vim.api.nvim_buf_get_lines(otter_nr, row_start, row_end + 2, false)
+  end
+  return get_code_chunks_with_eval_true(main_nr, lang, row_start, row_end + 2)
+end
 
 return M

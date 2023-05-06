@@ -49,14 +49,14 @@ end
 --- @param path string a path
 --- @return string
 M.otterpath_to_path = function(path)
-  local s,_ = path:gsub('-tmp%..+', '')
+  local s, _ = path:gsub('-tmp%..+', '')
   return s
 end
 
 --- @param path string a path
 --- @return string
 M.otterpath_to_plain_path = function(path)
-  local s,_ = path:gsub('%..+', '')
+  local s, _ = path:gsub('%..+', '')
   return s
 end
 
@@ -98,7 +98,7 @@ M.is_otter_context = function(main_nr, tsquery)
 end
 
 M.is_otter_language_context = function(lang)
-  vim.b['quarto_is_'..lang..'_chunk'] = false
+  vim.b['quarto_is_' .. lang .. '_chunk'] = false
   local ft = vim.api.nvim_buf_get_option(0, 'filetype')
   local parsername = vim.treesitter.language.get_lang(ft)
   local language_tree = ts.get_parser(0, parsername)
@@ -126,14 +126,14 @@ M.is_otter_language_context = function(lang)
       end
       -- the corresponding code is in the current range
       if found and name == 'code' and ts.is_in_node_range(node, row, col) then
-        vim.b['quarto_is_'..lang..'_chunk'] = true
+        vim.b['quarto_is_' .. lang .. '_chunk'] = true
       end
     end
   end
 end
 
 
-M.get_current_language_context = function ()
+M.get_current_language_context = function()
   local ft = vim.api.nvim_buf_get_option(0, 'filetype')
   local parsername = vim.treesitter.language.get_lang(ft)
   local language_tree = ts.get_parser(0, parsername)
@@ -144,8 +144,6 @@ M.get_current_language_context = function ()
   local query = vim.treesitter.query.parse(parsername, require 'otter.tools.queries'[parsername])
 
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  row = row - 1
-  col = col
 
   -- get text ranges
   for pattern, match, metadata in query:iter_matches(root, 0) do
@@ -162,8 +160,11 @@ M.get_current_language_context = function ()
         lang = text
       end
       -- the corresponding code is in the current range
-      if found and name == 'code' and ts.is_in_node_range(node, row, col) then
-        return lang
+      if found and name == 'code' then
+        local row_start, col_start, row_end, col_end = node:range()
+        if row_start <= row and row_end >= row - 1 then
+          return lang
+        end
       end
     end
   end

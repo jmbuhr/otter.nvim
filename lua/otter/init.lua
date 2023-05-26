@@ -2,6 +2,8 @@ local M = {}
 
 local api = vim.api
 local keeper = require 'otter.keeper'
+local handlers = require 'otter.tools.handlers'
+local config = require 'otter.config'.config
 
 M.activate = keeper.activate
 M.sync_raft = keeper.sync_raft
@@ -9,6 +11,23 @@ M.send_request = keeper.send_request
 M.export = keeper.export_raft
 M.export_otter_as = keeper.export_otter_as
 
+M.debug = function()
+  local main_nr = api.nvim_get_current_buf()
+  M.send_request(main_nr, "textDocument/hover", function(response)
+    return response
+  end)
+end
+
+M.dev_setup = function()
+  api.nvim_create_autocmd({ "BufEnter" }, {
+    pattern = { "*.md" },
+    callback = function()
+      M.activate({ 'r', 'python', 'lua' }, true)
+      vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
+      vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
+    end,
+  })
+end
 
 -- example implementations to work with the send_request function
 M.ask_definition = function()
@@ -30,16 +49,16 @@ M.ask_definition = function()
   end
 
   M.send_request(main_nr, "textDocument/definition", function(response)
-    if #response == 0 then
-      return redirect_definition(response)
-    end
+      if #response == 0 then
+        return redirect_definition(response)
+      end
 
-    local modified_response = {}
-    for _, res in ipairs(response) do
-      table.insert(modified_response, redirect_definition(res))
-    end
-    return modified_response
-  end,
+      local modified_response = {}
+      for _, res in ipairs(response) do
+        table.insert(modified_response, redirect_definition(res))
+      end
+      return modified_response
+    end,
     vim.lsp.buf.definition
   )
 end
@@ -53,34 +72,46 @@ end
 M.ask_hover = function()
   local main_nr = api.nvim_get_current_buf()
   M.send_request(main_nr, "textDocument/hover", function(response)
-    local ok, filtered_response = pcall(replace_header_div, response)
-    if ok then
-      return filtered_response
-    else
-      return response
-    end
-  end,
-    vim.lsp.buf.hover
+      local ok, filtered_response = pcall(replace_header_div, response)
+      if ok then
+        return filtered_response
+      else
+        return response
+      end
+    end,
+    vim.lsp.buf.hover,
+    handlers.hover,
+    config.lsp.hover
   )
 end
 
 
-M.debug = function()
-  local main_nr = api.nvim_get_current_buf()
-  M.send_request(main_nr, "textDocument/hover", function(response)
-    return response
-  end)
-end
 
-M.dev_setup = function()
-  api.nvim_create_autocmd({ "BufEnter" }, {
-    pattern = { "*.md" },
-    callback = function()
-      M.activate({ 'r', 'python', 'lua' }, true)
-      vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
-      vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
+M.ask_rename = function()
+  local main_nr = api.nvim_get_current_buf()
+  local main_uri = vim.uri_from_bufnr(main_nr)
+
+  local function redirect(res)
+    local changes = res.documentChanges
+    for _, change in ipairs(changes) do
+      if change.textDocument.uri ~= nil then
+        if require 'otter.tools.functions'.is_otterpath(change.textDocument.uri) then
+          change.textDocument.uri = main_uri
+        end
+      end
+    end
+    res.documentChanges = changes
+    return res
+  end
+
+  M.send_request(main_nr, "textDocument/rename", function(response)
+    local res = redirect(response)
+    P(res)
+    return res
     end,
-  })
+    vim.lsp.buf.rename,
+    handlers.rename
+  )
 end
 
 

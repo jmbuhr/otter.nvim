@@ -172,7 +172,9 @@ end
 ---@param request string lsp request
 ---@param filter function function to process the response
 ---@param fallback function|nil optional funtion to call if not in an otter context
-M.send_request = function(main_nr, request, filter, fallback)
+---@param handler function|nil optional funtion to handle the filtered lsp request for cases in which the default handler does not suffice
+---@param conf table|nil optional config to pass to the handler.
+M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   fallback = fallback or nil
   M.sync_raft(main_nr)
   local ft = api.nvim_buf_get_option(main_nr, 'filetype')
@@ -208,8 +210,8 @@ M.send_request = function(main_nr, request, filter, fallback)
           -- otherwise apply the filter to the one response
           response = filter(response)
         end
-        if request == 'textDocument/hover' or request == 'textDocument/signatureHelp' then
-          handlers.hover(err, response, method, config.lsp.hover)
+        if handler ~= nil then
+          handler(err, response, method, conf)
         else
           vim.lsp.handlers[request](err, response, method, ...)
         end

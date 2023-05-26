@@ -170,7 +170,7 @@ end
 --- The response can optionally be filtered through a function.
 ---@param main_nr integer bufnr of main buffer
 ---@param request string lsp request
----@param filter function function to process the response
+---@param filter function|nil function to process the response
 ---@param fallback function|nil optional funtion to call if not in an otter context
 ---@param handler function|nil optional funtion to handle the filtered lsp request for cases in which the default handler does not suffice
 ---@param conf table|nil optional config to pass to the handler.
@@ -187,12 +187,27 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   local otter_nr = M._otters_attached[main_nr].buffers[lang]
   local otter_uri = vim.uri_from_bufnr(otter_nr)
   local params = vim.lsp.util.make_position_params()
+  -- general
   params.textDocument = {
     uri = otter_uri
   }
-  params.context =  {
-    includeDeclaration = true,
-  }
+  if request == 'textDocument/rename' then
+    params.context =  {
+      includeDeclaration = true,
+    }
+  end
+  -- for 'textDocument/rename'
+  if request == 'textDocument/rename' then
+    local cword = vim.fn.expand('<cword>')
+    local prompt_opts = {
+      prompt = 'New Name: ',
+      default = cword
+    }
+    vim.ui.input(prompt_opts, function (input)
+      params.newName = input
+    end)
+  end
+
   vim.lsp.buf_request(otter_nr, request, params, function(err, response, method, ...)
     if response == nil then return nil end
     -- if response is a list of responses, filter every response

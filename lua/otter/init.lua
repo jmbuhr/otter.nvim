@@ -116,24 +116,20 @@ M.ask_rename = function()
 
   local function redirect(res)
     local changes = res.documentChanges
-    for _, change in ipairs(changes) do
-      if change.textDocument.uri ~= nil then
-        if require 'otter.tools.functions'.is_otterpath(change.textDocument.uri) then
-          change.textDocument.uri = main_uri
-        end
+    local new_changes = {}
+    for _,change in ipairs(changes) do
+      local uri = change.textDocument.uri
+      if require 'otter.tools.functions'.is_otterpath(uri) then
+        change.textDocument.uri = main_uri
       end
+      table.insert(new_changes, change)
     end
-    res.documentChanges = changes
+    res.documentChanges = new_changes
     return res
   end
 
-  M.send_request(main_nr, "textDocument/rename", function(response)
-    local res = redirect(response)
-    P(res)
-    return res
-    end,
-    vim.lsp.buf.rename,
-    handlers.rename
+  M.send_request(main_nr, "textDocument/rename", redirect,
+    vim.lsp.buf.rename
   )
 end
 

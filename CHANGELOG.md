@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.13.0](https://github.com/jmbuhr/otter.nvim/compare/v0.12.0...v0.13.0) (2023-05-26)
+
+
+### Features
+
+* add otter.ask_references ([6249847](https://github.com/jmbuhr/otter.nvim/commit/6249847cab5264b6c9a2bdd1820ec5c85dfbc204))
+* add otter.ask_rename ([dde4ef5](https://github.com/jmbuhr/otter.nvim/commit/dde4ef5e49f063a495876bc20fa7ed1e3277adea))
+* allow custom handlers for lsp request responses ([54320db](https://github.com/jmbuhr/otter.nvim/commit/54320db67d61d8f9d58535e03f67493949822369))
+
 ## [0.12.0](https://github.com/jmbuhr/otter.nvim/compare/v0.11.0...v0.12.0) (2023-05-06)
 
 

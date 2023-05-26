@@ -69,6 +69,8 @@ local function replace_header_div(response)
   return response
 end
 
+
+-- See <https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/buf.lua>
 M.ask_hover = function()
   local main_nr = api.nvim_get_current_buf()
   M.send_request(main_nr, "textDocument/hover", function(response)
@@ -82,6 +84,27 @@ M.ask_hover = function()
     vim.lsp.buf.hover,
     handlers.hover,
     config.lsp.hover
+  )
+end
+
+
+M.ask_references = function()
+  local main_nr = api.nvim_get_current_buf()
+  local main_uri = vim.uri_from_bufnr(main_nr)
+
+  local function redirect(res)
+    local uri = res.uri
+    if require 'otter.tools.functions'.is_otterpath(uri) then
+      res.uri = main_uri
+    end
+    return res
+  end
+
+  M.send_request(main_nr, "textDocument/references", function(response)
+      local res = redirect(response)
+      return res
+    end,
+    vim.lsp.buf.references
   )
 end
 

@@ -168,6 +168,7 @@ M.get_current_language_context = function()
       end
     end
   end
+  return nil
 end
 
 

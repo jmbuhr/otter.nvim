@@ -176,49 +176,46 @@ end
 ---@param conf table|nil optional config to pass to the handler.
 M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   fallback = fallback or nil
+  filter = filter or function(x) return x end
   M.sync_raft(main_nr)
-  local ft = api.nvim_buf_get_option(main_nr, 'filetype')
-  local tsquery = queries[ft]
 
-  if not is_otter_context(main_nr, tsquery) and fallback then
+  local lang = get_current_language_context()
+  if lang == nil and fallback then
     fallback()
-    return
   end
 
-  for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
-    local uri = vim.uri_from_bufnr(otter_nr)
-    local position_params = vim.lsp.util.make_position_params(0)
-    position_params.textDocument = {
-      uri = uri
-    }
-    vim.lsp.buf_request(otter_nr, request, position_params, function(err, response, method, ...)
-      if response == nil then return nil end
-      if filter == nil then
-        vim.lsp.handlers[request](err, response, method, ...)
-      else
-        -- if response is a list of responses, filter every response
-        if #response > 0 then
-          local responses = {}
-          for _, res in ipairs(response) do
-            local filtered_res = filter(res)
-            if filtered_res then
-              table.insert(responses, filtered_res)
-            end
-          end
-          response = responses
-        else
-          -- otherwise apply the filter to the one response
-          response = filter(response)
-        end
-        if handler ~= nil then
-          handler(err, response, method, conf)
-        else
-          vim.lsp.handlers[request](err, response, method, ...)
+  local otter_nr = M._otters_attached[main_nr].buffers[lang]
+  local otter_uri = vim.uri_from_bufnr(otter_nr)
+  local params = vim.lsp.util.make_position_params()
+  params.textDocument = {
+    uri = otter_uri
+  }
+  params.context =  {
+    includeDeclaration = true,
+  }
+  vim.lsp.buf_request(otter_nr, request, params, function(err, response, method, ...)
+    if response == nil then return nil end
+    -- if response is a list of responses, filter every response
+    if #response > 0 then
+      local responses = {}
+      for _, res in ipairs(response) do
+        local filtered_res = filter(res)
+        if filtered_res then
+          table.insert(responses, filtered_res)
         end
       end
+      response = responses
+    else
+      -- otherwise apply the filter to the one response
+      response = filter(response)
     end
-    )
+    if handler ~= nil then
+      handler(err, response, method, conf)
+    else
+      vim.lsp.handlers[request](err, response, method, ...)
+    end
   end
+  )
 end
 
 

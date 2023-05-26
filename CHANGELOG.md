@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/jmbuhr/otter.nvim/compare/v0.11.0...v0.12.0) (2023-05-06)
+
+
+### Features
+
+* more way to get code chunks ([74e569c](https://github.com/jmbuhr/otter.nvim/commit/74e569cba137439f7796f511979c7a77f32ed7bd))
+
 ## [0.11.0](https://github.com/jmbuhr/otter.nvim/compare/v0.10.1...v0.11.0) (2023-05-01)
 
 

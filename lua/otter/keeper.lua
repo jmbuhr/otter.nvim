@@ -182,6 +182,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   local lang = get_current_language_context()
   if lang == nil and fallback then
     fallback()
+    return
   end
 
   local otter_nr = M._otters_attached[main_nr].buffers[lang]
@@ -191,7 +192,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   params.textDocument = {
     uri = otter_uri
   }
-  if request == 'textDocument/rename' then
+  if request == 'textDocument/references' then
     params.context =  {
       includeDeclaration = true,
     }

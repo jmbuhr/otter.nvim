@@ -100,10 +100,8 @@ M.ask_references = function()
     return res
   end
 
-  M.send_request(main_nr, "textDocument/references", function(response)
-      local res = redirect(response)
-      return res
-    end,
+  M.send_request(main_nr, "textDocument/references",
+    redirect,
     vim.lsp.buf.references
   )
 end
@@ -117,7 +115,7 @@ M.ask_rename = function()
   local function redirect(res)
     local changes = res.documentChanges
     local new_changes = {}
-    for _,change in ipairs(changes) do
+    for _, change in ipairs(changes) do
       local uri = change.textDocument.uri
       if require 'otter.tools.functions'.is_otterpath(uri) then
         change.textDocument.uri = main_uri
@@ -128,7 +126,8 @@ M.ask_rename = function()
     return res
   end
 
-  M.send_request(main_nr, "textDocument/rename", redirect,
+  M.send_request(main_nr, "textDocument/rename",
+    redirect,
     vim.lsp.buf.rename
   )
 end

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/jmbuhr/otter.nvim/compare/v0.13.0...v0.13.1) (2023-05-28)
+
+
+### Bug Fixes
+
+* ask_references and return early when outside of otter context ([4fbc0d6](https://github.com/jmbuhr/otter.nvim/commit/4fbc0d6b92837bb38a98d8d991ab412fa4e3d729))
+
 ## [0.13.0](https://github.com/jmbuhr/otter.nvim/compare/v0.12.0...v0.13.0) (2023-05-26)
 
 

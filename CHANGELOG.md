@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/jmbuhr/otter.nvim/compare/v0.13.1...v0.14.0) (2023-05-31)
+
+
+### Features
+
+* **query:** add org mode ([9fffb91](https://github.com/jmbuhr/otter.nvim/commit/9fffb91915007b9fb65ebc051df105ff80ce1100))
+
 ## [0.13.1](https://github.com/jmbuhr/otter.nvim/compare/v0.13.0...v0.13.1) (2023-05-28)
 
 

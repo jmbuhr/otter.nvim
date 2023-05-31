@@ -1,4 +1,4 @@
-*otter.nvim.txt*          For Neovim >= 0.9.0         Last change: 2023 May 28
+*otter.nvim.txt*          For Neovim >= 0.9.0         Last change: 2023 May 31
 
 ==============================================================================
 Table of Contents                               *otter.nvim-table-of-contents*

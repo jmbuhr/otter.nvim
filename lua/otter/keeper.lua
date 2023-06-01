@@ -12,7 +12,7 @@ local ts = vim.treesitter
 local tsq = require'nvim-treesitter.query'
 
 local injectable_languages = {
-  'html', 'js', 'css'
+  'html', 'javascript', 'css', 'vim', 'lua'
 }
 
 
@@ -153,7 +153,6 @@ M.activate = function(languages, completion, tsqueries)
   queries = vim.tbl_deep_extend('force', queries, tsqueries or {})
 
   -- test if we have a query for the main language
-  assert(queries[vim.bo[main_nr].filetype] ~= nil, 'No query found for this file type')
   M._otters_attached[main_nr] = {}
 
   local all_code_chunks = extract_code_chunks(main_nr)

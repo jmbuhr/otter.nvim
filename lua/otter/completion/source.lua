@@ -1,5 +1,6 @@
 local ts = vim.treesitter
 local tsq = require 'nvim-treesitter.query'
+local get_current_language_context = require 'otter.tools.functions'.get_current_language_context
 
 local source = {}
 
@@ -24,39 +25,7 @@ end
 ---associated with this source.
 ---@return boolean
 source.is_otter_lang_context = function(self)
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  row = row - 1
-  col = col
-
-  local parser = ts.get_parser(self.main_nr, self.main_parsername)
-  local query = tsq.get_query(self.main_parsername, 'injections')
-  local tree = parser:parse()
-  local root = tree[1]:root()
-
-  local found_chunk = false
-  local lang_capture
-  for id, node, metadata in query:iter_captures(root, self.main_nr) do
-    local name = query.captures[id]
-    local text
-    -- chunks where the name of the injected language is dynamic
-    -- e.g. markdown code chunks
-    if name == '_lang' then
-      text = ts.get_node_text(node, self.main_nr, metadata)
-      lang_capture = text
-      found_chunk = true
-    end
-    if name == 'content' and found_chunk and lang_capture == self.otter_ft and ts.is_in_node_range(node, row, col) then
-      found_chunk = false
-      return true
-    end
-
-    -- chunks where the name of the language is the name of the capture
-    if (name == self.otter_ft) and ts.is_in_node_range(node, row, col) then
-      return true
-    end
-  end
-  return false
-
+  return get_current_language_context(self.main_nr) == self.otter_ft
 end
 
 

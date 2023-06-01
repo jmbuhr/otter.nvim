@@ -7,4 +7,5 @@ return {
   bash = '.sh',
   html = '.html',
   css = '.css',
+  javascript = '.js',
 }

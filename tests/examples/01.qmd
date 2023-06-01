@@ -8,40 +8,38 @@ engine: markdown
 
 ```{python}
 print('hello world')
-
 ```
 
 <html>
 <body>
 <p>Hello</p>
 </body>
+<div>hello</div>
+<div class="hello">world</div>
 <style>
-body {
-  background-color: grey;
+.hello {
+  color: orange;
 }
 </style>
-</html>
-
 <script>
 console.log('hello world')
 </script>
+</html>
+
+<script>
+consol
+</script>
 
 
-```{html}
-<p>
-</p>
+```{javascript}
+console.log('hello world')
 ```
 
-
-```{r}
-print('hello world')
-```
 
 ```{python}
 def hello():
   print('hello world')
 ```
-
 
 ```{python}
 hello()

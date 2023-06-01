@@ -45,11 +45,9 @@ source.is_otter_lang_context = function(self)
       lang_capture = text
       found_chunk = true
     end
-    if name == 'content' and found_chunk and lang_capture == self.otter_ft then
-      if found_chunk and name == 'code' and ts.is_in_node_range(node, row, col) then
-        return true
-      end
+    if name == 'content' and found_chunk and lang_capture == self.otter_ft and ts.is_in_node_range(node, row, col) then
       found_chunk = false
+      return true
     end
 
     -- chunks where the name of the language is the name of the capture

@@ -312,6 +312,9 @@ end
 local function get_code_chunks_with_eval_true(main_nr, lang, row_from, row_to)
   local ft = api.nvim_buf_get_option(main_nr, 'filetype')
   local tsquery = queries[ft]
+  if tsquery == nil then
+    return {}
+  end
   local parsername = vim.treesitter.language.get_lang(ft)
   local language_tree = ts.get_parser(main_nr, parsername)
   local syntax_tree = language_tree:parse()
@@ -327,10 +330,10 @@ local function get_code_chunks_with_eval_true(main_nr, lang, row_from, row_to)
     for id, node in pairs(match) do
       local name = query.captures[id]
       local text = vim.treesitter.get_node_text(node, 0)
-      if name == 'lang' then
+      if name == '_lang' then
         lang_capture = text
       end
-      if name == 'code' and lang_capture == lang then
+      if name == 'content' and lang_capture == lang then
         local row_start, col1, row_end, col2 = node:range()
         if row_from ~= nil and row_to ~= nil then
           if (row_start >= row_to and row_to > 0) or row_end < row_from then

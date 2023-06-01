@@ -5,4 +5,6 @@ return {
   lua = '.lua',
   haskell = '.hs',
   bash = '.sh',
+  html = '.html',
+  css = '.css',
 }

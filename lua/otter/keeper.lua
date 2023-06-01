@@ -3,24 +3,28 @@ local lines = require 'otter.tools.functions'.lines
 local empty_lines = require 'otter.tools.functions'.empty_lines
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
-local is_otter_context = require 'otter.tools.functions'.is_otter_context
 local get_current_language_context = require 'otter.tools.functions'.get_current_language_context
+local contains = require'otter.tools.functions'.contains
 local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
 local tsq = require'nvim-treesitter.query'
-local handlers = require 'otter.tools.handlers'
-local config = require 'otter.config'.config
+
+local injectable_languages = {
+  'html', 'js', 'css'
+}
 
 
 M._otters_attached = {}
+
 
 ---Extract code chunks from the specified buffer.
 ---@param main_nr integer The main buffer number
 ---@param lang string|nil language to extract. All languages if nil.
 ---@return table
-local function extract_code_chunks(main_nr, lang)
+local function extract_code_chunks(main_nr, lang, injectable)
+  injectable = injectable or injectable_languages
   local main_ft = api.nvim_buf_get_option(main_nr, 'filetype')
   local parsername = vim.treesitter.language.get_lang(main_ft)
   if parsername == nil then return {} end
@@ -35,6 +39,9 @@ local function extract_code_chunks(main_nr, lang)
   for id, node, metadata in query:iter_captures(root, main_nr) do
     local name = query.captures[id]
     local text
+
+    -- chunks where the name of the injected language is dynamic
+    -- e.g. markdown code chunks
     if name == '_lang' then
       text = ts.get_node_text(node, main_nr, metadata)
       lang_capture = text
@@ -54,6 +61,24 @@ local function extract_code_chunks(main_nr, lang)
       table.insert(code_chunks[lang_capture], result)
       found_chunk = false
     end
+
+    -- chunks where the name of the language is the name of the capture
+    if contains(injectable, name) then
+      if (lang == nil or name == lang) then
+        text = ts.get_node_text(node, main_nr, metadata)
+        local row1, col1, row2, col2 = node:range()
+        local result = {
+          range = { from = { row1, col1 }, to = { row2, col2 } },
+          lang = name,
+          text = lines(text)
+        }
+        if code_chunks[name] == nil then
+          code_chunks[name] = {}
+        end
+        table.insert(code_chunks[name], result)
+      end
+    end
+
   end
 
   return code_chunks

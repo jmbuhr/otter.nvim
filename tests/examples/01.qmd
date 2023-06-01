@@ -16,6 +16,9 @@ print('hello world')
 <p>Hello</p>
 </body>
 <style>
+body {
+  background-color: grey;
+}
 </style>
 </html>
 

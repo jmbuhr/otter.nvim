@@ -8,4 +8,5 @@ return {
   html = '.html',
   css = '.css',
   javascript = '.js',
+  yaml = '.yml',
 }

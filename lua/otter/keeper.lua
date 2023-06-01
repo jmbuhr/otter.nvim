@@ -12,7 +12,7 @@ local ts = vim.treesitter
 local tsq = require'nvim-treesitter.query'
 
 local injectable_languages = {
-  'html', 'javascript', 'css', 'vim', 'lua'
+  'html', 'javascript', 'css', 'vim', 'lua', 'yaml'
 }
 
 

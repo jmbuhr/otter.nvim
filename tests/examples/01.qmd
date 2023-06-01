@@ -1,0 +1,28 @@
+---
+title: Hello World
+format: html
+---
+
+# Hello
+
+```{python}
+print('hello world')
+```
+
+<html>
+
+</html>
+
+```{r}
+print('hello world')
+```
+
+```{python}
+def hello():
+  print('hello world')
+```
+
+
+```{python}
+hello()
+```

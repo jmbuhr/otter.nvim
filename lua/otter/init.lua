@@ -4,6 +4,8 @@ local api = vim.api
 local keeper = require 'otter.keeper'
 local handlers = require 'otter.tools.handlers'
 local config = require 'otter.config'.config
+local tsq = require'nvim-treesitter.query'
+local ts = vim.treesitter
 
 M.activate = keeper.activate
 M.sync_raft = keeper.sync_raft
@@ -19,14 +21,29 @@ M.debug = function()
 end
 
 M.dev_setup = function()
-  api.nvim_create_autocmd({ "BufEnter" }, {
-    pattern = { "*.md" },
-    callback = function()
-      M.activate({ 'r', 'python', 'lua' }, true)
-      vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
-      vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
-    end,
-  })
+
+  local lang = vim.api.nvim_buf_get_option(0, 'filetype')
+  local parser = vim.treesitter.get_parser(0, lang)
+  local query = tsq.get_query(lang, 'injections')
+  local tree = parser:parse()
+  local root = tree[1]:root()
+
+  for id, node, metadata in query:iter_captures(root, 0) do
+    local name = query.captures[id] -- name of the capture in the query
+    -- typically useful info about the node:
+    local type = node:type() -- type of the captured node
+    local row1, col1, row2, col2 = node:range() -- range of the capture
+    print(name)
+    print(row1 .. ' - ' .. row2)
+    print(ts.get_node_text(node, 0, metadata))
+  end
+  
+
+  -- M.activate({ 'r', 'python', 'lua' }, true)
+  -- vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
+  -- vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
+  -- vim.api.nvim_buf_set_keymap(0, 'n', 'gr', ":lua require'otter'.ask_references()<cr>", { silent = true })
+  -- vim.api.nvim_buf_set_keymap(0, 'n', '<leader>lR', ":lua require'otter'.ask_rename()<cr>", { silent = true })
 end
 
 -- example implementations to work with the send_request function

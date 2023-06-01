@@ -9,6 +9,7 @@ local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
+local tsq = require'nvim-treesitter.query'
 local handlers = require 'otter.tools.handlers'
 local config = require 'otter.config'.config
 
@@ -17,42 +18,41 @@ M._otters_attached = {}
 
 ---Extract code chunks from the specified buffer.
 ---@param main_nr integer The main buffer number
----@param lang string|nil
+---@param lang string|nil language to extract. All languages if nil.
 ---@return table
 local function extract_code_chunks(main_nr, lang)
-  -- get and parse AST
-  local ft = api.nvim_buf_get_option(main_nr, 'filetype')
-  local tsquery = queries[ft]
-  local parsername = vim.treesitter.language.get_lang(ft)
-  local language_tree = ts.get_parser(main_nr, parsername)
-  local syntax_tree = language_tree:parse()
-  local root = syntax_tree[1]:root()
+  local main_ft = api.nvim_buf_get_option(main_nr, 'filetype')
+  local parsername = vim.treesitter.language.get_lang(main_ft)
+  if parsername == nil then return {} end
+  local parser = ts.get_parser(main_nr, parsername)
+  local query = tsq.get_query(parsername, 'injections')
+  local tree = parser:parse()
+  local root = tree[1]:root()
 
-  -- create capture
-  local query = vim.treesitter.query.parse(parsername, tsquery)
-
-  -- get text ranges
   local code_chunks = {}
-  for pattern, match, metadata in query:iter_matches(root, main_nr) do
-    local lang_capture
-    for id, node in pairs(match) do
-      local name = query.captures[id]
-      local text = vim.treesitter.get_node_text(node, 0)
-      if name == 'lang' then
-        lang_capture = text
+  local found_chunk = false
+  local lang_capture
+  for id, node, metadata in query:iter_captures(root, main_nr) do
+    local name = query.captures[id]
+    local text
+    if name == '_lang' then
+      text = ts.get_node_text(node, main_nr, metadata)
+      lang_capture = text
+      found_chunk = true
+    end
+    if name == 'content' and found_chunk and (lang == nil or lang_capture == lang) then
+      text = ts.get_node_text(node, main_nr, metadata)
+      local row1, col1, row2, col2 = node:range()
+      local result = {
+        range = { from = { row1, col1 }, to = { row2, col2 } },
+        lang = lang_capture,
+        text = lines(text)
+      }
+      if code_chunks[lang_capture] == nil then
+        code_chunks[lang_capture] = {}
       end
-      if name == 'code' and (lang == nil or lang_capture == lang) then
-        local row1, col1, row2, col2 = node:range()
-        local result = {
-          range = { from = { row1, col1 }, to = { row2, col2 } },
-          lang = lang_capture,
-          text = lines(text)
-        }
-        if code_chunks[lang_capture] == nil then
-          code_chunks[lang_capture] = {}
-        end
-        table.insert(code_chunks[lang_capture], result)
-      end
+      table.insert(code_chunks[lang_capture], result)
+      found_chunk = false
     end
   end
 

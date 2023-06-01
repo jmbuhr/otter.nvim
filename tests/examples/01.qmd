@@ -35,7 +35,6 @@ consol
 console.log('hello world')
 ```
 
-
 ```{python}
 def hello():
   print('hello world')

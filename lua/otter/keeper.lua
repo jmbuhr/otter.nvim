@@ -23,13 +23,18 @@ M._otters_attached = {}
 ---@param main_nr integer The main buffer number
 ---@param lang string|nil language to extract. All languages if nil.
 ---@return table
-local function extract_code_chunks(main_nr, lang, injectable)
+local function extract_code_chunks(main_nr, lang, injectable, tsquery)
   injectable = injectable or injectable_languages
   local main_ft = api.nvim_buf_get_option(main_nr, 'filetype')
   local parsername = vim.treesitter.language.get_lang(main_ft)
   if parsername == nil then return {} end
   local parser = ts.get_parser(main_nr, parsername)
-  local query = tsq.get_query(parsername, 'injections')
+  local query
+  if tsquery ~= nil then
+    query = ts.query.parse(parsername, tsquery)
+  else
+    query = tsq.get_query(parsername, 'injections')
+  end
   local tree = parser:parse()
   local root = tree[1]:root()
 
@@ -204,8 +209,11 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   M.sync_raft(main_nr)
 
   local lang = get_current_language_context()
-  if lang == nil and fallback then
-    fallback()
+  
+  if not contains(M._otters_attached[main_nr].languages, lang) then
+    if fallback then
+      fallback()
+    end
     return
   end
 

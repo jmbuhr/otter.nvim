@@ -4,7 +4,7 @@ local get_current_language_context = require 'otter.tools.functions'.get_current
 
 local source = {}
 
-source.new = function(client, main_nr, otter_nr, updater, queries)
+source.new = function(client, main_nr, otter_nr, updater, tsquery)
   local self = setmetatable({}, { __index = source })
   self.client = client
   self.otter_nr = otter_nr
@@ -13,7 +13,7 @@ source.new = function(client, main_nr, otter_nr, updater, queries)
   self.main_ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
   self.otter_parsername = vim.treesitter.language.get_lang(self.otter_ft)
   self.main_parsername = vim.treesitter.language.get_lang(self.main_ft)
-  self.main_tsquery = queries[self.main_ft]
+  self.main_tsquery = tsquery
   self.context = require 'otter.tools.contexts'[self.main_ft]
   self.id = otter_nr
   self.request_ids = {}

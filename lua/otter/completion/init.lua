@@ -1,4 +1,5 @@
 local source = require 'otter.completion.source'
+local keeper = require 'otter.keeper'
 
 local M = {}
 
@@ -7,9 +8,9 @@ M.cmp_client_source_map = {}
 M.allowed_clients = {}
 
 ---Setup cmp-nvim-lsp source.
-M.setup_source = function(main_nr, otter_nr, queries)
+M.setup_source = function(main_nr, otter_nr)
   local callback = function()
-    M.cmp_on_insert_enter(main_nr, otter_nr, queries)
+    M.cmp_on_insert_enter(main_nr, otter_nr)
   end
   vim.api.nvim_create_autocmd('InsertEnter', {
     buffer = main_nr,
@@ -20,14 +21,14 @@ end
 
 ---Refresh sources on InsertEnter.
 -- adds a source for the otter buffer
-M.cmp_on_insert_enter = function(main_nr, otter_nr, queries)
+M.cmp_on_insert_enter = function(main_nr, otter_nr)
   local cmp = require('cmp')
 
   -- register all active clients.
   for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = otter_nr })) do
     M.allowed_clients[client.id] = client
     if not M.cmp_client_source_map[client.id] then
-      local s = source.new(client, main_nr, otter_nr, require 'otter.keeper'.sync_this_raft, queries)
+      local s = source.new(client, main_nr, otter_nr, keeper.sync_this_raft, keeper._otters_attached[main_nr].tsquery)
       if s:is_available() then
         M.cmp_client_source_map[s.client.id] = cmp.register_source('otter', s)
       end

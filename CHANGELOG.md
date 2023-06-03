@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/jmbuhr/otter.nvim/compare/v0.14.0...v0.15.0) (2023-06-03)
+
+
+### Features
+
+* use injections ([c05e899](https://github.com/jmbuhr/otter.nvim/commit/c05e899dc867360d41800cf791759e77f91bdbbf))
+
 ## [0.14.0](https://github.com/jmbuhr/otter.nvim/compare/v0.13.1...v0.14.0) (2023-05-31)
 
 

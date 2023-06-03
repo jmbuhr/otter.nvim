@@ -4,8 +4,6 @@ local api = vim.api
 local keeper = require 'otter.keeper'
 local handlers = require 'otter.tools.handlers'
 local config = require 'otter.config'.config
-local tsq = require'nvim-treesitter.query'
-local ts = vim.treesitter
 
 M.activate = keeper.activate
 M.sync_raft = keeper.sync_raft

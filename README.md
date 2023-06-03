@@ -75,6 +75,13 @@ Specifically, you'll want to look at the `lua/plugins/quarto.lua` file
 in the [quarto-nvim-kickstarter](https://github.com/jmbuhr/quarto-nvim-kickstarter)
 configuration.
 
+Assuming `otter.nvim` is configured and added to `nvim-cmp` as a completion source,
+call `require'otter'.activate({'python', 'r', <more languages you want to embed> })` on any
+buffer that has injections (see `:h treesitter-language-injections`) defined
+and you will see code completion and diagnostics (on save).
+
+Then use the `otter.ask_...` functions to e.g. ask for hover documentation, references or the definition.
+
 ### Dependencies
 
 `otter.nvim` relies on the following plugins:
@@ -85,23 +92,6 @@ configuration.
   'neovim/nvim-lspconfig',
   'nvim-treesitter/nvim-treesitter'
 }
-```
-
-If you call `require'otter'.dev_setup()` in your nvim configuration you will even see
-code completion and documentation windows for the lua chunks in this readme!
-All this function does is:
-
-```lua
-otter = require'otter'
-
-api.nvim_create_autocmd({ "BufEnter" }, {
-  pattern = { "*.md" },
-  callback = function()
-    otter.activate({ 'r', 'python', 'lua' }, true)
-    vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
-    vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
-  end,
-})
 ```
 
 ![An otter eagerly awaiting your lsp requests. Generated with DALL-E 2.](img/2022-12-23-15-59-24.png)

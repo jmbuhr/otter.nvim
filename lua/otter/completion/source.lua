@@ -1,8 +1,10 @@
 local ts = vim.treesitter
+local tsq = require 'nvim-treesitter.query'
+local keeper = require 'otter.keeper'
 
 local source = {}
 
-source.new = function(client, main_nr, otter_nr, updater, queries)
+source.new = function(client, main_nr, otter_nr, updater, tsquery)
   local self = setmetatable({}, { __index = source })
   self.client = client
   self.otter_nr = otter_nr
@@ -11,7 +13,7 @@ source.new = function(client, main_nr, otter_nr, updater, queries)
   self.main_ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
   self.otter_parsername = vim.treesitter.language.get_lang(self.otter_ft)
   self.main_parsername = vim.treesitter.language.get_lang(self.main_ft)
-  self.main_tsquery = queries[self.main_ft]
+  self.main_tsquery = tsquery
   self.context = require 'otter.tools.contexts'[self.main_ft]
   self.id = otter_nr
   self.request_ids = {}
@@ -23,38 +25,7 @@ end
 ---associated with this source.
 ---@return boolean
 source.is_otter_lang_context = function(self)
-  local language_tree = ts.get_parser(self.main_nr, self.main_parsername)
-  local syntax_tree = language_tree:parse()
-  local root = syntax_tree[1]:root()
-
-  -- create capture
-  local query = vim.treesitter.query.parse(self.main_parsername, self.main_tsquery)
-
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  row = row - 1
-  col = col
-
-  -- get text ranges
-  for pattern, match, metadata in query:iter_matches(root, self.main_nr) do
-    -- each match has two nodes, the language and the code
-    -- the language node is the first one
-    local found = false -- reset found for the next match
-    for id, node in pairs(match) do
-      local name = query.captures[id]
-      local ok, text = pcall(vim.treesitter.get_node_text, node, 0)
-      if not ok then return false end
-      if name == 'lang' and text == self.otter_ft then
-        -- we found a match where the language node matches
-        -- the otter language
-        found = true
-      end
-      -- the corresponding code is in the current range
-      if found and name == 'code' and ts.is_in_node_range(node, row, col) then
-        return true
-      end
-    end
-  end
-  return false
+  return keeper.get_current_language_context(self.main_nr) == self.otter_ft
 end
 
 
@@ -85,7 +56,6 @@ source.is_available = function(self)
     return false
   end
   return true;
-
 end
 
 ---Get LSP's PositionEncodingKind.

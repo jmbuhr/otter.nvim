@@ -19,14 +19,12 @@ M.debug = function()
 end
 
 M.dev_setup = function()
-  api.nvim_create_autocmd({ "BufEnter" }, {
-    pattern = { "*.md" },
-    callback = function()
-      M.activate({ 'r', 'python', 'lua' }, true)
-      vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
-      vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
-    end,
-  })
+
+  M.activate({ 'r', 'python', 'lua', 'html', 'css' }, true)
+  vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
+  vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
+  vim.api.nvim_buf_set_keymap(0, 'n', 'gr', ":lua require'otter'.ask_references()<cr>", { silent = true })
+  vim.api.nvim_buf_set_keymap(0, 'n', '<leader>lR', ":lua require'otter'.ask_rename()<cr>", { silent = true })
 end
 
 -- example implementations to work with the send_request function

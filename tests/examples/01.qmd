@@ -1,0 +1,45 @@
+---
+title: Hello World
+format: html
+engine: markdown
+---
+
+# Hello
+
+```{python}
+print('hello world')
+```
+
+<html>
+<body>
+<p>Hello</p>
+</body>
+<div>hello</div>
+<div class="hello">world</div>
+<style>
+.hello {
+  color: orange;
+}
+</style>
+<script>
+console.log('hello world')
+</script>
+</html>
+
+<script>
+consol
+</script>
+
+
+```{javascript}
+console.log('hello world')
+```
+
+```{python}
+def hello():
+  print('hello world')
+```
+
+```{python}
+hello()
+```

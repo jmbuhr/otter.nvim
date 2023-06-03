@@ -3,55 +3,120 @@ local lines = require 'otter.tools.functions'.lines
 local empty_lines = require 'otter.tools.functions'.empty_lines
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
-local is_otter_context = require 'otter.tools.functions'.is_otter_context
-local get_current_language_context = require 'otter.tools.functions'.get_current_language_context
-local queries = require 'otter.tools.queries'
+local concat = require 'otter.tools.functions'.concat
+local contains = require 'otter.tools.functions'.contains
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
-local handlers = require 'otter.tools.handlers'
-local config = require 'otter.config'.config
-
 
 M._otters_attached = {}
 
+local injectable_languages = { }
+for key, _ in pairs(extensions) do
+  table.insert(injectable_languages, key)
+end
+
 ---Extract code chunks from the specified buffer.
 ---@param main_nr integer The main buffer number
----@param lang string|nil
+---@param lang string|nil language to extract. All languages if nil.
 ---@return table
-local function extract_code_chunks(main_nr, lang)
-  -- get and parse AST
-  local ft = api.nvim_buf_get_option(main_nr, 'filetype')
-  local tsquery = queries[ft]
-  local parsername = vim.treesitter.language.get_lang(ft)
-  local language_tree = ts.get_parser(main_nr, parsername)
-  local syntax_tree = language_tree:parse()
-  local root = syntax_tree[1]:root()
+local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, row_to)
+  local query = M._otters_attached[main_nr].query
+  local parser = M._otters_attached[main_nr].parser
+  local tree = parser:parse()
+  local root = tree[1]:root()
 
-  -- create capture
-  local query = vim.treesitter.query.parse(parsername, tsquery)
-
-  -- get text ranges
   local code_chunks = {}
-  for pattern, match, metadata in query:iter_matches(root, main_nr) do
-    local lang_capture
-    for id, node in pairs(match) do
-      local name = query.captures[id]
-      local text = vim.treesitter.get_node_text(node, 0)
-      if name == 'lang' then
-        lang_capture = text
+  local found_chunk = false
+  local lang_capture
+  for id, node, metadata in query:iter_captures(root, main_nr) do
+    local name = query.captures[id]
+    local text
+
+    -- chunks where the name of the injected language is dynamic
+    -- e.g. markdown code chunks
+    if name == '_lang' then
+      text = ts.get_node_text(node, main_nr, metadata)
+      lang_capture = text
+      found_chunk = true
+    elseif name == 'content' and found_chunk and (lang == nil or lang_capture == lang) then
+      text = ts.get_node_text(node, main_nr, metadata)
+      if exclude_eval_false and string.find(text, '| *eval: *false') then
+        text = ''
       end
-      if name == 'code' and (lang == nil or lang_capture == lang) then
+      local row1, col1, row2, col2 = node:range()
+      if row_from ~= nil and row_to ~= nil then
+        if (row1 >= row_to and row_to > 0) or row2 < row_from then
+          goto continue
+        end
+      end
+      local result = {
+        range = { from = { row1, col1 }, to = { row2, col2 } },
+        lang = lang_capture,
+        node = node,
+        text = lines(text)
+      }
+      if code_chunks[lang_capture] == nil then
+        code_chunks[lang_capture] = {}
+      end
+      table.insert(code_chunks[lang_capture], result)
+      found_chunk = false
+      -- chunks where the name of the language is the name of the capture
+    elseif contains(injectable_languages, name) then
+      if (lang == nil or name == lang) then
+        text = ts.get_node_text(node, main_nr, metadata)
         local row1, col1, row2, col2 = node:range()
         local result = {
           range = { from = { row1, col1 }, to = { row2, col2 } },
-          lang = lang_capture,
+          lang = name,
+          node = node,
           text = lines(text)
         }
-        if code_chunks[lang_capture] == nil then
-          code_chunks[lang_capture] = {}
+        if code_chunks[name] == nil then
+          code_chunks[name] = {}
         end
-        table.insert(code_chunks[lang_capture], result)
+        table.insert(code_chunks[name], result)
+      end
+    end
+    ::continue::
+  end
+
+  return code_chunks
+end
+
+
+M.get_current_language_context = function(main_nr)
+  main_nr = main_nr or api.nvim_get_current_buf()
+  local row, col = unpack(api.nvim_win_get_cursor(0))
+  row = row - 1
+  col = col
+
+  local query = M._otters_attached[main_nr].query
+  local parser = M._otters_attached[main_nr].parser
+  local tree = parser:parse()
+  local root = tree[1]:root()
+  local code_chunks = {}
+  local found_chunk = false
+  local lang_capture
+
+  for id, node, metadata in query:iter_captures(root, main_nr) do
+    local name = query.captures[id]
+    local text
+    -- chunks where the name of the injected language is dynamic
+    -- e.g. markdown code chunks
+    if name == '_lang' then
+      text = ts.get_node_text(node, main_nr, metadata)
+      lang_capture = text
+      found_chunk = true
+    elseif name == 'content' and found_chunk then
+      if ts.is_in_node_range(node, row, col) then
+        return lang_capture
+      end
+      -- chunks where the name of the language is the name of the capture
+    elseif contains(injectable_languages, name) then
+      text = ts.get_node_text(node, main_nr, metadata)
+      if ts.is_in_node_range(node, row, col) then
+        return name
       end
     end
   end
@@ -59,18 +124,17 @@ local function extract_code_chunks(main_nr, lang)
   return code_chunks
 end
 
+
 --- Syncronize the raft of otters attached to a buffer
 ---@param main_nr integer
 M.sync_raft = function(main_nr)
   -- return early if buffer content has not changed
-
   local tick = vim.api.nvim_buf_get_changedtick(main_nr)
   local ottertick = vim.api.nvim_buf_get_var(main_nr, 'ottertick')
   if ottertick == tick then
     return
   end
   vim.api.nvim_buf_set_var(main_nr, 'ottertick', tick)
-
 
   local all_code_chunks = extract_code_chunks(main_nr)
   if next(all_code_chunks) == nil then
@@ -80,30 +144,29 @@ M.sync_raft = function(main_nr)
     local languages = M._otters_attached[main_nr].languages
     for _, lang in ipairs(languages) do
       local otter_nr = M._otters_attached[main_nr].buffers[lang]
-      local code_chunks = all_code_chunks[lang]
-      if code_chunks ~= nil then
-        local nmax = code_chunks[#code_chunks].range['to'][1] -- last code line
+      if otter_nr ~= nil then
+        local code_chunks = all_code_chunks[lang]
+        if code_chunks ~= nil then
+          local nmax = code_chunks[#code_chunks].range['to'][1] -- last code line
 
-        -- create list with empty lines the lenght of the buffer
-        local ls = empty_lines(nmax)
+          -- create list with empty lines the lenght of the buffer
+          local ls = empty_lines(nmax)
 
-        -- write language lines
-        for _, t in ipairs(code_chunks) do
-          local start_index = t.range['from'][1]
-          for i, l in ipairs(t.text) do
-            local index = start_index + i
-            table.remove(ls, index)
-            table.insert(ls, index, l)
+          -- collect language lines
+          for _, t in ipairs(code_chunks) do
+            local start_index = t.range['from'][1]
+            for i, l in ipairs(t.text) do
+              local index = start_index + i
+              table.remove(ls, index)
+              table.insert(ls, index, l)
+            end
           end
+
+          -- clear buffer
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
+          -- add language lines
+          api.nvim_buf_set_lines(otter_nr, 0, nmax, false, ls)
         end
-
-        -- vim.print(ls)
-
-        -- clear buffer
-        api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
-
-        -- add language lines
-        api.nvim_buf_set_lines(otter_nr, 0, nmax, false, ls)
       end
     end
   end
@@ -118,26 +181,33 @@ end
 --- Activate the current buffer by adding and syncronizing
 --- otter buffers.
 ---@param languages table
----@param completion boolean
----@param tsqueries table|nil
-M.activate = function(languages, completion, tsqueries)
+---@param completion boolean|nil
+---@param diagnostics boolean|nil
+---@param tsquery string|nil
+M.activate = function(languages, completion, diagnostics, tsquery)
+  completion = completion or true
+  diagnostics = diagnostics or true
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
-
-  -- merge supplied queries with pre-installed ones
-  queries = vim.tbl_deep_extend('force', queries, tsqueries or {})
-
-  -- test if we have a query for the main language
-  assert(queries[vim.bo[main_nr].filetype] ~= nil, 'No query found for this file type')
+  local parsername = vim.treesitter.language.get_lang(api.nvim_buf_get_option(main_nr, 'filetype'))
+  local query
+  if tsquery ~= nil then
+    query = ts.query.parse(parsername, tsquery)
+  else
+    query = ts.query.get(parsername, 'injections')
+  end
   M._otters_attached[main_nr] = {}
-
-  local all_code_chunks = extract_code_chunks(main_nr)
   M._otters_attached[main_nr].languages = languages
   M._otters_attached[main_nr].buffers = {}
+  M._otters_attached[main_nr].tsquery = tsquery
+  M._otters_attached[main_nr].query = query
+  M._otters_attached[main_nr].parser = ts.get_parser(main_nr, parsername)
+
+  local all_code_chunks = extract_code_chunks(main_nr)
 
   -- create otter buffers
   for _, lang in ipairs(languages) do
-    local extension = extensions[lang]
+    local extension = '.' .. extensions[lang]
     if extension == nil then goto continue end
     local code_chunks = all_code_chunks[lang]
     if code_chunks == nil then goto continue end
@@ -160,8 +230,29 @@ M.activate = function(languages, completion, tsqueries)
 
   if completion then
     for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
-      require 'otter.completion'.setup_source(main_nr, otter_nr, queries)
+      require 'otter.completion'.setup_source(main_nr, otter_nr)
     end
+  end
+
+  if diagnostics then
+    local nss = {}
+    for lang, bufnr in pairs(M._otters_attached[main_nr].buffers) do
+      local ns = api.nvim_create_namespace('otter-lang-' .. lang)
+      nss[bufnr] = ns
+    end
+
+    api.nvim_create_autocmd("BufWritePost", {
+      buffer = main_nr,
+      group = api.nvim_create_augroup("OtterLSPDiagnositcs", {}),
+      callback = function(_, _)
+        M.sync_raft(main_nr)
+        for bufnr, ns in pairs(nss) do
+          local diag = vim.diagnostic.get(bufnr)
+          vim.diagnostic.reset(ns, main_nr)
+          vim.diagnostic.set(ns, main_nr, diag, {})
+        end
+      end
+    })
   end
 end
 
@@ -179,9 +270,12 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   filter = filter or function(x) return x end
   M.sync_raft(main_nr)
 
-  local lang = get_current_language_context()
-  if lang == nil and fallback then
-    fallback()
+  local lang = M.get_current_language_context()
+
+  if not contains(M._otters_attached[main_nr].languages, lang) then
+    if fallback then
+      fallback()
+    end
     return
   end
 
@@ -193,7 +287,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     uri = otter_uri
   }
   if request == 'textDocument/references' then
-    params.context =  {
+    params.context = {
       includeDeclaration = true,
     }
   end
@@ -204,7 +298,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       prompt = 'New Name: ',
       default = cword
     }
-    vim.ui.input(prompt_opts, function (input)
+    vim.ui.input(prompt_opts, function(input)
       params.newName = input
     end)
   end
@@ -277,110 +371,51 @@ M.export_otter_as = function(language, fname, force)
 end
 
 
-local function get_code_chunks_with_eval_true(main_nr, lang, row_from, row_to)
-  local ft = api.nvim_buf_get_option(main_nr, 'filetype')
-  local tsquery = queries[ft]
-  local parsername = vim.treesitter.language.get_lang(ft)
-  local language_tree = ts.get_parser(main_nr, parsername)
-  local syntax_tree = language_tree:parse()
-  local root = syntax_tree[1]:root()
-
-  -- create capture
-  local query = vim.treesitter.query.parse(parsername, tsquery)
-
-  -- get text ranges
-  local code = {}
-  for pattern, match, metadata in query:iter_matches(root, main_nr) do
-    local lang_capture
-    for id, node in pairs(match) do
-      local name = query.captures[id]
-      local text = vim.treesitter.get_node_text(node, 0)
-      if name == 'lang' then
-        lang_capture = text
-      end
-      if name == 'code' and lang_capture == lang then
-        local row_start, col1, row_end, col2 = node:range()
-        if row_from ~= nil and row_to ~= nil then
-          if (row_start >= row_to and row_to > 0) or row_end < row_from then
-            goto continue
-          end
-        end
-        if string.find(text, '#| *eval: *false') then
-          goto continue
-        end
-        table.insert(code, text)
-      end
-      ::continue::
-    end
+M.get_curent_language_lines = function(exclude_eval_false, row_start, row_end)
+  local main_nr = vim.api.nvim_get_current_buf()
+  M.sync_raft(main_nr)
+  local lang = M.get_current_language_context()
+  if lang == nil then
+    return
   end
 
+  local chunks = extract_code_chunks(main_nr, lang, exclude_eval_false, row_start, row_end)[lang]
+  if not chunks or next(chunks) == nil then
+    return
+  end
+  local code = {}
+  for _, c in ipairs(chunks) do
+    table.insert(code, concat(c.text))
+  end
   return code
 end
 
-
-M.get_language_lines_to_cursor = function(include_eval_false)
-  local main_nr = vim.api.nvim_get_current_buf()
-  M.sync_raft(main_nr)
-  local lang = get_current_language_context()
-  if lang == nil then
-    return
-  end
-  local otter_nr = M._otters_attached[main_nr].buffers[lang]
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  row = row - 1
-  if include_eval_false then
-    return vim.api.nvim_buf_get_lines(otter_nr, 0, row + 2, false)
-  end
-  return get_code_chunks_with_eval_true(main_nr, lang, 0, row + 2)
+M.get_language_lines_to_cursor = function(exclude_eval_false)
+  local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
+  row = row + 1
+  return M.get_curent_language_lines(exclude_eval_false, 0, row)
 end
 
-M.get_language_lines_from_cursor = function(include_eval_false)
-  local main_nr = vim.api.nvim_get_current_buf()
-  M.sync_raft(main_nr)
-  local lang = get_current_language_context()
-  if lang == nil then
-    return
-  end
-  local otter_nr = M._otters_attached[main_nr].buffers[lang]
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  row = row - 1
-  if include_eval_false then
-    return vim.api.nvim_buf_get_lines(otter_nr, row, -1, false)
-  end
-  return get_code_chunks_with_eval_true(main_nr, lang, row, -1)
+M.get_language_lines_from_cursor = function(exclude_eval_false)
+  local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
+  row = row + 1
+  return M.get_curent_language_lines(exclude_eval_false, row, -1)
 end
 
-
-M.get_language_lines = function(include_eval_false)
-  local main_nr = vim.api.nvim_get_current_buf()
-  M.sync_raft(main_nr)
-  local lang = get_current_language_context()
-  if lang == nil then
-    return
-  end
-  local otter_nr = M._otters_attached[main_nr].buffers[lang]
-  if include_eval_false then
-    return vim.api.nvim_buf_get_lines(otter_nr, 0, -1, false)
-  end
-  return get_code_chunks_with_eval_true(main_nr, lang)
+M.get_language_lines = function(exclude_eval_false)
+  return M.get_curent_language_lines(exclude_eval_false)
 end
 
-M.get_language_lines_in_visual_selection = function(include_eval_false)
-  local main_nr = vim.api.nvim_get_current_buf()
-  M.sync_raft(main_nr)
-  local lang = get_current_language_context()
+M.get_language_lines_in_visual_selection = function(exclude_eval_false)
+  local lang = M.get_current_language_context()
   if lang == nil then
     return
   end
-  local otter_nr = M._otters_attached[main_nr].buffers[lang]
-  local row_start, _ = unpack(api.nvim_buf_get_mark(main_nr, '<'))
-  local row_end, _ = unpack(api.nvim_buf_get_mark(main_nr, '>'))
+  local row_start, _ = unpack(api.nvim_buf_get_mark(0, '<'))
+  local row_end, _ = unpack(api.nvim_buf_get_mark(0, '>'))
   row_start = row_start - 1
   row_end = row_end - 1
-  if include_eval_false then
-    return vim.api.nvim_buf_get_lines(otter_nr, row_start, row_end + 2, false)
-  end
-  return get_code_chunks_with_eval_true(main_nr, lang, row_start, row_end + 2)
+  return M.get_curent_language_lines(exclude_eval_false, row_start, row_end)
 end
 
 return M

@@ -1,0 +1,23 @@
+#+title:  Example Org File
+#+author: TEC
+#+date:   2020-10-27
+
+* Learn Org
+
+Org makes easy things trivial and complex things practical.
+
+You don't need to learn Org before using Org: read the quickstart
+page and you should be good to go.  If you need more, Org will be
+here for you as well: dive into the manual and join the community!
+
+#+begin_src python
+from pathlib import Path
+cssRatios = []
+for css_min in Path("resources/style").glob("*.min.css"):
+    css = css_min.with_suffix('').with_suffix('.css')
+    cssRatios.append([css.name,
+    "{:.0f}% minified ({:4.1f} KiB)".format( 100 *
+                      css_min.stat().st_size / css.stat().st_size,
+                      css_min.stat().st_size / 1000)])
+return cssRatios
+#+end_src

@@ -3,7 +3,7 @@ local lines = require 'otter.tools.functions'.lines
 local empty_lines = require 'otter.tools.functions'.empty_lines
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
-local concat = require'otter.tools.functions'.concat
+local concat = require 'otter.tools.functions'.concat
 local contains = require 'otter.tools.functions'.contains
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
@@ -89,55 +89,39 @@ M.get_current_language_context = function(main_nr)
   row = row - 1
   col = col
 
-  local code_chunks = extract_code_chunks(main_nr)
-  for lang, results in pairs(code_chunks) do
-    for _, result in ipairs(results) do
-      if ts.is_in_node_range(result.node, row, col) then
-        return lang
-      end
-    end
-  end
-
-
-end
-
-local function get_code_chunks_with_eval_true(main_nr, lang, row_from, row_to)
-  local main_ft = api.nvim_buf_get_option(main_nr, 'filetype')
-  local parsername = vim.treesitter.language.get_lang(main_ft)
-  if parsername == nil then return {} end
-  local parser = ts.get_parser(main_nr, parsername)
-  local query = tsq.get_query(parsername, 'injections')
+  local query = M._otters_attached[main_nr].query
+  local parser = M._otters_attached[main_nr].parser
   local tree = parser:parse()
   local root = tree[1]:root()
+  local code_chunks = {}
+  local found_chunk = false
+  local lang_capture
 
-  -- get text ranges
-  local code = {}
-  for pattern, match, metadata in query:iter_matches(root, main_nr) do
-    local lang_capture
-    for id, node in pairs(match) do
-      local name = query.captures[id]
-      local text = vim.treesitter.get_node_text(node, 0)
-      if name == '_lang' then
-        lang_capture = text
+  for id, node, metadata in query:iter_captures(root, main_nr) do
+    local name = query.captures[id]
+    local text
+    -- chunks where the name of the injected language is dynamic
+    -- e.g. markdown code chunks
+    if name == '_lang' then
+      text = ts.get_node_text(node, main_nr, metadata)
+      lang_capture = text
+      found_chunk = true
+    elseif name == 'content' and found_chunk then
+      if ts.is_in_node_range(node, row, col) then
+        return lang_capture
       end
-      if name == 'content' and lang_capture == lang then
-        local row_start, col1, row_end, col2 = node:range()
-        if row_from ~= nil and row_to ~= nil then
-          if (row_start >= row_to and row_to > 0) or row_end < row_from then
-            goto continue
-          end
-        end
-        if string.find(text, '#| *eval: *false') then
-          goto continue
-        end
-        table.insert(code, text)
+      -- chunks where the name of the language is the name of the capture
+    elseif not contains(not_injectable_captures, name) then
+      text = ts.get_node_text(node, main_nr, metadata)
+      if ts.is_in_node_range(node, row, col) then
+        return name
       end
-      ::continue::
     end
   end
 
-  return code
+  return code_chunks
 end
+
 
 --- Syncronize the raft of otters attached to a buffer
 ---@param main_nr integer
@@ -216,7 +200,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   M._otters_attached[main_nr].tsquery = tsquery
   M._otters_attached[main_nr].query = query
   M._otters_attached[main_nr].parser = ts.get_parser(main_nr, parsername)
-
 
   local all_code_chunks = extract_code_chunks(main_nr)
 
@@ -406,13 +389,13 @@ M.get_curent_language_lines = function(exclude_eval_false, row_start, row_end)
 end
 
 M.get_language_lines_to_cursor = function(exclude_eval_false)
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
   row = row + 1
   return M.get_curent_language_lines(exclude_eval_false, 0, row)
 end
 
 M.get_language_lines_from_cursor = function(exclude_eval_false)
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
   row = row + 1
   return M.get_curent_language_lines(exclude_eval_false, row, -1)
 end

@@ -8,11 +8,13 @@ local contains = require 'otter.tools.functions'.contains
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
-local tsq = require 'nvim-treesitter.query'
 
 M._otters_attached = {}
 
-local not_injectable_captures = { 'markdown_inline', 'combined' }
+local injectable_languages = { }
+for key, _ in pairs(extensions) do
+  table.insert(injectable_languages, key)
+end
 
 ---Extract code chunks from the specified buffer.
 ---@param main_nr integer The main buffer number
@@ -60,7 +62,7 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
       table.insert(code_chunks[lang_capture], result)
       found_chunk = false
       -- chunks where the name of the language is the name of the capture
-    elseif not contains(not_injectable_captures, name) then
+    elseif contains(injectable_languages, name) then
       if (lang == nil or name == lang) then
         text = ts.get_node_text(node, main_nr, metadata)
         local row1, col1, row2, col2 = node:range()
@@ -111,7 +113,7 @@ M.get_current_language_context = function(main_nr)
         return lang_capture
       end
       -- chunks where the name of the language is the name of the capture
-    elseif not contains(not_injectable_captures, name) then
+    elseif contains(injectable_languages, name) then
       text = ts.get_node_text(node, main_nr, metadata)
       if ts.is_in_node_range(node, row, col) then
         return name
@@ -205,7 +207,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
   -- create otter buffers
   for _, lang in ipairs(languages) do
-    local extension = extensions[lang]
+    local extension = '.' .. extensions[lang]
     if extension == nil then goto continue end
     local code_chunks = all_code_chunks[lang]
     if code_chunks == nil then goto continue end

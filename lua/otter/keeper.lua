@@ -19,17 +19,8 @@ local not_injectable_captures = { 'markdown_inline', 'combined' }
 ---@param lang string|nil language to extract. All languages if nil.
 ---@return table
 local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, row_to)
-  local main_ft = api.nvim_buf_get_option(main_nr, 'filetype')
-  local parsername = vim.treesitter.language.get_lang(main_ft)
-  if parsername == nil then return {} end
-  local parser = ts.get_parser(main_nr, parsername)
-  local query
-  local tsquery = M._otters_attached[main_nr].tsquery
-  if tsquery ~= nil then
-    query = ts.query.parse(parsername, tsquery)
-  else
-    query = tsq.get_query(parsername, 'injections')
-  end
+  local query = M._otters_attached[main_nr].query
+  local parser = M._otters_attached[main_nr].parser
   local tree = parser:parse()
   local root = tree[1]:root()
 
@@ -94,7 +85,6 @@ end
 
 M.get_current_language_context = function(main_nr)
   main_nr = main_nr or api.nvim_get_current_buf()
-
   local row, col = unpack(api.nvim_win_get_cursor(0))
   row = row - 1
   col = col
@@ -107,6 +97,8 @@ M.get_current_language_context = function(main_nr)
       end
     end
   end
+
+
 end
 
 local function get_code_chunks_with_eval_true(main_nr, lang, row_from, row_to)
@@ -211,11 +203,21 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   diagnostics = diagnostics or true
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
-
+  local parsername = vim.treesitter.language.get_lang(api.nvim_buf_get_option(main_nr, 'filetype'))
+  local query
+  if tsquery ~= nil then
+    query = ts.query.parse(parsername, tsquery)
+  else
+    query = ts.query.get(parsername, 'injections')
+  end
   M._otters_attached[main_nr] = {}
   M._otters_attached[main_nr].languages = languages
   M._otters_attached[main_nr].buffers = {}
   M._otters_attached[main_nr].tsquery = tsquery
+  M._otters_attached[main_nr].query = query
+  M._otters_attached[main_nr].parser = ts.get_parser(main_nr, parsername)
+
+
   local all_code_chunks = extract_code_chunks(main_nr)
 
   -- create otter buffers

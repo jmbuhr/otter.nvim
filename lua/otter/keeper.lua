@@ -3,9 +3,8 @@ local lines = require 'otter.tools.functions'.lines
 local empty_lines = require 'otter.tools.functions'.empty_lines
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
-local get_current_language_context = require 'otter.tools.functions'.get_current_language_context
+local concat = require'otter.tools.functions'.concat
 local contains = require 'otter.tools.functions'.contains
-local queries = require 'otter.tools.queries'
 local extensions = require 'otter.tools.extensions'
 local api = vim.api
 local ts = vim.treesitter
@@ -61,6 +60,7 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
       local result = {
         range = { from = { row1, col1 }, to = { row2, col2 } },
         lang = lang_capture,
+        node = node,
         text = lines(text)
       }
       if code_chunks[lang_capture] == nil then
@@ -76,6 +76,7 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
         local result = {
           range = { from = { row1, col1 }, to = { row2, col2 } },
           lang = name,
+          node = node,
           text = lines(text)
         }
         if code_chunks[name] == nil then
@@ -90,6 +91,23 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
   return code_chunks
 end
 
+
+M.get_current_language_context = function(main_nr)
+  main_nr = main_nr or api.nvim_get_current_buf()
+
+  local row, col = unpack(api.nvim_win_get_cursor(0))
+  row = row - 1
+  col = col
+
+  local code_chunks = extract_code_chunks(main_nr)
+  for lang, results in pairs(code_chunks) do
+    for _, result in ipairs(results) do
+      if ts.is_in_node_range(result.node, row, col) then
+        return lang
+      end
+    end
+  end
+end
 
 local function get_code_chunks_with_eval_true(main_nr, lang, row_from, row_to)
   local main_ft = api.nvim_buf_get_option(main_nr, 'filetype')
@@ -133,14 +151,12 @@ end
 ---@param main_nr integer
 M.sync_raft = function(main_nr)
   -- return early if buffer content has not changed
-
   local tick = vim.api.nvim_buf_get_changedtick(main_nr)
   local ottertick = vim.api.nvim_buf_get_var(main_nr, 'ottertick')
   if ottertick == tick then
     return
   end
   vim.api.nvim_buf_set_var(main_nr, 'ottertick', tick)
-
 
   local all_code_chunks = extract_code_chunks(main_nr)
   if next(all_code_chunks) == nil then
@@ -187,9 +203,12 @@ end
 --- Activate the current buffer by adding and syncronizing
 --- otter buffers.
 ---@param languages table
----@param completion boolean
+---@param completion boolean|nil
+---@param diagnostics boolean|nil
 ---@param tsquery string|nil
-M.activate = function(languages, completion, tsquery)
+M.activate = function(languages, completion, diagnostics, tsquery)
+  completion = completion or true
+  diagnostics = diagnostics or true
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
 
@@ -224,8 +243,29 @@ M.activate = function(languages, completion, tsquery)
 
   if completion then
     for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
-      require 'otter.completion'.setup_source(main_nr, otter_nr, queries)
+      require 'otter.completion'.setup_source(main_nr, otter_nr)
     end
+  end
+
+  if diagnostics then
+    local nss = {}
+    for lang, bufnr in pairs(M._otters_attached[main_nr].buffers) do
+      local ns = api.nvim_create_namespace('otter-lang-' .. lang)
+      nss[bufnr] = ns
+    end
+
+    api.nvim_create_autocmd("BufWritePost", {
+      buffer = main_nr,
+      group = api.nvim_create_augroup("OtterLSPDiagnositcs", {}),
+      callback = function(_, _)
+        M.sync_raft(main_nr)
+        for bufnr, ns in pairs(nss) do
+          local diag = vim.diagnostic.get(bufnr)
+          vim.diagnostic.reset(ns, main_nr)
+          vim.diagnostic.set(ns, main_nr, diag, {})
+        end
+      end
+    })
   end
 end
 
@@ -243,7 +283,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   filter = filter or function(x) return x end
   M.sync_raft(main_nr)
 
-  local lang = get_current_language_context()
+  local lang = M.get_current_language_context()
 
   if not contains(M._otters_attached[main_nr].languages, lang) then
     if fallback then
@@ -344,20 +384,10 @@ M.export_otter_as = function(language, fname, force)
 end
 
 
-local function concat(ls)
-  local s = ''
-  for _, l in ipairs(ls) do
-    if l ~= '' then
-      s = s .. '\n' .. l
-    end
-  end
-  return s .. '\n'
-end
-
 M.get_curent_language_lines = function(exclude_eval_false, row_start, row_end)
   local main_nr = vim.api.nvim_get_current_buf()
   M.sync_raft(main_nr)
-  local lang = get_current_language_context()
+  local lang = M.get_current_language_context()
   if lang == nil then
     return
   end
@@ -390,7 +420,7 @@ M.get_language_lines = function(exclude_eval_false)
 end
 
 M.get_language_lines_in_visual_selection = function(exclude_eval_false)
-  local lang = get_current_language_context()
+  local lang = M.get_current_language_context()
   if lang == nil then
     return
   end

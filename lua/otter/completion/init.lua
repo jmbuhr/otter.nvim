@@ -14,7 +14,7 @@ M.setup_source = function(main_nr, otter_nr)
   end
   vim.api.nvim_create_autocmd('InsertEnter', {
     buffer = main_nr,
-    group = vim.api.nvim_create_augroup('cmp_quarto' .. otter_nr, { clear = true }),
+    group = vim.api.nvim_create_augroup('cmp_otter' .. otter_nr, { clear = true }),
     callback = callback
   })
 end

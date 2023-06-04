@@ -1,5 +1,3 @@
-local ts = vim.treesitter
-local tsq = require 'nvim-treesitter.query'
 local keeper = require 'otter.keeper'
 
 local source = {}
@@ -8,7 +6,7 @@ source.new = function(client, main_nr, otter_nr, updater, tsquery)
   local self = setmetatable({}, { __index = source })
   self.client = client
   self.otter_nr = otter_nr
-  self.otter_ft = vim.api.nvim_buf_get_option(otter_nr, 'filetype')
+  self.otter_ft = keeper._otters_attached[main_nr].otter_nr_to_lang[otter_nr]
   self.main_nr = main_nr
   self.main_ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
   self.otter_parsername = vim.treesitter.language.get_lang(self.otter_ft)
@@ -32,7 +30,7 @@ end
 ---Get debug name.
 ---@return string
 source.get_debug_name = function(self)
-  return table.concat({ 'quarto', self.client.name }, ':')
+  return table.concat({ 'otter', self.client.name }, ':')
 end
 
 ---Return the source is available.
@@ -51,10 +49,13 @@ source.is_available = function(self)
     return false
   end
 
+  -- WORAROUND: disabled check for capabilities for now
+  -- otherwise no completion from html properties
   -- client has no completion capability.
-  if not self:_get(self.client.server_capabilities, { 'completionProvider' }) then
-    return false
-  end
+  -- if not self:_get(self.client.server_capabilities, { 'completionProvider' }) then
+  --   return false
+  -- end
+
   return true;
 end
 

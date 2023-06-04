@@ -236,30 +236,16 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- from automatically attaching when ft is set
   for _, lang in ipairs(languages) do
     local otter_nr = M._otters_attached[main_nr].buffers[lang]
-    for k, config in pairs(lspconfigs) do
 
-      local original_on_attach = config.on_attach or function (_, _) end
-      config.on_attach = function (client, bufnr)
-        original_on_attach()
-        if completion then
-          require'otter.completion'.setup_source(main_nr, otter_nr)
-        end
-      end
-
-      if config.filetypes then
-        if contains(config.filetypes, lang) then
-          local client_id = vim.lsp.start(config, { bufnr = otter_nr })
-          if client_id then
-            vim.lsp.buf_attach_client(otter_nr, client_id)
-            local client = vim.lsp.get_client_by_id(client_id)
-          end
-        end
-      end
+    local autocommands = api.nvim_get_autocmds({ group = 'lspconfig', pattern = lang })
+    for _, command in ipairs(autocommands) do
+      local opt = {buf = otter_nr}
+      command.callback(opt)
     end
-  end
 
-  for lang, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
-    -- api.nvim_buf_set_option(otter_nr, 'filetype', lang)
+    if completion then
+      require 'otter.completion'.setup_source(main_nr, otter_nr)
+    end
   end
 
 

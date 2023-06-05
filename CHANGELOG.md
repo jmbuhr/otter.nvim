@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/jmbuhr/otter.nvim/compare/v0.15.0...v0.15.1) (2023-06-05)
+
+
+### Performance Improvements
+
+* don't set ft on otter buffers ([#41](https://github.com/jmbuhr/otter.nvim/issues/41)) ([6aa0699](https://github.com/jmbuhr/otter.nvim/commit/6aa0699c4a64980c1d77d951dc2dbf1798c870e3))
+
 ## [0.15.0](https://github.com/jmbuhr/otter.nvim/compare/v0.14.0...v0.15.0) (2023-06-03)
 
 

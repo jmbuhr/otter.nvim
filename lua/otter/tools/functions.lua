@@ -56,13 +56,13 @@ end
 
 
 M.path_to_otterpath = function(path, lang)
-  return path .. '-tmp' .. lang
+  return path .. '.otter' .. lang
 end
 
 --- @param path string a path
 --- @return string
 M.otterpath_to_path = function(path)
-  local s, _ = path:gsub('-tmp%..+', '')
+  local s, _ = path:gsub('.otter%..+', '')
   return s
 end
 
@@ -75,7 +75,7 @@ end
 
 --- @param path string
 M.is_otterpath = function(path)
-  return path:find('.+-tmp%..+') ~= nil
+  return path:find('.+.otter%..+') ~= nil
 end
 
 

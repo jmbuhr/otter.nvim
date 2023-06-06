@@ -1,5 +1,4 @@
 local M = {}
-local lines = require 'otter.tools.functions'.lines
 local empty_lines = require 'otter.tools.functions'.empty_lines
 local path_to_otterpath = require 'otter.tools.functions'.path_to_otterpath
 local otterpath_to_plain_path = require 'otter.tools.functions'.otterpath_to_plain_path
@@ -69,13 +68,18 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
       -- chunks where the name of the language is the name of the capture
     elseif contains(injectable_languages, name) then
       if (lang == nil or name == lang) then
+        -- local row1, col1, row2, col2
         local row1, col1, row2, col2 = node:range()
+        print(row1, col1, row2, col2)
+        P(metadata)
+        local range = ts.get_range(node, main_nr, metadata)
+        P(range)
         text = api.nvim_buf_get_text(main_nr, row1, col1, row2, col2, {})
         local result = {
           range = { from = { row1, col1 }, to = { row2, col2 } },
           lang = name,
           node = node,
-          text = lines(text)
+          text = text
         }
         if code_chunks[name] == nil then
           code_chunks[name] = {}

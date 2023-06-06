@@ -20,7 +20,7 @@ end
 
 M.dev_setup = function()
 
-  M.activate({ 'r', 'python', 'lua', 'html', 'css' }, true)
+  M.activate({ 'r', 'python', 'lua', 'html', 'css', 'sql' }, true)
   vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', 'gr', ":lua require'otter'.ask_references()<cr>", { silent = true })

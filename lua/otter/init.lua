@@ -92,6 +92,7 @@ M.ask_references = function()
 
   local function redirect(res)
     local uri = res.uri
+    if not res.uri then return end
     if require 'otter.tools.functions'.is_otterpath(uri) then
       res.uri = main_uri
     end

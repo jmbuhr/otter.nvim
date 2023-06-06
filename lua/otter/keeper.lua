@@ -319,7 +319,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   end
 
   vim.lsp.buf_request(otter_nr, request, params, function(err, response, method, ...)
-    if response == nil then return nil end
+    if response == nil then return end
     -- if response is a list of responses, filter every response
     if #response > 0 then
       local responses = {}
@@ -334,6 +334,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       -- otherwise apply the filter to the one response
       response = filter(response)
     end
+    if response == nil then return end
     if handler ~= nil then
       handler(err, response, method, conf)
     else

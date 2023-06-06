@@ -9,11 +9,11 @@ M.allowed_clients = {}
 
 ---Setup cmp-nvim-lsp source.
 M.setup_source = function(main_nr, otter_nr)
-  local callback = function()
-    M.cmp_on_insert_enter(main_nr, otter_nr)
+  local callback = function(opts)
+    M.cmp_on_insert_enter(main_nr, otter_nr, opts)
   end
   vim.api.nvim_create_autocmd('InsertEnter', {
-    buffer = main_nr,
+    -- buffer = main_nr,
     group = vim.api.nvim_create_augroup('cmp_otter' .. otter_nr, { clear = true }),
     callback = callback
   })
@@ -21,8 +21,12 @@ end
 
 ---Refresh sources on InsertEnter.
 -- adds a source for the otter buffer
-M.cmp_on_insert_enter = function(main_nr, otter_nr)
+M.cmp_on_insert_enter = function(main_nr, otter_nr, opts)
   local cmp = require('cmp')
+  if opts.buf ~= main_nr then
+    M.cmp_client_source_map = {}
+    return
+  end
 
   -- register all active clients.
   for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = otter_nr })) do

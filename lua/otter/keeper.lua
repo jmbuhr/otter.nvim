@@ -36,15 +36,20 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
     -- chunks where the name of the injected language is dynamic
     -- e.g. markdown code chunks
     if name == '_lang' then
-      text = ts.get_node_text(node, main_nr, metadata)
+      local row1, col1, row2, col2 = node:range()
+      text = api.nvim_buf_get_text(main_nr, row1, col1, row2, col2, {})
       lang_capture = text
       found_chunk = true
     elseif name == 'content' and found_chunk and (lang == nil or lang_capture == lang) then
-      text = ts.get_node_text(node, main_nr, metadata)
-      if exclude_eval_false and string.find(text, '| *eval: *false') then
-        text = ''
-      end
       local row1, col1, row2, col2 = node:range()
+      text = api.nvim_buf_get_text(main_nr, row1, col1, row2, col2, {})
+      if exclude_eval_false then
+        for line in ipairs(text) do
+          if string.find(line, '| *eval: *false') then
+            text = ''
+          end
+        end
+      end
       if row_from ~= nil and row_to ~= nil then
         if (row1 >= row_to and row_to > 0) or row2 < row_from then
           goto continue
@@ -54,7 +59,7 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
         range = { from = { row1, col1 }, to = { row2, col2 } },
         lang = lang_capture,
         node = node,
-        text = lines(text)
+        text = text
       }
       if code_chunks[lang_capture] == nil then
         code_chunks[lang_capture] = {}
@@ -64,8 +69,8 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
       -- chunks where the name of the language is the name of the capture
     elseif contains(injectable_languages, name) then
       if (lang == nil or name == lang) then
-        text = ts.get_node_text(node, main_nr, metadata)
         local row1, col1, row2, col2 = node:range()
+        text = api.nvim_buf_get_text(main_nr, row1, col1, row2, col2, {})
         local result = {
           range = { from = { row1, col1 }, to = { row2, col2 } },
           lang = name,

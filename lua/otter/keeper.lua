@@ -296,7 +296,13 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
 
   local otter_nr = M._otters_attached[main_nr].buffers[lang]
   local otter_uri = vim.uri_from_bufnr(otter_nr)
-  local params = vim.lsp.util.make_position_params()
+  local params
+  if request == 'textDocument/documentSymbol' then
+    params = vim.lsp.util.make_text_document_params()
+    params.uri = otter_uri
+  else
+    params = vim.lsp.util.make_position_params()
+  end
   -- general
   params.textDocument = {
     uri = otter_uri

@@ -21,7 +21,9 @@ end
 M.dev_setup = function()
 
   M.activate({ 'r', 'python', 'lua', 'html', 'css' }, true)
+  vim.api.nvim_buf_set_keymap(0, 'n', 'gS', ":lua require'otter'.ask_document_symbols()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
+  vim.api.nvim_buf_set_keymap(0, 'n', 'gD', ":lua require'otter'.ask_type_definition()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', 'gr', ":lua require'otter'.ask_references()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', '<leader>lR', ":lua require'otter'.ask_rename()<cr>", { silent = true })
@@ -58,6 +60,39 @@ M.ask_definition = function()
       return modified_response
     end,
     vim.lsp.buf.definition
+  )
+end
+
+M.ask_type_definition = function()
+  local main_nr = api.nvim_get_current_buf()
+  local main_uri = vim.uri_from_bufnr(main_nr)
+
+  local function redirect_definition(res)
+    if res.uri ~= nil then
+      if require 'otter.tools.functions'.is_otterpath(res.uri) then
+        res.uri = main_uri
+      end
+    end
+    if res.targetUri ~= nil then
+      if require 'otter.tools.functions'.is_otterpath(res.targetUri) then
+        res.targetUri = main_uri
+      end
+    end
+    return res
+  end
+
+  M.send_request(main_nr, "textDocument/typeDefinition", function(response)
+      if #response == 0 then
+        return redirect_definition(response)
+      end
+
+      local modified_response = {}
+      for _, res in ipairs(response) do
+        table.insert(modified_response, redirect_definition(res))
+      end
+      return modified_response
+    end,
+    vim.lsp.buf.type_definition
   )
 end
 
@@ -102,6 +137,22 @@ M.ask_references = function()
   M.send_request(main_nr, "textDocument/references",
     redirect,
     vim.lsp.buf.references
+  )
+end
+
+
+M.ask_document_symbols = function()
+  local main_nr = api.nvim_get_current_buf()
+  local main_uri = vim.uri_from_bufnr(main_nr)
+
+  local function redirect(res)
+    return res
+  end
+
+  M.send_request(main_nr, "textDocument/documentSymbol",
+    redirect,
+    vim.lsp.buf.document_symbol,
+    handlers.document_symbol
   )
 end
 

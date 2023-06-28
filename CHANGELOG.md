@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.1](https://github.com/jmbuhr/otter.nvim/compare/v0.16.0...v0.16.1) (2023-06-06)
+
+
+### Bug Fixes
+
+* deactivate otter cmp source when not in the main buffer ([1f7dfcd](https://github.com/jmbuhr/otter.nvim/commit/1f7dfcd877b5c3d290722fdf158e77d259ca7957))
+
+## [0.16.0](https://github.com/jmbuhr/otter.nvim/compare/v0.15.1...v0.16.0) (2023-06-06)
+
+
+### Features
+
+* get_language_lines_around cursor ([864db19](https://github.com/jmbuhr/otter.nvim/commit/864db19aeaa26f85ee18f9a6fc0e582e5cd14155))
+
 ## [0.15.1](https://github.com/jmbuhr/otter.nvim/compare/v0.15.0...v0.15.1) (2023-06-05)
 
 

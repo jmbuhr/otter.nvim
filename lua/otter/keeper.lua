@@ -128,13 +128,12 @@ end
 --- Syncronize the raft of otters attached to a buffer
 ---@param main_nr integer
 M.sync_raft = function(main_nr)
-  local all_code_chunks = extract_code_chunks(main_nr)
-  if next(all_code_chunks) == nil then
-    return {}
-  end
   if M._otters_attached[main_nr] ~= nil then
-    local languages = M._otters_attached[main_nr].languages
-    for _, lang in ipairs(languages) do
+    local all_code_chunks = extract_code_chunks(main_nr)
+    if next(all_code_chunks) == nil then
+      return {}
+    end
+    for _, lang in ipairs(M._otters_attached[main_nr].languages) do
       local otter_nr = M._otters_attached[main_nr].buffers[lang]
       if otter_nr ~= nil then
         local code_chunks = all_code_chunks[lang]
@@ -410,6 +409,33 @@ M.get_curent_language_lines = function(exclude_eval_false, row_start, row_end)
     table.insert(code, concat(c.text))
   end
   return code
+end
+
+
+M.get_language_lines_around_cursor = function()
+  local main_nr = vim.api.nvim_get_current_buf()
+  local row, col = unpack(api.nvim_win_get_cursor(0))
+  row = row - 1
+  col = col
+
+  local query = M._otters_attached[main_nr].query
+  local parser = M._otters_attached[main_nr].parser
+  local tree = parser:parse()
+  local root = tree[1]:root()
+
+  for id, node, metadata in query:iter_captures(root, main_nr) do
+    local name = query.captures[id]
+    if name == 'content' then
+      if ts.is_in_node_range(node, row, col) then
+        return ts.get_node_text(node, main_nr, metadata)
+      end
+      -- chunks where the name of the language is the name of the capture
+    elseif contains(injectable_languages, name) then
+      if ts.is_in_node_range(node, row, col) then
+        return ts.get_node_text(node, main_nr, metadata)
+      end
+    end
+  end
 end
 
 M.get_language_lines_to_cursor = function(exclude_eval_false)

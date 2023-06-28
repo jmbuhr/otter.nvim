@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/jmbuhr/otter.nvim/compare/v0.16.1...v0.17.0) (2023-06-28)
+
+
+### Features
+
+* **lsp:** ask_type_definition and ask_document_symbol ([6a5d874](https://github.com/jmbuhr/otter.nvim/commit/6a5d874b4b425f14afc56303d28cdbe6af53525a))
+* use node:range instead of node text to get lines ([963a7b3](https://github.com/jmbuhr/otter.nvim/commit/963a7b3077e218cf6284da0666515ebfb56d13f9))
+
+
+### Bug Fixes
+
+* silently return if no response by the language server or the filter ([3b5d856](https://github.com/jmbuhr/otter.nvim/commit/3b5d856290a5f2b62b58be6b437e4bf02e02e779))
+
 ## [0.16.1](https://github.com/jmbuhr/otter.nvim/compare/v0.16.0...v0.16.1) (2023-06-06)
 
 

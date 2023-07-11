@@ -3,7 +3,19 @@ local M = {}
 local api = vim.api
 local keeper = require 'otter.keeper'
 local handlers = require 'otter.tools.handlers'
-local config = require 'otter.config'.config
+
+local default_config = {
+  lsp = {
+    hover = {
+      border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }
+    }
+  }
+}
+
+M.config = default_config
+M.setup = function(opts)
+  M.config = vim.tbl_deep_extend('force', M.config, opts or {})
+end
 
 M.activate = keeper.activate
 M.sync_raft = keeper.sync_raft
@@ -116,7 +128,7 @@ M.ask_hover = function()
     end,
     vim.lsp.buf.hover,
     handlers.hover,
-    config.lsp.hover
+    M.config.lsp.hover
   )
 end
 

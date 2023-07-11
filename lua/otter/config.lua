@@ -1,17 +1,7 @@
+local M = {}
 
-M = {}
-
-M.config = {
-  lsp = {
-    hover = {
-      border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }
-    }
-  }
-}
-
-M.setup = function(opt)
-  M.config = vim.tbl_deep_extend('force', M.config, opt or {})
+M.setup = function(_)
+  vim.deprecate("otter.config.setup", "otter.setup or lazy.nvim opts = {...}", "v0.18.0", "otter.nvim", true)
 end
 
 return M
-

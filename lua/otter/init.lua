@@ -158,6 +158,11 @@ M.ask_document_symbols = function()
   local main_uri = vim.uri_from_bufnr(main_nr)
 
   local function redirect(res)
+    if not res.location or not res.location.uri then return end
+    local uri = res.location.uri
+    if require 'otter.tools.functions'.is_otterpath(uri) then
+      res.location.uri = main_uri
+    end
     return res
   end
 
@@ -175,16 +180,15 @@ M.ask_rename = function()
   local main_uri = vim.uri_from_bufnr(main_nr)
 
   local function redirect(res)
-    local changes = res.documentChanges
+    local changes = res.changes
     local new_changes = {}
-    for _, change in ipairs(changes) do
-      local uri = change.textDocument.uri
+    for uri, change in pairs(changes) do
       if require 'otter.tools.functions'.is_otterpath(uri) then
-        change.textDocument.uri = main_uri
+        uri = main_uri
       end
-      table.insert(new_changes, change)
+      new_changes[uri]= change
     end
-    res.documentChanges = new_changes
+    res.changes = new_changes
     return res
   end
 

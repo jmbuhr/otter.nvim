@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/jmbuhr/otter.nvim/compare/v0.17.0...v1.0.0) (2023-07-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* trigger version
+
+### Bug Fixes
+
+* trigger version ([25c177b](https://github.com/jmbuhr/otter.nvim/commit/25c177bdf579c545d9780010cb645741e75e1e8f))
+
 ## [0.17.0](https://github.com/jmbuhr/otter.nvim/compare/v0.16.1...v0.17.0) (2023-06-28)
 
 

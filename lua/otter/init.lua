@@ -119,16 +119,16 @@ end
 M.ask_hover = function()
   local main_nr = api.nvim_get_current_buf()
   M.send_request(main_nr, "textDocument/hover", function(response)
-      local ok, filtered_response = pcall(replace_header_div, response)
-      if ok then
-        return filtered_response
-      else
-        return response
-      end
-    end,
-    vim.lsp.buf.hover,
-    handlers.hover,
-    M.config.lsp.hover
+    local ok, filtered_response = pcall(replace_header_div, response)
+    if ok then
+      return filtered_response
+    else
+      return response
+    end
+  end,
+  vim.lsp.buf.hover,
+  handlers.hover,
+  M.config.lsp.hover
   )
 end
 
@@ -181,15 +181,29 @@ M.ask_rename = function()
 
   local function redirect(res)
     local changes = res.changes
-    local new_changes = {}
-    for uri, change in pairs(changes) do
-      if require 'otter.tools.functions'.is_otterpath(uri) then
-        uri = main_uri
+    if changes ~= nil then
+      local new_changes = {}
+      for uri, change in pairs(changes) do
+        if require 'otter.tools.functions'.is_otterpath(uri) then
+          uri = main_uri
+        end
+        new_changes[uri]= change
       end
-      new_changes[uri]= change
+      res.changes = new_changes
+      return res
+    else
+      changes = res.documentChanges
+      local new_changes = {}
+      for _, change in ipairs(changes) do
+        local uri = change.textDocument.uri
+        if require 'otter.tools.functions'.is_otterpath(uri) then
+          change.textDocument.uri = main_uri
+        end
+        table.insert(new_changes, change)
+      end
+      res.documentChanges = new_changes
+      return res
     end
-    res.changes = new_changes
-    return res
   end
 
   M.send_request(main_nr, "textDocument/rename",

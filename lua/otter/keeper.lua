@@ -323,7 +323,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     end)
   end
 
-  vim.lsp.buf_request(otter_nr, request, params, function(err, response, method, ...)
+  vim.lsp.buf_request(otter_nr, request, params, function(err, response, ctx, ...)
     if response == nil then return end
     -- if response is a list of responses, filter every response
     if #response > 0 then
@@ -341,9 +341,9 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     end
     if response == nil then return end
     if handler ~= nil then
-      handler(err, response, method, conf)
+      handler(err, response, ctx, conf)
     else
-      vim.lsp.handlers[request](err, response, method, ...)
+      vim.lsp.handlers[request](err, response, ctx, ...)
     end
   end
   )

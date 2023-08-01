@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/jmbuhr/otter.nvim/compare/v1.0.1...v1.0.2) (2023-08-01)
+
+
+### Bug Fixes
+
+* fix document/rename ([3bec604](https://github.com/jmbuhr/otter.nvim/commit/3bec6044f39e4b6de98559d80af214aad024ac14))
+
 ## [1.0.1](https://github.com/jmbuhr/otter.nvim/compare/v1.0.0...v1.0.1) (2023-07-15)
 
 

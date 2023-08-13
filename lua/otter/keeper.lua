@@ -37,7 +37,11 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
     -- e.g. markdown code chunks
     if name == '_lang' then
       text = ts.get_node_text(node, main_nr, metadata)
-      lang_capture = text
+      local fname = "*." .. text
+      lang_capture, _ = vim.filetype.match({filename = fname})
+      if lang_capture == nil then
+        lang_capture = text
+      end
       found_chunk = true
     elseif name == 'content' and found_chunk and (lang == nil or lang_capture == lang) then
       text = ts.get_node_text(node, main_nr, metadata)
@@ -106,7 +110,11 @@ M.get_current_language_context = function(main_nr)
     -- e.g. markdown code chunks
     if name == '_lang' then
       text = ts.get_node_text(node, main_nr, metadata)
-      lang_capture = text
+      local fname = "*." .. text
+      lang_capture, _ = vim.filetype.match({filename = fname})
+      if lang_capture == nil then
+        lang_capture = text
+      end
       found_chunk = true
     elseif name == 'content' and found_chunk then
       if ts.is_in_node_range(node, row, col) then

@@ -1,6 +1,7 @@
 return {
   python = 'py',
   r = 'R',
+  webr = 'R',
   julia = 'jl',
   lua = 'lua',
   haskell = 'hs',

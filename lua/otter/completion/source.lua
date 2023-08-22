@@ -49,7 +49,7 @@ source.is_available = function(self)
     return false
   end
 
-  -- WORAROUND: disabled check for capabilities for now
+  -- WORKAROUND: disabled check for capabilities for now
   -- otherwise no completion from html properties
   -- client has no completion capability.
   -- if not self:_get(self.client.server_capabilities, { 'completionProvider' }) then

@@ -33,13 +33,19 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
     local name = query.captures[id]
     local text
 
+    local injection_language = metadata["injection.language"]
+    if injection_language ~= nil then
+      lang_capture = injection_language
+      found_chunk = true
+    end
+
     -- chunks where the name of the injected language is dynamic
     -- e.g. markdown code chunks
     if name == '_lang' then
       text = ts.get_node_text(node, main_nr, metadata)
       lang_capture = text
       found_chunk = true
-    elseif name == 'content' and found_chunk and (lang == nil or lang_capture == lang) then
+    elseif (name == 'content' or name == 'injection.content') and found_chunk and (lang == nil or lang_capture == lang) then
       text = ts.get_node_text(node, main_nr, metadata)
       if exclude_eval_false and string.find(text, '| *eval: *false') then
         text = ''

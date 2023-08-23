@@ -23,10 +23,6 @@ end
 -- adds a source for the otter buffer
 M.cmp_on_insert_enter = function(main_nr, otter_nr, opts)
   local cmp = require('cmp')
-  if opts.buf ~= main_nr then
-    M.cmp_client_source_map = {}
-    return
-  end
 
   -- register all active clients.
   for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = otter_nr })) do

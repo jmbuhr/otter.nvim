@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/jmbuhr/otter.nvim/compare/v1.0.2...v1.0.3) (2023-08-22)
+
+
+### Bug Fixes
+
+* fix [#51](https://github.com/jmbuhr/otter.nvim/issues/51) completion items come up multiple times ([#52](https://github.com/jmbuhr/otter.nvim/issues/52)) ([ef79ee7](https://github.com/jmbuhr/otter.nvim/commit/ef79ee7f2adc4d8e6934c81595c6bbd820af5f87))
+
 ## [1.0.2](https://github.com/jmbuhr/otter.nvim/compare/v1.0.1...v1.0.2) (2023-08-01)
 
 

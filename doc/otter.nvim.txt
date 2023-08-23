@@ -1,4 +1,4 @@
-*otter.nvim.txt*        For Neovim >= 0.9.0        Last change: 2023 August 02
+*otter.nvim.txt*        For Neovim >= 0.9.0        Last change: 2023 August 22
 
 ==============================================================================
 Table of Contents                               *otter.nvim-table-of-contents*
@@ -104,8 +104,8 @@ configuration.
 
 Assuming `otter.nvim` is configured and added to `nvim-cmp` as a completion
 source, call `require'otter'.activate({'python', 'r', <more languages you want
-to embed> })` on any buffer that has injections (see `:h
-treesitter-language-injections`) defined and you will see code completion and
+to embed> })` on any buffer that has injections (see
+|treesitter-language-injections|) defined and you will see code completion and
 diagnostics (on save).
 
 Then use the `otter.ask_...` functions to e.g. ask for hover documentation,

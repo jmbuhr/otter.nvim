@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/jmbuhr/otter.nvim/compare/v1.0.3...v1.1.0) (2023-08-23)
+
+
+### Features
+
+* also get injection.language directly from metadata if available ([94f642c](https://github.com/jmbuhr/otter.nvim/commit/94f642c06d03d7b91d857efc30ede01b96d53101))
+
 ## [1.0.3](https://github.com/jmbuhr/otter.nvim/compare/v1.0.2...v1.0.3) (2023-08-22)
 
 

@@ -56,4 +56,16 @@ function M.document_symbol(_, result, ctx, config)
   end
 end
 
+M.format = function(_, result, ctx, _)
+  if not result then
+    return
+  end
+  local client = vim.lsp.get_client_by_id(ctx.client_id)
+  if not client then
+    return
+  end
+  -- use the current buffer, 0
+  util.apply_text_edits(result, 0, client.offset_encoding)
+end
+
 return M

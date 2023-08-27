@@ -31,7 +31,6 @@ M.debug = function()
 end
 
 M.dev_setup = function()
-
   M.activate({ 'r', 'python', 'lua', 'html', 'css' }, true)
   vim.api.nvim_buf_set_keymap(0, 'n', 'gS', ":lua require'otter'.ask_document_symbols()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', 'gd', ":lua require'otter'.ask_definition()<cr>", { silent = true })
@@ -39,6 +38,7 @@ M.dev_setup = function()
   vim.api.nvim_buf_set_keymap(0, 'n', 'K', ":lua require'otter'.ask_hover()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', 'gr', ":lua require'otter'.ask_references()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, 'n', '<leader>lR', ":lua require'otter'.ask_rename()<cr>", { silent = true })
+  vim.api.nvim_buf_set_keymap(0, 'n', '<leader>lf', ":lua require'otter'.ask_format()<cr>", { silent = true })
 end
 
 -- example implementations to work with the send_request function
@@ -119,16 +119,16 @@ end
 M.ask_hover = function()
   local main_nr = api.nvim_get_current_buf()
   M.send_request(main_nr, "textDocument/hover", function(response)
-    local ok, filtered_response = pcall(replace_header_div, response)
-    if ok then
-      return filtered_response
-    else
-      return response
-    end
-  end,
-  vim.lsp.buf.hover,
-  handlers.hover,
-  M.config.lsp.hover
+      local ok, filtered_response = pcall(replace_header_div, response)
+      if ok then
+        return filtered_response
+      else
+        return response
+      end
+    end,
+    vim.lsp.buf.hover,
+    handlers.hover,
+    M.config.lsp.hover
   )
 end
 
@@ -187,7 +187,7 @@ M.ask_rename = function()
         if require 'otter.tools.functions'.is_otterpath(uri) then
           uri = main_uri
         end
-        new_changes[uri]= change
+        new_changes[uri] = change
       end
       res.changes = new_changes
       return res
@@ -209,6 +209,23 @@ M.ask_rename = function()
   M.send_request(main_nr, "textDocument/rename",
     redirect,
     vim.lsp.buf.rename
+  )
+end
+
+M.ask_format = function()
+  local main_nr = api.nvim_get_current_buf()
+
+  -- redirection has to happen in the handler instead,
+  -- because the response doesn't contain a mention
+  -- of the buffer.
+  local function redirect(res)
+    return res
+  end
+
+  M.send_request(main_nr, 'textDocument/rangeFormatting',
+    redirect,
+    vim.lsp.buf.format,
+    handlers.format
   )
 end
 

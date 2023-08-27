@@ -116,18 +116,17 @@ M.get_current_language_context = function(main_nr)
       found_chunk = true
     elseif name == 'content' and found_chunk then
       if ts.is_in_node_range(node, row, col) then
-        return lang_capture
+        return lang_capture, node:range()
       end
       -- chunks where the name of the language is the name of the capture
     elseif contains(injectable_languages, name) then
       text = ts.get_node_text(node, main_nr, metadata)
       if ts.is_in_node_range(node, row, col) then
-        return name
+        return name, node:range()
       end
     end
   end
 
-  return code_chunks
 end
 
 
@@ -244,7 +243,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
     local autocommands = api.nvim_get_autocmds({ group = 'lspconfig', pattern = lang })
     for _, command in ipairs(autocommands) do
-      local opt = {buf = otter_nr}
+      local opt = { buf = otter_nr }
       command.callback(opt)
     end
 
@@ -290,7 +289,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   filter = filter or function(x) return x end
   M.sync_raft(main_nr)
 
-  local lang = M.get_current_language_context()
+  local lang, start_row, start_col, end_row, end_col = M.get_current_language_context()
 
   if not contains(M._otters_attached[main_nr].languages, lang) then
     if fallback then
@@ -328,6 +327,17 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       params.newName = input
     end)
   end
+  if request == 'textDocument/rangeFormatting' then
+    params = vim.lsp.util.make_formatting_params()
+    params.textDocument = {
+      uri = otter_uri
+    }
+    params.range = {
+      start = { line = start_row, character = start_col },
+      ['end'] = { line = end_row, character = end_col },
+    }
+  end
+
 
   vim.lsp.buf_request(otter_nr, request, params, function(err, response, ctx, ...)
     if response == nil then return end

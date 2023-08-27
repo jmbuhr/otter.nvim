@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/jmbuhr/otter.nvim/compare/v1.1.0...v1.2.0) (2023-08-27)
+
+
+### Features
+
+* format current code chunk ([01578a4](https://github.com/jmbuhr/otter.nvim/commit/01578a40b9cece7a4a4e51e903b8a255c9b1f42a))
+
 ## [1.1.0](https://github.com/jmbuhr/otter.nvim/compare/v1.0.3...v1.1.0) (2023-08-23)
 
 

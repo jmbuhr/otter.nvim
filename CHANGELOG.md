@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/jmbuhr/otter.nvim/compare/v1.2.0...v1.2.1) (2023-09-16)
+
+
+### Bug Fixes
+
+* prevent accidentially leaving otter completion on outside of main ([229690a](https://github.com/jmbuhr/otter.nvim/commit/229690a58808fe0a82641b50d671d22d7174c497))
+
 ## [1.2.0](https://github.com/jmbuhr/otter.nvim/compare/v1.1.0...v1.2.0) (2023-08-27)
 
 

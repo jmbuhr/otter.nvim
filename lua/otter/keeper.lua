@@ -93,6 +93,9 @@ end
 
 M.get_current_language_context = function(main_nr)
   main_nr = main_nr or api.nvim_get_current_buf()
+  if M._otters_attached[main_nr] == nil then
+    return nil
+  end
   local row, col = unpack(api.nvim_win_get_cursor(0))
   row = row - 1
   col = col

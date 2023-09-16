@@ -23,7 +23,7 @@ end
 ---associated with this source.
 ---@return boolean
 source.is_otter_lang_context = function(self)
-  return keeper.get_current_language_context(self.main_nr) == self.otter_ft
+  return keeper.get_current_language_context() == self.otter_ft
 end
 
 

@@ -129,13 +129,12 @@ M.get_current_language_context = function(main_nr)
       end
     end
   end
-
 end
 
 
 --- Syncronize the raft of otters attached to a buffer
 ---@param main_nr integer bufnr of the parent buffer
----@param lang string only sync one otter buffer matching a language
+---@param lang string|nil only sync one otter buffer matching a language
 M.sync_raft = function(main_nr, lang)
   if M._otters_attached[main_nr] ~= nil then
     local all_code_chunks = extract_code_chunks(main_nr)
@@ -146,7 +145,7 @@ M.sync_raft = function(main_nr, lang)
     if lang == nil then
       langs = M._otters_attached[main_nr].languages
     else
-      langs = {lang}
+      langs = { lang }
     end
     for _, lang in ipairs(langs) do
       local otter_nr = M._otters_attached[main_nr].buffers[lang]
@@ -155,7 +154,7 @@ M.sync_raft = function(main_nr, lang)
         if code_chunks ~= nil then
           local nmax = code_chunks[#code_chunks].range['to'][1] -- last code line
 
-          -- create list with empty lines the lenght of the buffer
+          -- create list with empty lines the length of the buffer
           local ls = empty_lines(nmax)
 
           -- collect language lines
@@ -177,12 +176,6 @@ M.sync_raft = function(main_nr, lang)
     end
   end
 end
-
---- Syncronize the raft for the current buffer.
-M.sync_this_raft = function()
-  M.sync_raft(api.nvim_get_current_buf())
-end
-
 
 --- Activate the current buffer by adding and syncronizing
 --- otter buffers.
@@ -253,7 +246,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       local opt = { buf = otter_nr }
       command.callback(opt)
     end
-
   end
 
   if completion then
@@ -386,7 +378,7 @@ M.export_raft = function(force)
     local extension = extensions[lang] or ''
     path = otterpath_to_plain_path(path) .. extension
     print('Exporting otter: ' .. lang)
-    local new_path = vim.fn.input('New path: ', path, 'file')
+    local new_path = vim.fn.input({ prompt = 'New path: ', default = path, completion = 'file' })
     if new_path ~= '' then
       api.nvim_set_current_buf(otter_nr)
       vim.lsp.buf.format({ bufnr = otter_nr })

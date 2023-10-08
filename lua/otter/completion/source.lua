@@ -33,7 +33,7 @@ source.get_debug_name = function(self)
   return table.concat({ 'otter', self.client.name }, ':')
 end
 
----Return the source is available.
+---Return if the source is available.
 ---@return boolean
 source.is_available = function(self)
   -- client is stopped.

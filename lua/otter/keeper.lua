@@ -184,6 +184,7 @@ end
 ---@param diagnostics boolean|nil
 ---@param tsquery string|nil
 M.activate = function(languages, completion, diagnostics, tsquery)
+  vim.notify("otter.activate()")
   completion = completion or true
   diagnostics = diagnostics or true
   local main_nr = api.nvim_get_current_buf()
@@ -216,23 +217,19 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   languages = found_languages
   M._otters_attached[main_nr].languages = languages
 
-
-  local lspconfigs = require 'lspconfig.configs'
-
   -- create otter buffers
   for _, lang in ipairs(languages) do
     local extension = '.' .. extensions[lang]
-    if extension == nil then goto continue end
-    local code_chunks = all_code_chunks[lang]
-    local otter_path = path_to_otterpath(main_path, extension)
-    local otter_uri = 'file://' .. otter_path
-    local otter_nr = vim.uri_to_bufnr(otter_uri)
-    api.nvim_buf_set_name(otter_nr, otter_path)
-    api.nvim_buf_set_option(otter_nr, 'swapfile', false)
-    api.nvim_buf_set_option(otter_nr, 'buftype', 'nowrite')
-    M._otters_attached[main_nr].buffers[lang] = otter_nr
-    M._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
-    ::continue::
+    if extension ~= nil then
+      local otter_path = path_to_otterpath(main_path, extension)
+      local otter_uri = 'file://' .. otter_path
+      local otter_nr = vim.uri_to_bufnr(otter_uri)
+      api.nvim_buf_set_name(otter_nr, otter_path)
+      api.nvim_buf_set_option(otter_nr, 'swapfile', false)
+      api.nvim_buf_set_option(otter_nr, 'buftype', 'nowrite')
+      M._otters_attached[main_nr].buffers[lang] = otter_nr
+      M._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
+    end
   end
 
   M.sync_raft(main_nr)
@@ -250,9 +247,10 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       command.callback(opt)
     end
 
-    if completion then
-      require 'otter.completion'.setup_source(main_nr, otter_nr)
-    end
+  end
+
+  if completion then
+    require 'otter.completion'.setup_sources(main_nr, M._otters_attached[main_nr])
   end
 
 

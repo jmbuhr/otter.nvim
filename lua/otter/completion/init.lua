@@ -43,7 +43,12 @@ M.cmp_on_insert_enter = function(main_nr, opts)
     for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = otter_nr })) do
       M.allowed_clients[client.id] = client
       if not M.cmp_client_source_map[client.id] then
-        local s = source.new(client, main_nr, otter_nr, keeper.sync_this_raft, keeper._otters_attached[main_nr].tsquery)
+
+        local updater = function ()
+          keeper.sync_raft(main_nr, lang)
+        end
+
+        local s = source.new(client, main_nr, otter_nr, updater, keeper._otters_attached[main_nr].tsquery)
         if s:is_available() then
           M.cmp_client_source_map[s.client.id] = cmp.register_source('otter', s)
         end

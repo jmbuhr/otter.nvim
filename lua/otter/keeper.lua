@@ -134,14 +134,21 @@ end
 
 
 --- Syncronize the raft of otters attached to a buffer
----@param main_nr integer
-M.sync_raft = function(main_nr)
+---@param main_nr integer bufnr of the parent buffer
+---@param lang string only sync one otter buffer matching a language
+M.sync_raft = function(main_nr, lang)
   if M._otters_attached[main_nr] ~= nil then
     local all_code_chunks = extract_code_chunks(main_nr)
     if next(all_code_chunks) == nil then
       return {}
     end
-    for _, lang in ipairs(M._otters_attached[main_nr].languages) do
+    local langs
+    if lang == nil then
+      langs = M._otters_attached[main_nr].languages
+    else
+      langs = {lang}
+    end
+    for _, lang in ipairs(langs) do
       local otter_nr = M._otters_attached[main_nr].buffers[lang]
       if otter_nr ~= nil then
         local code_chunks = all_code_chunks[lang]

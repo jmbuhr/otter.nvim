@@ -1,5 +1,6 @@
 local source = require 'otter.completion.source'
 local keeper = require 'otter.keeper'
+local cmp = require('cmp')
 
 local M = {}
 
@@ -25,7 +26,17 @@ end
 -- adds a source for the otter buffer
 M.cmp_on_insert_enter = function(main_nr, opts)
   vim.notify("cmp_on_insert_enter: " .. main_nr)
-  local cmp = require('cmp')
+
+  if main_nr ~= vim.api.nvim_get_current_buf() then
+    vim.notify("Unregister sources, not in main buffer")
+    for client_id, source_id in pairs(M.cmp_client_source_map) do
+      cmp.unregister_source(source_id)
+    end
+    M.cmp_client_source_map = {}
+    M.allowed_clients = {}
+    return
+  end
+
 
   for lang, otter_nr in pairs(keeper._otters_attached[main_nr].buffers) do
     -- register all active clients.

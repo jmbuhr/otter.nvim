@@ -26,6 +26,7 @@ function M.hover(_, result, ctx, config)
   end
   -- returns bufnr,winnr buffer and window number of the newly created floating
   local bufnr, _ = util.open_floating_preview(markdown_lines, 'markdown', config)
+  -- vim.api.nvim_buf_set_option(bufnr, 'filetype', 'markdown')
   return result
 end
 

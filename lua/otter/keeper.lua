@@ -184,7 +184,6 @@ end
 ---@param diagnostics boolean|nil
 ---@param tsquery string|nil
 M.activate = function(languages, completion, diagnostics, tsquery)
-  vim.notify("otter.activate()")
   completion = completion or true
   diagnostics = diagnostics or true
   local main_nr = api.nvim_get_current_buf()

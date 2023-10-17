@@ -10,7 +10,6 @@ M.allowed_clients = {}
 
 ---Setup nvim-cmp otter source.
 M.setup_sources = function(main_nr, otters_attached)
-  vim.notify("otter.completion.setup_source: " .. main_nr)
 
   local callback = function(opts)
     M.cmp_on_insert_enter(main_nr, opts)
@@ -25,10 +24,8 @@ end
 ---Refresh sources on InsertEnter.
 -- adds a source for the otter buffer
 M.cmp_on_insert_enter = function(main_nr, opts)
-  vim.notify("cmp_on_insert_enter: " .. main_nr)
 
   if main_nr ~= vim.api.nvim_get_current_buf() then
-    vim.notify("Unregister sources, not in main buffer")
     for client_id, source_id in pairs(M.cmp_client_source_map) do
       cmp.unregister_source(source_id)
     end

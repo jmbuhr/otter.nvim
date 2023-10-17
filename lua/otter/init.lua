@@ -111,6 +111,7 @@ end
 
 local function replace_header_div(response)
   response.contents = response.contents:gsub('<div class="container">', '')
+  -- response.contents = response.contents:gsub('``` R', '```r')
   return response
 end
 

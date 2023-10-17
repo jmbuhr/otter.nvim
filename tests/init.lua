@@ -35,6 +35,4 @@ function M.setup()
   vim.env.XDG_CACHE_HOME = M.root(".tests/cache")
 end
 
-
-
 M.setup()

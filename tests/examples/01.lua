@@ -1,6 +1,5 @@
+print("hello from lua")
 
-print('hello from lua')
-
-vim.cmd[[
+vim.cmd([[
   let x = 10
-]]
+]])

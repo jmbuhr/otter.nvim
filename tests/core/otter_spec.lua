@@ -1,6 +1,5 @@
 describe("otter", function()
-  before_each(function()
-  end)
+  before_each(function() end)
 
   it("can be required", function()
     local otter = require("otter")

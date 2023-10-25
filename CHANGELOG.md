@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/jmbuhr/otter.nvim/compare/v1.3.0...v1.3.1) (2023-10-25)
+
+
+### Performance Improvements
+
+* parsing optimizations ([#60](https://github.com/jmbuhr/otter.nvim/issues/60)) ([4b111ee](https://github.com/jmbuhr/otter.nvim/commit/4b111ee2d1fe38c277ce22b9ed19c007815fe5c3))
+
 ## [1.3.0](https://github.com/jmbuhr/otter.nvim/compare/v1.2.1...v1.3.0) (2023-10-24)
 
 

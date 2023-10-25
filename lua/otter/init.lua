@@ -114,7 +114,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   for _, lang in ipairs(languages) do
     local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
 
-    if M.config.set_filetype then
+    if M.config.buffers.set_filetype then
       api.nvim_buf_set_option(otter_nr, "filetype", lang)
     else
       local autocommands = api.nvim_get_autocmds({ group = "lspconfig", pattern = lang })

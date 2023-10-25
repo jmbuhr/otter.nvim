@@ -23,7 +23,8 @@ end
 ---associated with this source.
 ---@return boolean
 source.is_otter_lang_context = function(self)
-  return keeper.get_current_language_context() == self.otter_ft
+  local lang, range = keeper.get_current_language_context()
+  return lang == self.otter_ft
 end
 
 ---Get debug name.
@@ -32,7 +33,7 @@ source.get_debug_name = function(self)
   return table.concat({ "otter", self.client.name }, ":")
 end
 
----Return the source is available.
+---Return if the source is available.
 ---@return boolean
 source.is_available = function(self)
   -- client is stopped.

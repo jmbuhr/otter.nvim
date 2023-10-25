@@ -10,6 +10,4 @@ return {
   javascript = "js",
   yaml = "yml",
   sql = "sql",
-  elixir = "ex",
-  markdown = "md"
 }

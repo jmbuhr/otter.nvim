@@ -16,7 +16,33 @@ for key, _ in pairs(extensions) do
   table.insert(injectable_languages, key)
 end
 
+local function determine_language(main_nr, name, node, metadata, current_language)
+  local injection_language = metadata["injection.language"]
+  if injection_language ~= nil then
+    -- chunks using the metadata to specify the injected language
+    -- e.g. html script tags
+    if injection_language ~= "comment" then
+      -- don't use comment as language,
+      -- comments with langue insiide are handled in injection.combined
+      return injection_language
+    end
+  elseif metadata["injection.combined"] == true then
+    -- chunks where the injected language is specified in the text of a comment
+    local lang_capture = metadata[2]["text"]
+    if lang_capture ~= nil then
+      return lang_capture
+    end
+  elseif name == "_lang" or name == "injection.language" then
+    -- chunks where the name of the injected language is dynamic
+    -- e.g. markdown code chunks
+    return ts.get_node_text(node, main_nr, metadata)
+  else
+    return current_language
+  end
+end
+
 ---Extract code chunks from the specified buffer.
+---Updates M._otters_attached[main_nr].code_chunks
 ---@param main_nr integer The main buffer number
 ---@param lang string|nil language to extract. All languages if nil.
 ---@return table
@@ -27,38 +53,25 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
   local root = tree[1]:root()
 
   local code_chunks = {}
-  local found_chunk = false
-  local lang_capture
+  local lang_capture = nil
   for id, node, metadata in query:iter_captures(root, main_nr) do
     local name = query.captures[id]
     local text
 
-    local injection_language = metadata["injection.language"]
-    if injection_language ~= nil then
-      lang_capture = injection_language
-      found_chunk = true
-    end
-
-    -- chunks where the name of the injected language is dynamic
-    -- e.g. markdown code chunks
-    if name == "_lang" then
-      text = ts.get_node_text(node, main_nr, metadata)
-      lang_capture = text
-      found_chunk = true
-    elseif
-      (name == "content" or name == "injection.content")
-      and found_chunk
+    lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
+    if
+      lang_capture
+      and (name == "content" or name == "injection.content")
       and (lang == nil or lang_capture == lang)
     then
+      -- the actual code content
       text = ts.get_node_text(node, main_nr, metadata)
       if exclude_eval_false and string.find(text, "| *eval: *false") then
         text = ""
       end
       local row1, col1, row2, col2 = node:range()
-      if row_from ~= nil and row_to ~= nil then
-        if (row1 >= row_to and row_to > 0) or row2 < row_from then
-          goto continue
-        end
+      if row_from ~= nil and row_to ~= nil and ((row1 >= row_to and row_to > 0) or row2 < row_from) then
+        goto continue
       end
       local result = {
         range = { from = { row1, col1 }, to = { row2, col2 } },
@@ -70,9 +83,10 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
         code_chunks[lang_capture] = {}
       end
       table.insert(code_chunks[lang_capture], result)
-      found_chunk = false
-      -- chunks where the name of the language is the name of the capture
+      -- reset current language
+      lang_capture = nil
     elseif contains(injectable_languages, name) then
+      -- chunks where the name of the language is the name of the capture
       if lang == nil or name == lang then
         text = ts.get_node_text(node, main_nr, metadata)
         local row1, col1, row2, col2 = node:range()
@@ -90,7 +104,6 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
     end
     ::continue::
   end
-
   return code_chunks
 end
 
@@ -107,49 +120,61 @@ M.get_current_language_context = function(main_nr)
   local parser = M._otters_attached[main_nr].parser
   local tree = parser:parse()
   local root = tree[1]:root()
-  local code_chunks = {}
-  local found_chunk = false
-  local lang_capture
-
+  local lang_capture = nil
   for id, node, metadata in query:iter_captures(root, main_nr) do
     local name = query.captures[id]
-    local text
-    -- chunks where the name of the injected language is dynamic
-    -- e.g. markdown code chunks
-    if name == "_lang" then
-      text = ts.get_node_text(node, main_nr, metadata)
-      lang_capture = text
-      found_chunk = true
-    elseif name == "content" and found_chunk then
+
+    lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
+
+    if lang_capture and (name == "content" or name == "injection.content") then
+      -- chunks where the name of the injected language is dynamic
+      -- e.g. markdown code chunks
       if ts.is_in_node_range(node, row, col) then
         return lang_capture, node:range()
       end
       -- chunks where the name of the language is the name of the capture
     elseif contains(injectable_languages, name) then
-      text = ts.get_node_text(node, main_nr, metadata)
       if ts.is_in_node_range(node, row, col) then
         return name, node:range()
       end
     end
   end
+  return nil
 end
 
 --- Syncronize the raft of otters attached to a buffer
----@param main_nr integer
-M.sync_raft = function(main_nr)
+---@param main_nr integer bufnr of the parent buffer
+---@param lang string|nil only sync one otter buffer matching a language
+M.sync_raft = function(main_nr, lang)
   if M._otters_attached[main_nr] ~= nil then
-    local all_code_chunks = extract_code_chunks(main_nr)
+    local all_code_chunks
+    local changetick = api.nvim_buf_get_changedtick(main_nr)
+    if M._otters_attached[main_nr].last_changetick == changetick then
+      all_code_chunks = M._otters_attached[main_nr].code_chunks
+    else
+      all_code_chunks = extract_code_chunks(main_nr)
+    end
+
+    M._otters_attached[main_nr].last_changetick = changetick
+    M._otters_attached[main_nr].code_chunks = all_code_chunks
+
     if next(all_code_chunks) == nil then
       return {}
     end
-    for _, lang in ipairs(M._otters_attached[main_nr].languages) do
+    local langs
+    if lang == nil then
+      langs = M._otters_attached[main_nr].languages
+    else
+      langs = { lang }
+    end
+    for _, lang in ipairs(langs) do
       local otter_nr = M._otters_attached[main_nr].buffers[lang]
       if otter_nr ~= nil then
         local code_chunks = all_code_chunks[lang]
         if code_chunks ~= nil then
           local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
 
-          -- create list with empty lines the lenght of the buffer
+          -- create list with empty lines the length of the buffer
           local ls = empty_lines(nmax)
 
           -- collect language lines
@@ -170,11 +195,6 @@ M.sync_raft = function(main_nr)
       end
     end
   end
-end
-
---- Syncronize the raft for the current buffer.
-M.sync_this_raft = function()
-  M.sync_raft(api.nvim_get_current_buf())
 end
 
 --- Activate the current buffer by adding and syncronizing
@@ -205,6 +225,8 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   M._otters_attached[main_nr].tsquery = tsquery
   M._otters_attached[main_nr].query = query
   M._otters_attached[main_nr].parser = ts.get_parser(main_nr, parsername)
+  M._otters_attached[main_nr].code_chunks = nil
+  M._otters_attached[main_nr].last_changetick = nil
 
   local all_code_chunks = extract_code_chunks(main_nr)
   local found_languages = {}
@@ -215,8 +237,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   end
   languages = found_languages
   M._otters_attached[main_nr].languages = languages
-
-  local lspconfigs = require("lspconfig.configs")
 
   -- create otter buffers
   for _, lang in ipairs(languages) do
@@ -247,10 +267,10 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       local opt = { buf = otter_nr }
       command.callback(opt)
     end
+  end
 
-    if completion then
-      require("otter.completion").setup_source(main_nr, otter_nr)
-    end
+  if completion then
+    require("otter.completion").setup_sources(main_nr, M._otters_attached[main_nr])
   end
 
   if diagnostics then
@@ -262,7 +282,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
     api.nvim_create_autocmd("BufWritePost", {
       buffer = main_nr,
-      group = api.nvim_create_augroup("OtterLSPDiagnositcs", {}),
+      group = api.nvim_create_augroup("OtterDiagnostics", {}),
       callback = function(_, _)
         M.sync_raft(main_nr)
         for bufnr, ns in pairs(nss) do
@@ -379,8 +399,8 @@ M.export_raft = function(force)
     local lang = M._otters_attached[main_nr].otter_nr_to_lang[otter_nr]
     local extension = extensions[lang] or ""
     path = otterpath_to_plain_path(path) .. extension
-    print("Exporting otter: " .. lang)
-    local new_path = vim.fn.input("New path: ", path, "file")
+    vim.notify("Exporting otter: " .. lang)
+    local new_path = vim.fn.input({ prompt = "New path: ", default = path, completion = "file" })
     if new_path ~= "" then
       api.nvim_set_current_buf(otter_nr)
       vim.lsp.buf.format({ bufnr = otter_nr })

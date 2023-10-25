@@ -1,3 +1,4 @@
+local cmp = require("cmp")
 local keeper = require("otter.keeper")
 local source = require("otter.completion.source")
 
@@ -7,30 +8,43 @@ local M = {}
 M.cmp_client_source_map = {}
 M.allowed_clients = {}
 
----Setup cmp-nvim-lsp source.
-M.setup_source = function(main_nr, otter_nr)
+---Setup nvim-cmp otter source.
+M.setup_sources = function(main_nr, otters_attached)
   local callback = function(opts)
-    M.cmp_on_insert_enter(main_nr, otter_nr, opts)
+    M.cmp_on_insert_enter(main_nr, opts)
   end
   vim.api.nvim_create_autocmd("InsertEnter", {
     -- buffer = main_nr,
-    group = vim.api.nvim_create_augroup("cmp_otter" .. otter_nr, { clear = true }),
+    group = vim.api.nvim_create_augroup("cmp_otter" .. main_nr, { clear = true }),
     callback = callback,
   })
 end
 
 ---Refresh sources on InsertEnter.
 -- adds a source for the otter buffer
-M.cmp_on_insert_enter = function(main_nr, otter_nr, opts)
-  local cmp = require("cmp")
+M.cmp_on_insert_enter = function(main_nr, opts)
+  if main_nr ~= vim.api.nvim_get_current_buf() then
+    for client_id, source_id in pairs(M.cmp_client_source_map) do
+      cmp.unregister_source(source_id)
+    end
+    M.cmp_client_source_map = {}
+    M.allowed_clients = {}
+    return
+  end
 
-  -- register all active clients.
-  for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = otter_nr })) do
-    M.allowed_clients[client.id] = client
-    if not M.cmp_client_source_map[client.id] then
-      local s = source.new(client, main_nr, otter_nr, keeper.sync_this_raft, keeper._otters_attached[main_nr].tsquery)
-      if s:is_available() then
-        M.cmp_client_source_map[s.client.id] = cmp.register_source("otter", s)
+  for lang, otter_nr in pairs(keeper._otters_attached[main_nr].buffers) do
+    -- register all active clients.
+    for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = otter_nr })) do
+      M.allowed_clients[client.id] = client
+      if not M.cmp_client_source_map[client.id] then
+        local updater = function()
+          keeper.sync_raft(main_nr, lang)
+        end
+
+        local s = source.new(client, main_nr, otter_nr, updater, keeper._otters_attached[main_nr].tsquery)
+        if s:is_available() then
+          M.cmp_client_source_map[s.client.id] = cmp.register_source("otter", s)
+        end
       end
     end
   end

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/jmbuhr/otter.nvim/compare/v1.2.1...v1.3.0) (2023-10-24)
+
+
+### Features
+
+* Add Markdown and Elixir extensions ([#64](https://github.com/jmbuhr/otter.nvim/issues/64)) ([ecb2f21](https://github.com/jmbuhr/otter.nvim/commit/ecb2f21abd109682bd60ce07d5ec22649e700a8f))
+
 ## [1.2.1](https://github.com/jmbuhr/otter.nvim/compare/v1.2.0...v1.2.1) (2023-09-16)
 
 

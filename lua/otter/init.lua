@@ -1,8 +1,8 @@
 local M = {}
 
 local api = vim.api
-local keeper = require("otter.keeper")
 local handlers = require("otter.tools.handlers")
+local keeper = require("otter.keeper")
 
 local default_config = {
   lsp = {

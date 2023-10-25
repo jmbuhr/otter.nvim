@@ -1,6 +1,6 @@
-local source = require("otter.completion.source")
-local keeper = require("otter.keeper")
 local cmp = require("cmp")
+local keeper = require("otter.keeper")
+local source = require("otter.completion.source")
 
 local M = {}
 

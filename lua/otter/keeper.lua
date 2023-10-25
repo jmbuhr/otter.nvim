@@ -282,7 +282,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
     api.nvim_create_autocmd("BufWritePost", {
       buffer = main_nr,
-      group = api.nvim_create_augroup("OtterLSPDiagnositcs", {}),
+      group = api.nvim_create_augroup("OtterDiagnostics", {}),
       callback = function(_, _)
         M.sync_raft(main_nr)
         for bufnr, ns in pairs(nss) do

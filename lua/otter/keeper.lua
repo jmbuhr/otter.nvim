@@ -42,6 +42,7 @@ local function determine_language(main_nr, name, node, metadata, current_languag
 end
 
 ---Extract code chunks from the specified buffer.
+---Updates M._otters_attached[main_nr].code_chunks
 ---@param main_nr integer The main buffer number
 ---@param lang string|nil language to extract. All languages if nil.
 ---@return table
@@ -103,7 +104,6 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
     end
     ::continue::
   end
-
   return code_chunks
 end
 
@@ -150,7 +150,17 @@ end
 ---@param lang string|nil only sync one otter buffer matching a language
 M.sync_raft = function(main_nr, lang)
   if M._otters_attached[main_nr] ~= nil then
-    local all_code_chunks = extract_code_chunks(main_nr)
+    local all_code_chunks
+    local changetick = api.nvim_buf_get_changedtick(main_nr)
+    if M._otters_attached[main_nr].last_changetick == changetick then
+      all_code_chunks = M._otters_attached[main_nr].code_chunks
+    else
+      all_code_chunks = extract_code_chunks(main_nr)
+    end
+
+    M._otters_attached[main_nr].last_changetick = changetick
+    M._otters_attached[main_nr].code_chunks = all_code_chunks
+
     if next(all_code_chunks) == nil then
       return {}
     end
@@ -218,6 +228,8 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   M._otters_attached[main_nr].tsquery = tsquery
   M._otters_attached[main_nr].query = query
   M._otters_attached[main_nr].parser = ts.get_parser(main_nr, parsername)
+  M._otters_attached[main_nr].code_chunks = nil
+  M._otters_attached[main_nr].last_changetick = nil
 
   local all_code_chunks = extract_code_chunks(main_nr)
   local found_languages = {}

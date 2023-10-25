@@ -1,7 +1,6 @@
 local M = {}
 local lines = require("otter.tools.functions").lines
 local empty_lines = require("otter.tools.functions").empty_lines
-local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
 local otterpath_to_plain_path = require("otter.tools.functions").otterpath_to_plain_path
 local concat = require("otter.tools.functions").concat
 local contains = require("otter.tools.functions").contains
@@ -46,7 +45,7 @@ end
 ---@param main_nr integer The main buffer number
 ---@param lang string|nil language to extract. All languages if nil.
 ---@return table
-local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, row_to)
+M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, row_to)
   local query = M._otters_attached[main_nr].query
   local parser = M._otters_attached[main_nr].parser
   local tree = parser:parse()
@@ -152,7 +151,7 @@ M.sync_raft = function(main_nr, lang)
     if M._otters_attached[main_nr].last_changetick == changetick then
       all_code_chunks = M._otters_attached[main_nr].code_chunks
     else
-      all_code_chunks = extract_code_chunks(main_nr)
+      all_code_chunks = M.extract_code_chunks(main_nr)
     end
 
     M._otters_attached[main_nr].last_changetick = changetick
@@ -194,104 +193,6 @@ M.sync_raft = function(main_nr, lang)
         end
       end
     end
-  end
-end
-
---- Activate the current buffer by adding and syncronizing
---- otter buffers.
----@param languages table
----@param completion boolean|nil
----@param diagnostics boolean|nil
----@param tsquery string|nil
-M.activate = function(languages, completion, diagnostics, tsquery)
-  completion = completion or true
-  diagnostics = diagnostics or true
-  local main_nr = api.nvim_get_current_buf()
-  local main_path = api.nvim_buf_get_name(main_nr)
-  local parsername = vim.treesitter.language.get_lang(api.nvim_buf_get_option(main_nr, "filetype"))
-  if not parsername then
-    return
-  end
-  local query
-  if tsquery ~= nil then
-    query = ts.query.parse(parsername, tsquery)
-  else
-    query = ts.query.get(parsername, "injections")
-  end
-  M._otters_attached[main_nr] = {}
-  M._otters_attached[main_nr].languages = languages
-  M._otters_attached[main_nr].buffers = {}
-  M._otters_attached[main_nr].otter_nr_to_lang = {}
-  M._otters_attached[main_nr].tsquery = tsquery
-  M._otters_attached[main_nr].query = query
-  M._otters_attached[main_nr].parser = ts.get_parser(main_nr, parsername)
-  M._otters_attached[main_nr].code_chunks = nil
-  M._otters_attached[main_nr].last_changetick = nil
-
-  local all_code_chunks = extract_code_chunks(main_nr)
-  local found_languages = {}
-  for _, lang in ipairs(languages) do
-    if all_code_chunks[lang] ~= nil then
-      table.insert(found_languages, lang)
-    end
-  end
-  languages = found_languages
-  M._otters_attached[main_nr].languages = languages
-
-  -- create otter buffers
-  for _, lang in ipairs(languages) do
-    local extension = "." .. extensions[lang]
-    if extension ~= nil then
-      local otter_path = path_to_otterpath(main_path, extension)
-      local otter_uri = "file://" .. otter_path
-      local otter_nr = vim.uri_to_bufnr(otter_uri)
-      api.nvim_buf_set_name(otter_nr, otter_path)
-      api.nvim_buf_set_option(otter_nr, "swapfile", false)
-      api.nvim_buf_set_option(otter_nr, "buftype", "nowrite")
-      M._otters_attached[main_nr].buffers[lang] = otter_nr
-      M._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
-    end
-  end
-
-  M.sync_raft(main_nr)
-
-  -- manually attach language server the corresponds to the fileytype
-  -- without setting the filetype
-  -- to prevent other plugins we don't need in the otter buffers
-  -- from automatically attaching when ft is set
-  for _, lang in ipairs(languages) do
-    local otter_nr = M._otters_attached[main_nr].buffers[lang]
-
-    local autocommands = api.nvim_get_autocmds({ group = "lspconfig", pattern = lang })
-    for _, command in ipairs(autocommands) do
-      local opt = { buf = otter_nr }
-      command.callback(opt)
-    end
-  end
-
-  if completion then
-    require("otter.completion").setup_sources(main_nr, M._otters_attached[main_nr])
-  end
-
-  if diagnostics then
-    local nss = {}
-    for lang, bufnr in pairs(M._otters_attached[main_nr].buffers) do
-      local ns = api.nvim_create_namespace("otter-lang-" .. lang)
-      nss[bufnr] = ns
-    end
-
-    api.nvim_create_autocmd("BufWritePost", {
-      buffer = main_nr,
-      group = api.nvim_create_augroup("OtterDiagnostics", {}),
-      callback = function(_, _)
-        M.sync_raft(main_nr)
-        for bufnr, ns in pairs(nss) do
-          local diag = vim.diagnostic.get(bufnr)
-          vim.diagnostic.reset(ns, main_nr)
-          vim.diagnostic.set(ns, main_nr, diag, {})
-        end
-      end,
-    })
   end
 end
 
@@ -439,7 +340,7 @@ M.get_curent_language_lines = function(exclude_eval_false, row_start, row_end)
     return
   end
 
-  local chunks = extract_code_chunks(main_nr, lang, exclude_eval_false, row_start, row_end)[lang]
+  local chunks = M.extract_code_chunks(main_nr, lang, exclude_eval_false, row_start, row_end)[lang]
   if not chunks or next(chunks) == nil then
     return
   end

@@ -1,14 +1,23 @@
 local M = {}
 
 local api = vim.api
+local ts = vim.treesitter
+local extensions = require("otter.tools.extensions")
 local handlers = require("otter.tools.handlers")
 local keeper = require("otter.keeper")
+local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
 
 local default_config = {
   lsp = {
     hover = {
       border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
     },
+  },
+  buffers = {
+    -- if set to true, the filetype of the otterbuffers will be set.
+    -- otherwise only the autocommand of lspconfig that attaches
+    -- the language server will be executed without setting the filetype
+    set_filetype = false,
   },
 }
 
@@ -17,7 +26,6 @@ M.setup = function(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 end
 
-M.activate = keeper.activate
 M.sync_raft = keeper.sync_raft
 M.send_request = keeper.send_request
 M.export = keeper.export_raft
@@ -39,6 +47,108 @@ M.dev_setup = function()
   vim.api.nvim_buf_set_keymap(0, "n", "gr", ":lua require'otter'.ask_references()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, "n", "<leader>lR", ":lua require'otter'.ask_rename()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, "n", "<leader>lf", ":lua require'otter'.ask_format()<cr>", { silent = true })
+end
+
+--- Activate the current buffer by adding and syncronizing
+--- otter buffers.
+---@param languages table
+---@param completion boolean|nil
+---@param diagnostics boolean|nil
+---@param tsquery string|nil
+M.activate = function(languages, completion, diagnostics, tsquery)
+  completion = completion or true
+  diagnostics = diagnostics or true
+  local main_nr = api.nvim_get_current_buf()
+  local main_path = api.nvim_buf_get_name(main_nr)
+  local parsername = vim.treesitter.language.get_lang(api.nvim_buf_get_option(main_nr, "filetype"))
+  if not parsername then
+    return
+  end
+  local query
+  if tsquery ~= nil then
+    query = ts.query.parse(parsername, tsquery)
+  else
+    query = ts.query.get(parsername, "injections")
+  end
+  keeper._otters_attached[main_nr] = {}
+  keeper._otters_attached[main_nr].languages = languages
+  keeper._otters_attached[main_nr].buffers = {}
+  keeper._otters_attached[main_nr].otter_nr_to_lang = {}
+  keeper._otters_attached[main_nr].tsquery = tsquery
+  keeper._otters_attached[main_nr].query = query
+  keeper._otters_attached[main_nr].parser = ts.get_parser(main_nr, parsername)
+  keeper._otters_attached[main_nr].code_chunks = nil
+  keeper._otters_attached[main_nr].last_changetick = nil
+
+  local all_code_chunks = keeper.extract_code_chunks(main_nr)
+  local found_languages = {}
+  for _, lang in ipairs(languages) do
+    if all_code_chunks[lang] ~= nil then
+      table.insert(found_languages, lang)
+    end
+  end
+  languages = found_languages
+  keeper._otters_attached[main_nr].languages = languages
+
+  -- create otter buffers
+  for _, lang in ipairs(languages) do
+    local extension = "." .. extensions[lang]
+    if extension ~= nil then
+      local otter_path = path_to_otterpath(main_path, extension)
+      local otter_uri = "file://" .. otter_path
+      local otter_nr = vim.uri_to_bufnr(otter_uri)
+      api.nvim_buf_set_name(otter_nr, otter_path)
+      api.nvim_buf_set_option(otter_nr, "swapfile", false)
+      api.nvim_buf_set_option(otter_nr, "buftype", "nowrite")
+      keeper._otters_attached[main_nr].buffers[lang] = otter_nr
+      keeper._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
+    end
+  end
+
+  keeper.sync_raft(main_nr)
+
+  -- manually attach language server the corresponds to the fileytype
+  -- without setting the filetype
+  -- to prevent other plugins we don't need in the otter buffers
+  -- from automatically attaching when ft is set
+  for _, lang in ipairs(languages) do
+    local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
+
+    if M.config.set_filetype then
+      api.nvim_buf_set_option(otter_nr, "filetype", lang)
+    else
+      local autocommands = api.nvim_get_autocmds({ group = "lspconfig", pattern = lang })
+      for _, command in ipairs(autocommands) do
+        local opt = { buf = otter_nr }
+        command.callback(opt)
+      end
+    end
+  end
+
+  if completion then
+    require("otter.completion").setup_sources(main_nr, keeper._otters_attached[main_nr])
+  end
+
+  if diagnostics then
+    local nss = {}
+    for lang, bufnr in pairs(keeper._otters_attached[main_nr].buffers) do
+      local ns = api.nvim_create_namespace("otter-lang-" .. lang)
+      nss[bufnr] = ns
+    end
+
+    api.nvim_create_autocmd("BufWritePost", {
+      buffer = main_nr,
+      group = api.nvim_create_augroup("OtterDiagnostics", {}),
+      callback = function(_, _)
+        M.sync_raft(main_nr)
+        for bufnr, ns in pairs(nss) do
+          local diag = vim.diagnostic.get(bufnr)
+          vim.diagnostic.reset(ns, main_nr)
+          vim.diagnostic.set(ns, main_nr, diag, {})
+        end
+      end,
+    })
+  end
 end
 
 -- example implementations to work with the send_request function

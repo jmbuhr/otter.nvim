@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0](https://github.com/jmbuhr/otter.nvim/compare/v1.3.1...v1.4.0) (2023-10-25)
+
+
+### Features
+
+* add option to set otter buffer filetype ([e302002](https://github.com/jmbuhr/otter.nvim/commit/e30200211aed45cb3daf1c458f23f2645f9abba9)), closes [#63](https://github.com/jmbuhr/otter.nvim/issues/63)
+
+
+### Bug Fixes
+
+* re-add [#64](https://github.com/jmbuhr/otter.nvim/issues/64) ([a6d3786](https://github.com/jmbuhr/otter.nvim/commit/a6d37869b04a0ed07815433974db6b8b4fe01ae5))
+
 ## [1.3.1](https://github.com/jmbuhr/otter.nvim/compare/v1.3.0...v1.3.1) (2023-10-25)
 
 

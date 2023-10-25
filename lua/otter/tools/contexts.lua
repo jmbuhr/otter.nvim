@@ -1,3 +1,3 @@
 return {
-  markdown = 'code_fence_content'
+  markdown = "code_fence_content",
 }

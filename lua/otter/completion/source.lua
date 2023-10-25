@@ -1,4 +1,4 @@
-local keeper = require 'otter.keeper'
+local keeper = require("otter.keeper")
 
 local source = {}
 
@@ -8,11 +8,11 @@ source.new = function(client, main_nr, otter_nr, updater, tsquery)
   self.otter_nr = otter_nr
   self.otter_ft = keeper._otters_attached[main_nr].otter_nr_to_lang[otter_nr]
   self.main_nr = main_nr
-  self.main_ft = vim.api.nvim_buf_get_option(main_nr, 'filetype')
+  self.main_ft = vim.api.nvim_buf_get_option(main_nr, "filetype")
   self.otter_parsername = vim.treesitter.language.get_lang(self.otter_ft)
   self.main_parsername = vim.treesitter.language.get_lang(self.main_ft)
   self.main_tsquery = tsquery
-  self.context = require 'otter.tools.contexts'[self.main_ft]
+  self.context = require("otter.tools.contexts")[self.main_ft]
   self.id = otter_nr
   self.request_ids = {}
   self.updater = updater
@@ -27,11 +27,10 @@ source.is_otter_lang_context = function(self)
   return lang == self.otter_ft
 end
 
-
 ---Get debug name.
 ---@return string
 source.get_debug_name = function(self)
-  return table.concat({ 'otter', self.client.name }, ':')
+  return table.concat({ "otter", self.client.name }, ":")
 end
 
 ---Return if the source is available.
@@ -57,26 +56,26 @@ source.is_available = function(self)
   --   return false
   -- end
 
-  return true;
+  return true
 end
 
 ---Get LSP's PositionEncodingKind.
 ---@return lsp.PositionEncodingKind
 source.get_position_encoding_kind = function(self)
-  return self:_get(self.client.server_capabilities, { 'positionEncoding' }) or self.client.offset_encoding or 'utf-16'
+  return self:_get(self.client.server_capabilities, { "positionEncoding" }) or self.client.offset_encoding or "utf-16"
 end
 
 ---Get triggerCharacters.
 ---@return string[]
 source.get_trigger_characters = function(self)
-  return self:_get(self.client.server_capabilities, { 'completionProvider', 'triggerCharacters' }) or {}
+  return self:_get(self.client.server_capabilities, { "completionProvider", "triggerCharacters" }) or {}
 end
 
 ---Get get_keyword_pattern.
 ---@param params cmp.SourceApiParams
 ---@return string
 source.get_keyword_pattern = function(self, params)
-  return (params.option or {})[self.client.name] or require('cmp').get_config().completion.keyword_pattern
+  return (params.option or {})[self.client.name] or require("cmp").get_config().completion.keyword_pattern
 end
 
 ---Resolve LSP CompletionItem.
@@ -87,12 +86,12 @@ source.complete = function(self, params, callback)
   local win = vim.api.nvim_get_current_win()
   local lsp_params = vim.lsp.util.make_position_params(win, self.client.offset_encoding)
   lsp_params.textDocument = {
-    uri = vim.uri_from_bufnr(self.otter_nr)
+    uri = vim.uri_from_bufnr(self.otter_nr),
   }
   lsp_params.context = {}
   lsp_params.context.triggerKind = params.completion_context.triggerKind
   lsp_params.context.triggerCharacter = params.completion_context.triggerCharacter
-  self:_request('textDocument/completion', lsp_params, function(_, response)
+  self:_request("textDocument/completion", lsp_params, function(_, response)
     callback(response)
   end)
 end
@@ -107,11 +106,11 @@ source.resolve = function(self, completion_item, callback)
   end
 
   -- client has no completion capability.
-  if not self:_get(self.client.server_capabilities, { 'completionProvider', 'resolveProvider' }) then
+  if not self:_get(self.client.server_capabilities, { "completionProvider", "resolveProvider" }) then
     return callback()
   end
 
-  self:_request('completionItem/resolve', completion_item, function(_, response)
+  self:_request("completionItem/resolve", completion_item, function(_, response)
     callback(response or completion_item)
   end)
 end
@@ -130,7 +129,7 @@ source.execute = function(self, completion_item, callback)
     return callback()
   end
 
-  self:_request('workspace/executeCommand', completion_item.command, function(_, _)
+  self:_request("workspace/executeCommand", completion_item.command, function(_, _)
     callback()
   end)
 end

@@ -1,6 +1,6 @@
-local source = require 'otter.completion.source'
-local keeper = require 'otter.keeper'
-local cmp = require('cmp')
+local source = require("otter.completion.source")
+local keeper = require("otter.keeper")
+local cmp = require("cmp")
 
 local M = {}
 
@@ -13,10 +13,10 @@ M.setup_sources = function(main_nr, otters_attached)
   local callback = function(opts)
     M.cmp_on_insert_enter(main_nr, opts)
   end
-  vim.api.nvim_create_autocmd('InsertEnter', {
+  vim.api.nvim_create_autocmd("InsertEnter", {
     -- buffer = main_nr,
-    group = vim.api.nvim_create_augroup('cmp_otter' .. main_nr, { clear = true }),
-    callback = callback
+    group = vim.api.nvim_create_augroup("cmp_otter" .. main_nr, { clear = true }),
+    callback = callback,
   })
 end
 
@@ -32,20 +32,18 @@ M.cmp_on_insert_enter = function(main_nr, opts)
     return
   end
 
-
   for lang, otter_nr in pairs(keeper._otters_attached[main_nr].buffers) do
     -- register all active clients.
     for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = otter_nr })) do
       M.allowed_clients[client.id] = client
       if not M.cmp_client_source_map[client.id] then
-
-        local updater = function ()
+        local updater = function()
           keeper.sync_raft(main_nr, lang)
         end
 
         local s = source.new(client, main_nr, otter_nr, updater, keeper._otters_attached[main_nr].tsquery)
         if s:is_available() then
-          M.cmp_client_source_map[s.client.id] = cmp.register_source('otter', s)
+          M.cmp_client_source_map[s.client.id] = cmp.register_source("otter", s)
         end
       end
     end
@@ -59,6 +57,5 @@ M.cmp_on_insert_enter = function(main_nr, opts)
     end
   end
 end
-
 
 return M

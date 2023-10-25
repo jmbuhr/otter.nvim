@@ -60,9 +60,9 @@ local function extract_code_chunks(main_nr, lang, exclude_eval_false, row_from, 
 
     lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
     if
-        lang_capture
-        and (name == "content" or name == "injection.content")
-        and (lang == nil or lang_capture == lang)
+      lang_capture
+      and (name == "content" or name == "injection.content")
+      and (lang == nil or lang_capture == lang)
     then
       -- the actual code content
       text = ts.get_node_text(node, main_nr, metadata)
@@ -126,10 +126,7 @@ M.get_current_language_context = function(main_nr)
 
     lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
 
-    if
-        lang_capture
-        and (name == "content" or name == "injection.content")
-    then
+    if lang_capture and (name == "content" or name == "injection.content") then
       -- chunks where the name of the injected language is dynamic
       -- e.g. markdown code chunks
       if ts.is_in_node_range(node, row, col) then

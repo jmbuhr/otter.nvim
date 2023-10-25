@@ -11,5 +11,5 @@ return {
   yaml = "yml",
   sql = "sql",
   elixir = "ex",
-  markdown = "md"
+  markdown = "md",
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/jmbuhr/otter.nvim/compare/v1.4.0...v1.4.1) (2023-10-25)
+
+
+### Bug Fixes
+
+* config use ([ea23615](https://github.com/jmbuhr/otter.nvim/commit/ea236158460eb100b7b126226340bcc70291180b))
+
 ## [1.4.0](https://github.com/jmbuhr/otter.nvim/compare/v1.3.1...v1.4.0) (2023-10-25)
 
 

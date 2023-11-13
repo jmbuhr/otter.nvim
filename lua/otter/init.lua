@@ -18,6 +18,7 @@ local default_config = {
     -- otherwise only the autocommand of lspconfig that attaches
     -- the language server will be executed without setting the filetype
     set_filetype = false,
+    write_to_disk = false,
   },
 }
 
@@ -99,9 +100,37 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       local otter_nr = vim.uri_to_bufnr(otter_uri)
       api.nvim_buf_set_name(otter_nr, otter_path)
       api.nvim_buf_set_option(otter_nr, "swapfile", false)
-      api.nvim_buf_set_option(otter_nr, "buftype", "nowrite")
       keeper._otters_attached[main_nr].buffers[lang] = otter_nr
       keeper._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
+
+      if M.config.buffers.write_to_disk then
+        -- remove otter buffer when main buffer is closed
+        api.nvim_create_autocmd({ "QuitPre", "WinClosed", "BufDelete" }, {
+          buffer = main_nr,
+          group = api.nvim_create_augroup("OtterAutoclose", {}),
+          callback = function(_, _)
+            if api.nvim_buf_is_loaded(otter_nr) then
+              api.nvim_buf_delete(otter_nr, { force = true })
+            end
+          end,
+        })
+        -- write to disk when main buffer is written
+        api.nvim_create_autocmd("BufWritePost", {
+          buffer = main_nr,
+          group = api.nvim_create_augroup("OtterAutowrite", {}),
+          callback = function(_, _)
+            if api.nvim_buf_is_loaded(otter_nr) then
+              api.nvim_buf_call(otter_nr,
+                function ()
+                  vim.cmd("write! " .. otter_path)
+                end
+              )
+            end
+          end,
+        })
+      else
+        api.nvim_buf_set_option(otter_nr, "buftype", "nowrite")
+      end
     end
   end
 

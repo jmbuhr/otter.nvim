@@ -12,7 +12,7 @@ local default_config = {
     -- the language server will be executed without setting the filetype
     set_filetype = false,
   },
-  strip_wrapping_quote_characters = { "'", '"', "`" }
+  strip_wrapping_quote_characters = { "'", '"', "`" },
 }
 
 M.cfg = default_config

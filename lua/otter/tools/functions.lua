@@ -1,6 +1,6 @@
 local M = {}
 
-local config = require 'otter.config'
+local config = require("otter.config")
 
 M.contains = function(list, x)
   for _, v in pairs(list) do

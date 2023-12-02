@@ -60,9 +60,9 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
 
     lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
     if
-        lang_capture
-        and (name == "content" or name == "injection.content")
-        and (lang == nil or lang_capture == lang)
+      lang_capture
+      and (name == "content" or name == "injection.content")
+      and (lang == nil or lang_capture == lang)
     then
       -- the actual code content
       text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })

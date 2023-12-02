@@ -10,7 +10,6 @@ end
 
 local M = {}
 
-
 local function trim_empty_lines(lines)
   local start = 1
   for i = 1, #lines do
@@ -28,7 +27,6 @@ local function trim_empty_lines(lines)
   end
   return vim.list_extend({}, lines, start, finish)
 end
-
 
 function M.hover(_, result, ctx, config)
   config = config or {}

@@ -4,6 +4,7 @@ local empty_lines = require("otter.tools.functions").empty_lines
 local otterpath_to_plain_path = require("otter.tools.functions").otterpath_to_plain_path
 local concat = require("otter.tools.functions").concat
 local contains = require("otter.tools.functions").contains
+local strip_wrapping_quotes = require("otter.tools.functions").strip_wrapping_quotes
 local extensions = require("otter.tools.extensions")
 local api = vim.api
 local ts = vim.treesitter
@@ -64,7 +65,10 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
       and (lang == nil or lang_capture == lang)
     then
       -- the actual code content
-      text = ts.get_node_text(node, main_nr, metadata)
+      text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
+      -- remove surrounding quotes (workaround for treesitter offets
+      -- not properly processed)
+      text = strip_wrapping_quotes(text)
       if exclude_eval_false and string.find(text, "| *eval: *false") then
         text = ""
       end
@@ -87,7 +91,8 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
     elseif contains(injectable_languages, name) then
       -- chunks where the name of the language is the name of the capture
       if lang == nil or name == lang then
-        text = ts.get_node_text(node, main_nr, metadata)
+        text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
+        text = strip_wrapping_quotes(text)
         local row1, col1, row2, col2 = node:range()
         local result = {
           range = { from = { row1, col1 }, to = { row2, col2 } },

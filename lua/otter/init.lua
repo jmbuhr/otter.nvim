@@ -6,24 +6,10 @@ local extensions = require("otter.tools.extensions")
 local handlers = require("otter.tools.handlers")
 local keeper = require("otter.keeper")
 local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
+local config = require("otter.config")
 
-local default_config = {
-  lsp = {
-    hover = {
-      border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
-    },
-  },
-  buffers = {
-    -- if set to true, the filetype of the otterbuffers will be set.
-    -- otherwise only the autocommand of lspconfig that attaches
-    -- the language server will be executed without setting the filetype
-    set_filetype = false,
-  },
-}
-
-M.config = default_config
 M.setup = function(opts)
-  M.config = vim.tbl_deep_extend("force", M.config, opts or {})
+  config.cfg = vim.tbl_deep_extend("force", config.cfg, opts or {})
 end
 
 M.sync_raft = keeper.sync_raft
@@ -114,7 +100,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   for _, lang in ipairs(languages) do
     local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
 
-    if M.config.buffers.set_filetype then
+    if config.cfg.buffers.set_filetype then
       api.nvim_buf_set_option(otter_nr, "filetype", lang)
     else
       local autocommands = api.nvim_get_autocmds({ group = "lspconfig", pattern = lang })
@@ -230,7 +216,7 @@ M.ask_hover = function()
     else
       return response
     end
-  end, vim.lsp.buf.hover, handlers.hover, M.config.lsp.hover)
+  end, vim.lsp.buf.hover, handlers.hover, config.cfg.lsp.hover)
 end
 
 M.ask_references = function()

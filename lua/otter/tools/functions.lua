@@ -1,7 +1,6 @@
 local M = {}
 
-local ts = vim.treesitter
-local tsq = require("nvim-treesitter.query")
+local config = require 'otter.config'
 
 M.contains = function(list, x)
   for _, v in pairs(list) do
@@ -10,6 +9,15 @@ M.contains = function(list, x)
     end
   end
   return false
+end
+
+M.strip_wrapping_quotes = function(s)
+  for _, c in ipairs(config.cfg.strip_wrapping_quote_characters) do
+    if s:sub(1, 1) == c and s:sub(#s, #s) == c then
+      return s:sub(2, #s - 1)
+    end
+  end
+  return s
 end
 
 M.lines = function(str)

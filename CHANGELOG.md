@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0](https://github.com/jmbuhr/otter.nvim/compare/v1.5.0...v1.6.0) (2023-12-22)
+
+
+### Features
+
+* add dot language ([3473c3e](https://github.com/jmbuhr/otter.nvim/commit/3473c3e68ed29639f7665cea331bf26adf2b03c0))
+
+
+### Bug Fixes
+
+* use complete language name if no extension is found ([a4c6cd8](https://github.com/jmbuhr/otter.nvim/commit/a4c6cd8ca259efe58bd2079b90483de7f8e16e2c))
+
 ## [1.5.0](https://github.com/jmbuhr/otter.nvim/compare/v1.4.1...v1.5.0) (2023-12-02)
 
 

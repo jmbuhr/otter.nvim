@@ -303,7 +303,7 @@ M.export_raft = function(force)
   for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
     local path = api.nvim_buf_get_name(otter_nr)
     local lang = M._otters_attached[main_nr].otter_nr_to_lang[otter_nr]
-    local extension = extensions[lang] or ""
+    local extension = extensions[lang] or lang
     path = otterpath_to_plain_path(path) .. extension
     vim.notify("Exporting otter: " .. lang)
     local new_path = vim.fn.input({ prompt = "New path: ", default = path, completion = "file" })

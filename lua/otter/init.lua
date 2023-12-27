@@ -137,7 +137,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   end
 end
 
--- example implementations to work with the send_request function
+--- Got to definition of the symbol under the cursor
 M.ask_definition = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -169,6 +169,7 @@ M.ask_definition = function()
   end, vim.lsp.buf.definition)
 end
 
+--- Got to type definition of the symbol under the cursor
 M.ask_type_definition = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -206,6 +207,7 @@ local function replace_header_div(response)
   return response
 end
 
+--- Open hover documentation of symbol under the cursor
 -- See <https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/buf.lua>
 M.ask_hover = function()
   local main_nr = api.nvim_get_current_buf()
@@ -219,6 +221,7 @@ M.ask_hover = function()
   end, vim.lsp.buf.hover, handlers.hover, config.cfg.lsp.hover)
 end
 
+--- Open quickfix list of references of the symbol under the cursor
 M.ask_references = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -237,6 +240,7 @@ M.ask_references = function()
   M.send_request(main_nr, "textDocument/references", redirect, vim.lsp.buf.references)
 end
 
+--- Open list of symbols of the current document
 M.ask_document_symbols = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -261,6 +265,7 @@ M.ask_document_symbols = function()
   )
 end
 
+--- Rename symbol under cursor
 M.ask_rename = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -295,6 +300,7 @@ M.ask_rename = function()
   M.send_request(main_nr, "textDocument/rename", redirect, vim.lsp.buf.rename)
 end
 
+--- Reformat current otter context
 M.ask_format = function()
   local main_nr = api.nvim_get_current_buf()
 

@@ -75,6 +75,67 @@ Specifically, you'll want to look at the `lua/plugins/quarto.lua` file
 in the [quarto-nvim-kickstarter](https://github.com/jmbuhr/quarto-nvim-kickstarter)
 configuration.
 
+In short:
+
+### Configure otter
+
+If you want to use the default config below you don't need to call `setup`.
+
+```lua
+local otter = requir'otter'
+otter.setup{
+  lsp = {
+    hover = {
+      border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
+    },
+  },
+  buffers = {
+    -- if set to true, the filetype of the otterbuffers will be set.
+    -- otherwise only the autocommand of lspconfig that attaches
+    -- the language server will be executed without setting the filetype
+    set_filetype = false,
+  },
+  strip_wrapping_quote_characters = { "'", '"', "`" },
+}
+```
+
+### Configure autocompletion
+
+Apart from its own functions, `otter.nvim` comes with a completion source for `nvim-cmp` for
+the embedded code. Use it as follows:
+
+```lua
+local cmp = require'cmp'
+cmp.setup(
+    -- <rest of your nvim-cmp config>
+    sources = {
+        { name = "otter" },
+        -- <other sources>
+    }
+}
+```
+
+
+### Activate otter
+
+Activate otter for the current document with
+
+```lua
+-- table of embedded languages to look for
+-- required (no default)
+local languages = {'python', 'lua' }
+-- enable completion/diagnostics
+-- defaults are true
+local completion = true
+local diagnostics = true
+-- treesitter query to look for embedded languages
+-- uses injections if nil or not set
+local tsquery = nil
+otter.activate(languages, completion, diagnostics, tsquery)
+```
+
+### Use otter
+
 Assuming `otter.nvim` is configured and added to `nvim-cmp` as a completion source,
 call `require'otter'.activate({'python', 'r', <more languages you want to embed> })` on any
 buffer that has injections (see `:h treesitter-language-injections`) defined

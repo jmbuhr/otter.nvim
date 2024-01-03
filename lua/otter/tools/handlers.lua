@@ -10,6 +10,24 @@ end
 
 local M = {}
 
+local function trim_empty_lines(lines)
+  local start = 1
+  for i = 1, #lines do
+    if lines[i] ~= nil and #lines[i] > 0 then
+      start = i
+      break
+    end
+  end
+  local finish = 1
+  for i = #lines, 1, -1 do
+    if lines[i] ~= nil and #lines[i] > 0 then
+      finish = i
+      break
+    end
+  end
+  return vim.list_extend({}, lines, start, finish)
+end
+
 function M.hover(_, result, ctx, config)
   config = config or {}
   config.focus_id = ctx.method
@@ -18,7 +36,7 @@ function M.hover(_, result, ctx, config)
     return
   end
   local markdown_lines = util.convert_input_to_markdown_lines(result.contents)
-  markdown_lines = util.trim_empty_lines(markdown_lines)
+  markdown_lines = trim_empty_lines(markdown_lines)
   if vim.tbl_isempty(markdown_lines) then
     return
   end

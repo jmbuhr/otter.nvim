@@ -6,25 +6,10 @@ local extensions = require("otter.tools.extensions")
 local handlers = require("otter.tools.handlers")
 local keeper = require("otter.keeper")
 local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
+local config = require("otter.config")
 
-local default_config = {
-  lsp = {
-    hover = {
-      border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
-    },
-  },
-  buffers = {
-    -- if set to true, the filetype of the otterbuffers will be set.
-    -- otherwise only the autocommand of lspconfig that attaches
-    -- the language server will be executed without setting the filetype
-    set_filetype = false,
-    write_to_disk = false,
-  },
-}
-
-M.config = default_config
 M.setup = function(opts)
-  M.config = vim.tbl_deep_extend("force", M.config, opts or {})
+  config.cfg = vim.tbl_deep_extend("force", config.cfg, opts or {})
 end
 
 M.sync_raft = keeper.sync_raft
@@ -143,7 +128,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   for _, lang in ipairs(languages) do
     local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
 
-    if M.config.buffers.set_filetype then
+    if config.cfg.buffers.set_filetype then
       api.nvim_buf_set_option(otter_nr, "filetype", lang)
     else
       local autocommands = api.nvim_get_autocmds({ group = "lspconfig", pattern = lang })
@@ -180,7 +165,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   end
 end
 
--- example implementations to work with the send_request function
+--- Got to definition of the symbol under the cursor
 M.ask_definition = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -212,6 +197,7 @@ M.ask_definition = function()
   end, vim.lsp.buf.definition)
 end
 
+--- Got to type definition of the symbol under the cursor
 M.ask_type_definition = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -249,6 +235,7 @@ local function replace_header_div(response)
   return response
 end
 
+--- Open hover documentation of symbol under the cursor
 -- See <https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/buf.lua>
 M.ask_hover = function()
   local main_nr = api.nvim_get_current_buf()
@@ -259,9 +246,10 @@ M.ask_hover = function()
     else
       return response
     end
-  end, vim.lsp.buf.hover, handlers.hover, M.config.lsp.hover)
+  end, vim.lsp.buf.hover, handlers.hover, config.cfg.lsp.hover)
 end
 
+--- Open quickfix list of references of the symbol under the cursor
 M.ask_references = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -280,6 +268,7 @@ M.ask_references = function()
   M.send_request(main_nr, "textDocument/references", redirect, vim.lsp.buf.references)
 end
 
+--- Open list of symbols of the current document
 M.ask_document_symbols = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -304,6 +293,7 @@ M.ask_document_symbols = function()
   )
 end
 
+--- Rename symbol under cursor
 M.ask_rename = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
@@ -338,6 +328,7 @@ M.ask_rename = function()
   M.send_request(main_nr, "textDocument/rename", redirect, vim.lsp.buf.rename)
 end
 
+--- Reformat current otter context
 M.ask_format = function()
   local main_nr = api.nvim_get_current_buf()
 

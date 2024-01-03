@@ -12,4 +12,5 @@ return {
   sql = "sql",
   elixir = "ex",
   markdown = "md",
+  dot = "dot"
 }

@@ -1,4 +1,4 @@
-*otter.nvim.txt*       For Neovim >= 0.9.0       Last change: 2023 December 27
+*otter.nvim.txt*        For Neovim >= 0.9.0       Last change: 2024 January 04
 
 ==============================================================================
 Table of Contents                               *otter.nvim-table-of-contents*
@@ -110,7 +110,7 @@ CONFIGURE OTTER ~
 If you want to use the default config below you don’t need to call `setup`.
 
 >lua
-    local otter = requir'otter'
+    local otter = require'otter'
     otter.setup{
       lsp = {
         hover = {
@@ -122,6 +122,11 @@ If you want to use the default config below you don’t need to call `setup`.
         -- otherwise only the autocommand of lspconfig that attaches
         -- the language server will be executed without setting the filetype
         set_filetype = false,
+        -- write <path>.otter.<embedded language extension> files
+        -- to disk on save of main buffer.
+        -- usefule for some linters that require actual files
+        -- otter files are deleted on quit or main buffer close
+        write_to_disk = false,
       },
       strip_wrapping_quote_characters = { "'", '"', "`" },
     }
@@ -190,14 +195,23 @@ when not in an otter context. Currently implemented functions are:
     otter.ask_format()
 <
 
+Additional functions:
+
+>lua
+    -- Export the raft of otters as files.
+    -- Asks for filename for each language.
+    otter.export()
+    otter.export_otter_as()
+<
+
 
 DEPENDENCIES ~
 
-`otter.nvim` relies on the following plugins:
+`otter.nvim` requires the following plugins:
 
 >lua
     {
-      'hrsh7th/nvim-cmp',
+      'hrsh7th/nvim-cmp', -- optional, for completion
       'neovim/nvim-lspconfig',
       'nvim-treesitter/nvim-treesitter'
     }

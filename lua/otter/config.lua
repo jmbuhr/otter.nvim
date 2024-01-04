@@ -11,6 +11,7 @@ local default_config = {
     -- otherwise only the autocommand of lspconfig that attaches
     -- the language server will be executed without setting the filetype
     set_filetype = false,
+    write_to_disk = false,
   },
   strip_wrapping_quote_characters = { "'", '"', "`" },
 }

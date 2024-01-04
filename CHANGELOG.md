@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/jmbuhr/otter.nvim/compare/v1.6.0...v1.7.0) (2024-01-04)
+
+
+### Features
+
+* trigger release ([51e69ba](https://github.com/jmbuhr/otter.nvim/commit/51e69bafb8ca74c0581ee8b1a16b6d6c7c85ab6e))
+
 ## [1.6.0](https://github.com/jmbuhr/otter.nvim/compare/v1.5.0...v1.6.0) (2023-12-22)
 
 

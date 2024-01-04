@@ -82,7 +82,7 @@ In short:
 If you want to use the default config below you don't need to call `setup`.
 
 ```lua
-local otter = requir'otter'
+local otter = require'otter'
 otter.setup{
   lsp = {
     hover = {
@@ -94,6 +94,11 @@ otter.setup{
     -- otherwise only the autocommand of lspconfig that attaches
     -- the language server will be executed without setting the filetype
     set_filetype = false,
+    -- write <path>.otter.<embedded language extension> files
+    -- to disk on save of main buffer.
+    -- usefule for some linters that require actual files
+    -- otter files are deleted on quit or main buffer close
+    write_to_disk = false,
   },
   strip_wrapping_quote_characters = { "'", '"', "`" },
 }
@@ -181,5 +186,6 @@ otter.export_otter_as()
 ```
 
 ![An otter eagerly awaiting your lsp requests. Generated with DALL-E 2.](img/2022-12-23-15-59-24.png)
+
 
 

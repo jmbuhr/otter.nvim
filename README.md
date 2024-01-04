@@ -158,14 +158,23 @@ otter.ask_rename()
 otter.ask_format()
 ```
 
+Additional functions:
+
+```lua
+-- Export the raft of otters as files.
+-- Asks for filename for each language.
+otter.export()
+otter.export_otter_as()
+```
+
 
 ### Dependencies
 
-`otter.nvim` relies on the following plugins:
+`otter.nvim` requires the following plugins:
 
 ```lua
 {
-  'hrsh7th/nvim-cmp',
+  'hrsh7th/nvim-cmp', -- optional, for completion
   'neovim/nvim-lspconfig',
   'nvim-treesitter/nvim-treesitter'
 }

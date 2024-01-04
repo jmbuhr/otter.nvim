@@ -1,10 +1,6 @@
 local M = {}
-local lines = require("otter.tools.functions").lines
-local empty_lines = require("otter.tools.functions").empty_lines
-local otterpath_to_plain_path = require("otter.tools.functions").otterpath_to_plain_path
-local concat = require("otter.tools.functions").concat
-local contains = require("otter.tools.functions").contains
-local strip_wrapping_quotes = require("otter.tools.functions").strip_wrapping_quotes
+
+local fn = require("otter.tools.functions")
 local extensions = require("otter.tools.extensions")
 local api = vim.api
 local ts = vim.treesitter
@@ -57,22 +53,32 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
   for id, node, metadata in query:iter_captures(root, main_nr) do
     local name = query.captures[id]
     local text
+    local was_stripped
 
     lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
     if
-      lang_capture
-      and (name == "content" or name == "injection.content")
-      and (lang == nil or lang_capture == lang)
+        lang_capture
+        and (name == "content" or name == "injection.content")
+        and (lang == nil or lang_capture == lang)
     then
       -- the actual code content
       text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
       -- remove surrounding quotes (workaround for treesitter offets
       -- not properly processed)
-      text = strip_wrapping_quotes(text)
+      text, was_stripped = fn.strip_wrapping_quotes(text)
       if exclude_eval_false and string.find(text, "| *eval: *false") then
         text = ""
       end
       local row1, col1, row2, col2 = node:range()
+      -- TODO: modify rows and cols accordingly
+      -- requires more logic to test if the code
+      -- and the wrapping quotes where on separate lines
+      -- and how to handle inline-code.
+      -- also for lsp request translation
+      -- if was_stripped then
+      --   col1 = col1 + 1
+      --   col2 = col2 - 1
+      -- end
       if row_from ~= nil and row_to ~= nil and ((row1 >= row_to and row_to > 0) or row2 < row_from) then
         goto continue
       end
@@ -80,7 +86,7 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
         range = { from = { row1, col1 }, to = { row2, col2 } },
         lang = lang_capture,
         node = node,
-        text = lines(text),
+        text = fn.lines(text),
       }
       if code_chunks[lang_capture] == nil then
         code_chunks[lang_capture] = {}
@@ -88,17 +94,21 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
       table.insert(code_chunks[lang_capture], result)
       -- reset current language
       lang_capture = nil
-    elseif contains(injectable_languages, name) then
+    elseif fn.contains(injectable_languages, name) then
       -- chunks where the name of the language is the name of the capture
       if lang == nil or name == lang then
         text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-        text = strip_wrapping_quotes(text)
+        text, was_stripped = fn.strip_wrapping_quotes(text)
         local row1, col1, row2, col2 = node:range()
+        -- if was_stripped then
+        --   col1 = col1 + 1
+        --   col2 = col2 - 1
+        -- end
         local result = {
           range = { from = { row1, col1 }, to = { row2, col2 } },
           lang = name,
           node = node,
-          text = lines(text),
+          text = fn.lines(text),
         }
         if code_chunks[name] == nil then
           code_chunks[name] = {}
@@ -137,7 +147,7 @@ M.get_current_language_context = function(main_nr)
         return lang_capture, node:range()
       end
       -- chunks where the name of the language is the name of the capture
-    elseif contains(injectable_languages, name) then
+    elseif fn.contains(injectable_languages, name) then
       if ts.is_in_node_range(node, row, col) then
         return name, node:range()
       end
@@ -179,7 +189,7 @@ M.sync_raft = function(main_nr, lang)
           local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
 
           -- create list with empty lines the length of the buffer
-          local ls = empty_lines(nmax)
+          local ls = fn.empty_lines(nmax)
 
           -- collect language lines
           for _, t in ipairs(code_chunks) do
@@ -218,7 +228,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
 
   local lang, start_row, start_col, end_row, end_col = M.get_current_language_context()
 
-  if not contains(M._otters_attached[main_nr].languages, lang) then
+  if not fn.contains(M._otters_attached[main_nr].languages, lang) then
     if fallback then
       fallback()
     end
@@ -304,7 +314,7 @@ M.export_raft = function(force)
     local path = api.nvim_buf_get_name(otter_nr)
     local lang = M._otters_attached[main_nr].otter_nr_to_lang[otter_nr]
     local extension = extensions[lang] or lang
-    path = otterpath_to_plain_path(path) .. '.' .. extension
+    path = fn.otterpath_to_plain_path(path) .. '.' .. extension
     vim.notify("Exporting otter: " .. lang)
     local new_path = vim.fn.input({ prompt = "New path: ", default = path, completion = "file" })
     if new_path ~= "" then
@@ -351,7 +361,7 @@ M.get_curent_language_lines = function(exclude_eval_false, row_start, row_end)
   end
   local code = {}
   for _, c in ipairs(chunks) do
-    table.insert(code, concat(c.text))
+    table.insert(code, fn.concat(c.text))
   end
   return code
 end
@@ -374,7 +384,7 @@ M.get_language_lines_around_cursor = function()
         return ts.get_node_text(node, main_nr, metadata)
       end
       -- chunks where the name of the language is the name of the capture
-    elseif contains(injectable_languages, name) then
+    elseif fn.contains(injectable_languages, name) then
       if ts.is_in_node_range(node, row, col) then
         return ts.get_node_text(node, main_nr, metadata)
       end

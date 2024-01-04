@@ -11,13 +11,16 @@ M.contains = function(list, x)
   return false
 end
 
+---strip wrapping quotes from a string
+---@param s string
+---@return string s, boolean stripped The stripped string and a boolean indicating whether the string was stripped
 M.strip_wrapping_quotes = function(s)
   for _, c in ipairs(config.cfg.strip_wrapping_quote_characters) do
     if s:sub(1, 1) == c and s:sub(#s, #s) == c then
-      return s:sub(2, #s - 1)
+      return s:sub(2, #s - 1), true
     end
   end
-  return s
+  return s, false
 end
 
 M.lines = function(str)
@@ -69,14 +72,14 @@ end
 --- @param path string a path
 --- @return string
 M.otterpath_to_path = function(path)
-  local s, _ = path:gsub(".otter%..+", "")
+  local s, _ = path:gsub("%.otter%..+", "")
   return s
 end
 
 --- @param path string a path
 --- @return string
 M.otterpath_to_plain_path = function(path)
-  local s, _ = path:gsub("%..+", "")
+  local s, _ = path:gsub("%..+%.otter%..+$", "")
   return s
 end
 

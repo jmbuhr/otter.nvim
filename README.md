@@ -187,5 +187,3 @@ otter.export_otter_as()
 
 ![An otter eagerly awaiting your lsp requests. Generated with DALL-E 2.](img/2022-12-23-15-59-24.png)
 
-
-

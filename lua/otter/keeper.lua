@@ -2,6 +2,7 @@ local M = {}
 
 local fn = require("otter.tools.functions")
 local extensions = require("otter.tools.extensions")
+local treesitter_iterator = require("otter.tools.treesitter_iterator")
 local api = vim.api
 local ts = vim.treesitter
 
@@ -50,15 +51,10 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
 
   local code_chunks = {}
   local lang_capture = nil
-  local metadata = {}
-  for id, node, maybemetadata in query:iter_captures(root, main_nr) do
-    if id == 1 then
-      metadata = maybemetadata
-    end
+  for id, node, metadata in treesitter_iterator.iter_captures(root, main_nr, query) do
     local name = query.captures[id]
     local text
     local was_stripped
-
     lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
     if
         lang_capture
@@ -139,11 +135,7 @@ M.get_current_language_context = function(main_nr)
   local tree = parser:parse()
   local root = tree[1]:root()
   local lang_capture = nil
-  local metadata = {}
-  for id, node, maybemetadata in query:iter_captures(root, main_nr) do
-    if id == 1 then
-      metadata = maybemetadata
-    end
+  for id, node, metadata in treesitter_iterator.iter_captures(root, main_nr, query) do
     local name = query.captures[id]
 
     lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
@@ -385,11 +377,7 @@ M.get_language_lines_around_cursor = function()
   local tree = parser:parse()
   local root = tree[1]:root()
 
-  local metadata = {}
-  for id, node, maybemetadata in query:iter_captures(root, main_nr) do
-    if id == 1 then
-      metadata = maybemetadata
-    end
+  for id, node, metadata in treesitter_iterator.iter_captures(root, main_nr, query) do
     local name = query.captures[id]
     if name == "content" then
       if ts.is_in_node_range(node, row, col) then

@@ -42,8 +42,8 @@ end
 ---@param diagnostics boolean|nil
 ---@param tsquery string|nil
 M.activate = function(languages, completion, diagnostics, tsquery)
-  completion = completion or true
-  diagnostics = diagnostics or true
+  completion = completion ~= false
+  diagnostics = diagnostics ~= false
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
   local parsername = vim.treesitter.language.get_lang(api.nvim_buf_get_option(main_nr, "filetype"))

@@ -274,7 +274,7 @@ end
 local function modify_position(obj, main_nr, invert)
   if not config.cfg.handle_leading_whitespace then return end
 
-  local sign = invert and 1 or -1
+  local sign = invert and -1 or 1
   if obj.range then
     local start = obj.range.start
     local end_ = obj.range["end"]
@@ -286,6 +286,14 @@ local function modify_position(obj, main_nr, invert)
   if obj.position then
     local pos = obj.position
     obj.position.character = pos.character + M.get_leading_offset(pos.line, main_nr) * sign
+  end
+
+  if obj.documentChanges then
+    for _, change in ipairs(obj.documentChanges) do
+      for _, edit in ipairs(change.edits) do
+        modify_position(edit, main_nr, invert)
+      end
+    end
   end
 end
 
@@ -353,7 +361,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     }
   end
 
-  modify_position(params, main_nr)
+  modify_position(params, main_nr, true)
 
   vim.lsp.buf_request(otter_nr, request, params, function(err, response, ctx, ...)
     if response == nil then
@@ -365,7 +373,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       for _, res in ipairs(response) do
         local filtered_res = filter(res)
         if filtered_res then
-          modify_position(filtered_res, main_nr, true)
+          modify_position(filtered_res, main_nr)
           table.insert(responses, filtered_res)
         end
       end
@@ -373,6 +381,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     else
       -- otherwise apply the filter to the one response
       response = filter(response)
+      modify_position(response, main_nr)
     end
     if response == nil then
       return

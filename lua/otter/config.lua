@@ -14,6 +14,7 @@ local default_config = {
     write_to_disk = false,
   },
   strip_wrapping_quote_characters = { "'", '"', "`" },
+  handle_leading_whitespace = false,
 }
 
 M.cfg = default_config

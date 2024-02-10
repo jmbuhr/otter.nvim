@@ -85,6 +85,8 @@ source.complete = function(self, params, callback)
   local otter_nrs = self.updater()
   local win = vim.api.nvim_get_current_win()
   local lsp_params = vim.lsp.util.make_position_params(win, self.client.offset_encoding)
+  lsp_params.position.character = lsp_params.position.character
+    - keeper.get_leading_offset(lsp_params.position.line, self.main_nr)
   lsp_params.textDocument = {
     uri = vim.uri_from_bufnr(self.otter_nr),
   }

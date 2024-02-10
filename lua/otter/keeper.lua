@@ -5,6 +5,7 @@ local extensions = require("otter.tools.extensions")
 local treesitter_iterator = require("otter.tools.treesitter_iterator")
 local api = vim.api
 local ts = vim.treesitter
+local config = require("otter.config")
 
 M._otters_attached = {}
 
@@ -20,7 +21,7 @@ local function determine_language(main_nr, name, node, metadata, current_languag
     -- e.g. html script tags
     if injection_language ~= "comment" then
       -- don't use comment as language,
-      -- comments with langue insiide are handled in injection.combined
+      -- comments with language inside are handled in injection.combined
       return injection_language
     end
   elseif metadata["injection.combined"] == true then
@@ -38,11 +39,39 @@ local function determine_language(main_nr, name, node, metadata, current_languag
   end
 end
 
+---trims the leading whitespace from text
+---@param text string
+---@param bufnr number host buffer number
+---@param starting_ln number
+---@return string, number
+local function trim_leading_witespace(text, bufnr, starting_ln)
+  if not config.cfg.handle_leading_whitespace then return text, 0 end
+
+  -- Assume the first line is least indented
+  -- the first line in the capture doesn't have its leading indent, so we grab from the buffer
+  local split = vim.split(text,  "\n", { trimempty = false })
+  if #split == 0 then return text, 0 end
+  local first_line = vim.api.nvim_buf_get_lines(bufnr, starting_ln, starting_ln + 1, false)
+  local leading = first_line[1]:match("^%s+")
+  if not leading then return text, 0 end
+  for i, line in ipairs(split) do
+    split[i] = line:gsub("^" .. leading, "")
+  end
+  return table.concat(split, "\n"), #leading
+end
+
+---@class CodeChunk
+---@field range table
+---@field lang string
+---@field node any
+---@field text string
+---@field leading_offset number
+
 ---Extract code chunks from the specified buffer.
 ---Updates M._otters_attached[main_nr].code_chunks
 ---@param main_nr integer The main buffer number
 ---@param lang string|nil language to extract. All languages if nil.
----@return table
+---@return CodeChunk[]
 M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, row_to)
   local query = M._otters_attached[main_nr].query
   local parser = M._otters_attached[main_nr].parser
@@ -63,7 +92,7 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
     then
       -- the actual code content
       text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-      -- remove surrounding quotes (workaround for treesitter offets
+      -- remove surrounding quotes (workaround for treesitter offsets
       -- not properly processed)
       text, was_stripped = fn.strip_wrapping_quotes(text)
       if exclude_eval_false and string.find(text, "| *eval: *false") then
@@ -82,11 +111,14 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
       if row_from ~= nil and row_to ~= nil and ((row1 >= row_to and row_to > 0) or row2 < row_from) then
         goto continue
       end
+      local leading_offset
+      text, leading_offset = trim_leading_witespace(text, main_nr, row1)
       local result = {
         range = { from = { row1, col1 }, to = { row2, col2 } },
         lang = lang_capture,
         node = node,
         text = fn.lines(text),
+        leading_offset = leading_offset,
       }
       if code_chunks[lang_capture] == nil then
         code_chunks[lang_capture] = {}
@@ -104,11 +136,14 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
         --   col1 = col1 + 1
         --   col2 = col2 - 1
         -- end
+        local leading_offset
+        text, leading_offset = trim_leading_witespace(text, main_nr, row1)
         local result = {
           range = { from = { row1, col1 }, to = { row2, col2 } },
           lang = name,
           node = node,
           text = fn.lines(text),
+          leading_offset = leading_offset,
         }
         if code_chunks[name] == nil then
           code_chunks[name] = {}
@@ -157,6 +192,25 @@ M.get_current_language_context = function(main_nr)
   end
   return nil
 end
+
+---find the leading_offset of the given line number, and buffer number. Returns 0 if the line number
+---isn't in a chunk.
+---@param line_nr number
+---@param main_nr number
+M.get_leading_offset = function(line_nr, main_nr)
+  if not config.cfg.handle_leading_whitespace then return 0 end
+
+  local lang_chunks = M._otters_attached[main_nr].code_chunks
+  for _, chunks in pairs(lang_chunks) do
+    for _, chunk in ipairs(chunks) do
+      if line_nr >= chunk.range.from[1] and line_nr <= chunk.range.to[1] then
+        return chunk.leading_offset
+      end
+    end
+  end
+  return 0
+end
+
 
 --- Syncronize the raft of otters attached to a buffer
 ---@param main_nr integer bufnr of the parent buffer
@@ -213,13 +267,35 @@ M.sync_raft = function(main_nr, lang)
   end
 end
 
+---adjusts IN PLACE the position to include the start and end
+---@param obj table
+---@param main_nr number
+---@param invert boolean?
+local function modify_position(obj, main_nr, invert)
+  if not config.cfg.handle_leading_whitespace then return end
+
+  local sign = invert and 1 or -1
+  if obj.range then
+    local start = obj.range.start
+    local end_ = obj.range["end"]
+    local offset = M.get_leading_offset(start.line, main_nr) * sign
+    obj.range.start.character = start.character + offset
+    obj.range["end"].character = end_.character + offset
+  end
+
+  if obj.position then
+    local pos = obj.position
+    obj.position.character = pos.character + M.get_leading_offset(pos.line, main_nr) * sign
+  end
+end
+
 --- Send a request to the otter buffers and handle the response.
 --- The response can optionally be filtered through a function.
 ---@param main_nr integer bufnr of main buffer
 ---@param request string lsp request
 ---@param filter function|nil function to process the response
----@param fallback function|nil optional funtion to call if not in an otter context
----@param handler function|nil optional funtion to handle the filtered lsp request for cases in which the default handler does not suffice
+---@param fallback function|nil optional function to call if not in an otter context
+---@param handler function|nil optional function to handle the filtered lsp request for cases in which the default handler does not suffice
 ---@param conf table|nil optional config to pass to the handler.
 M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   fallback = fallback or nil
@@ -277,6 +353,8 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     }
   end
 
+  modify_position(params, main_nr)
+
   vim.lsp.buf_request(otter_nr, request, params, function(err, response, ctx, ...)
     if response == nil then
       return
@@ -287,6 +365,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       for _, res in ipairs(response) do
         local filtered_res = filter(res)
         if filtered_res then
+          modify_position(filtered_res, main_nr, true)
           table.insert(responses, filtered_res)
         end
       end

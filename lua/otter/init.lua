@@ -35,7 +35,7 @@ M.dev_setup = function()
   vim.api.nvim_buf_set_keymap(0, "n", "<leader>lf", ":lua require'otter'.ask_format()<cr>", { silent = true })
 end
 
---- Activate the current buffer by adding and syncronizing
+--- Activate the current buffer by adding and synchronizing
 --- otter buffers.
 ---@param languages table
 ---@param completion boolean|nil
@@ -122,7 +122,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
   keeper.sync_raft(main_nr)
 
-  -- manually attach language server the corresponds to the fileytype
+  -- manually attach language server the corresponds to the filetype
   -- without setting the filetype
   -- to prevent other plugins we don't need in the otter buffers
   -- from automatically attaching when ft is set
@@ -157,9 +157,16 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       callback = function(_, _)
         M.sync_raft(main_nr)
         for bufnr, ns in pairs(nss) do
-          local diag = vim.diagnostic.get(bufnr)
+          local diags = vim.diagnostic.get(bufnr)
           vim.diagnostic.reset(ns, main_nr)
-          vim.diagnostic.set(ns, main_nr, diag, {})
+          if config.cfg.handle_leading_whitespace then
+            for _, diag in ipairs(diags) do
+              local offset = keeper.get_leading_offset(diag.lnum, main_nr)
+              diag.col = diag.col + offset
+              diag.end_col = diag.end_col + offset
+            end
+          end
+          vim.diagnostic.set(ns, main_nr, diags, {})
         end
       end,
     })

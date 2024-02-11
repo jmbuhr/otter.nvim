@@ -139,17 +139,19 @@ M.get_current_language_context = function(main_nr)
     local name = query.captures[id]
 
     lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
+    local start_row, start_col, end_row, end_col = node:range()
+    end_row = end_row - 1
 
     if lang_capture and (name == "content" or name == "injection.content") then
       -- chunks where the name of the injected language is dynamic
       -- e.g. markdown code chunks
       if ts.is_in_node_range(node, row, col) then
-        return lang_capture, node:range()
+        return lang_capture, start_row, start_col, end_row, end_col
       end
       -- chunks where the name of the language is the name of the capture
     elseif fn.contains(injectable_languages, name) then
       if ts.is_in_node_range(node, row, col) then
-        return name, node:range()
+        return name, start_row, start_col, end_row, end_col
       end
     end
   end

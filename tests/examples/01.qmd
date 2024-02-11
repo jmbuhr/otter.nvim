@@ -6,6 +6,13 @@ engine: markdown
 
 # Hello
 
+```{r}
+print('hello world')
+
+plot(1:10)
+```
+
+
 ```{python}
 print('hello world')
 ```

@@ -1,5 +1,16 @@
 #! /bin/env bash
+# usage: ./tests/debug-example.sh $1
 
-# $1: file extension
+echo "choose an example file based on number of extension."
+echo "e.g. ./tests/debug-example.sh 01"
+echo "e.g. ./tests/debug-example.sh qmd"
+echo "Options"
+ls ./tests/examples/
+
+if [ -z "$1" ]; then
+  echo "Please provide a file extension or a number"
+  echo "And call this from the project root directory"
+  exit 1
+fi
 
 nvim ./tests/examples/*$1* -c ":lua require'otter'.dev_setup()"

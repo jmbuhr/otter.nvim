@@ -2,4 +2,4 @@
 
 # $1: file extension
 
-nvim ./tests/examples/*.$1 -c ":lua require'otter'.dev_setup()"
+nvim ./tests/examples/*$1* -c ":lua require'otter'.dev_setup()"

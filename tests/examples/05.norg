@@ -1,0 +1,26 @@
+@document.meta
+title: Norg Example
+description: This is an example of Norg document.
+@end
+
+* Norg Example
+
+** Code
+  @code lua
+  print("Hello, Norg!")
+  @end
+
+
+  @code python
+  print("Hello world!")
+  import numpy as np
+  x = np.zeros(10)
+  @end
+
+** Other things
+  This is a paragraph.
+
+  - This is a list.
+  - This is another list.
+
+  This is another paragraph.

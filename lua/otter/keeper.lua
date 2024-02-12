@@ -141,6 +141,8 @@ M.get_current_language_context = function(main_nr)
     lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
     local start_row, start_col, end_row, end_col = node:range()
     end_row = end_row - 1
+    local last_line = vim.api.nvim_buf_get_lines(main_nr, end_row, end_row+1, true)[1]
+    end_col = last_line:len()
 
     if lang_capture and (name == "content" or name == "injection.content") then
       -- chunks where the name of the injected language is dynamic

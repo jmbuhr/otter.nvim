@@ -3,24 +3,35 @@ title: Norg Example
 description: This is an example of Norg document.
 @end
 
+@code lua
+local x = { "this", "is a table" }
+print("non-indented code block")
+@end
 * Norg Example
 
+  This is an example of an inline highlighted code chunk. It's supported in the next
+  version of the Neorg TS Parser, but it's not implemented in the current one. I'm
+  just leaving this here to see how this plugin will handle it in the future.
+  I can add `print('attached modifier extensions')`(lang:lua) text around the code.
+
 ** Code
-  @code lua
-  print("Hello, Norg!")
-  @end
 
+   @code lua
+   print("Hello, Norg!")
+   @end
 
-  @code python
-  print("Hello world!")
-  import numpy as np
-  x = np.zeros(10)
-  @end
+   @code python
+   print("Hello world!")
+   import numpy as np
+   x = np.zeros(10)
+   @end
 
 ** Other things
-  This is a paragraph.
 
-  - This is a list.
-  - This is another list.
+   This is a paragraph.
 
-  This is another paragraph.
+   - This is a list
+   -- with two indents
+   ~ and a numbered item
+
+   This is another paragraph.

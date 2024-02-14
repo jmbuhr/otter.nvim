@@ -45,15 +45,21 @@ end
 ---@param starting_ln number
 ---@return string, number
 local function trim_leading_witespace(text, bufnr, starting_ln)
-  if not config.cfg.handle_leading_whitespace then return text, 0 end
+  if not config.cfg.handle_leading_whitespace then
+    return text, 0
+  end
 
   -- Assume the first line is least indented
   -- the first line in the capture doesn't have its leading indent, so we grab from the buffer
-  local split = vim.split(text,  "\n", { trimempty = false })
-  if #split == 0 then return text, 0 end
+  local split = vim.split(text, "\n", { trimempty = false })
+  if #split == 0 then
+    return text, 0
+  end
   local first_line = vim.api.nvim_buf_get_lines(bufnr, starting_ln, starting_ln + 1, false)
   local leading = first_line[1]:match("^%s+")
-  if not leading then return text, 0 end
+  if not leading then
+    return text, 0
+  end
   for i, line in ipairs(split) do
     split[i] = line:gsub("^" .. leading, "")
   end
@@ -177,17 +183,29 @@ M.get_current_language_context = function(main_nr)
     local start_row, start_col, end_row, end_col = node:range()
     end_row = end_row - 1
 
+    local language = nil
     if lang_capture and (name == "content" or name == "injection.content") then
       -- chunks where the name of the injected language is dynamic
       -- e.g. markdown code chunks
       if ts.is_in_node_range(node, row, col) then
-        return lang_capture, start_row, start_col, end_row, end_col
+        language = lang_capture
       end
       -- chunks where the name of the language is the name of the capture
     elseif fn.contains(injectable_languages, name) then
       if ts.is_in_node_range(node, row, col) then
-        return name, start_row, start_col, end_row, end_col
+        language = name
       end
+    end
+
+    if language then
+      if config.cfg.handle_leading_whitespace then
+        local buf = M._otters_attached[main_nr].buffers[language]
+        local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
+        if lines[1] then
+          end_col = #lines[1]
+        end
+      end
+      return language, start_row, start_col, end_row, end_col
     end
   end
   return nil
@@ -198,7 +216,9 @@ end
 ---@param line_nr number
 ---@param main_nr number
 M.get_leading_offset = function(line_nr, main_nr)
-  if not config.cfg.handle_leading_whitespace then return 0 end
+  if not config.cfg.handle_leading_whitespace then
+    return 0
+  end
 
   local lang_chunks = M._otters_attached[main_nr].code_chunks
   for _, chunks in pairs(lang_chunks) do
@@ -209,6 +229,70 @@ M.get_leading_offset = function(line_nr, main_nr)
     end
   end
   return 0
+end
+
+---adjusts IN PLACE the position to include the start and end
+---@param obj table
+---@param main_nr number
+---@param invert boolean?
+---@param exclude_end boolean?
+---@param known_offset number?
+M.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
+  if not config.cfg.handle_leading_whitespace or known_offset == 0 then
+    return
+  end
+
+  local sign = invert and -1 or 1
+  local offset = known_offset
+
+  -- there are apparently a lot of ranges that different language servers can use
+  local ranges = { "range", "targetSelectionRange", "targetRange", "originSelectionRange" }
+  for _, range in ipairs(ranges) do
+    if obj[range] then
+      local start = obj[range].start
+      local end_ = obj[range]["end"]
+      offset = offset or M.get_leading_offset(start.line, main_nr) * sign
+      obj[range].start.character = start.character + offset
+      if not exclude_end then
+        obj[range]["end"].character = end_.character + offset
+      end
+    end
+  end
+
+  if obj.position then
+    local pos = obj.position
+    offset = offset or M.get_leading_offset(pos.line, main_nr) * sign
+    obj.position.character = pos.character + offset
+  end
+
+  if obj.documentChanges then
+    for _, change in ipairs(obj.documentChanges) do
+      if change.edits then
+        for _, edit in ipairs(change.edits) do
+          M.modify_position(edit, main_nr, invert, exclude_end, offset)
+        end
+      end
+    end
+  end
+
+  if obj.changes then
+    for _, change in pairs(obj.changes) do
+      for _, edit in ipairs(change) do
+        M.modify_position(edit, main_nr, invert, exclude_end, offset)
+      end
+    end
+  end
+
+  if obj.newText then
+    offset = offset or M.get_leading_offset(obj.range.start, main_nr) * sign
+    local str = ""
+    for _ = 1, offset, 1 do
+      str = str .. " "
+    end
+    -- Put indents in front of newline, but ignore newlines that are followed by newlines
+    obj.newText = string.gsub(obj.newText, "(\n)([^\n])", "%1" .. str .. "%2")
+    obj.newText = string.gsub(obj.newText, "\n$", "\n" .. str) -- match a potential newline at the end
+  end
 end
 
 
@@ -262,36 +346,6 @@ M.sync_raft = function(main_nr, lang)
           -- add language lines
           api.nvim_buf_set_lines(otter_nr, 0, nmax, false, ls)
         end
-      end
-    end
-  end
-end
-
----adjusts IN PLACE the position to include the start and end
----@param obj table
----@param main_nr number
----@param invert boolean?
-local function modify_position(obj, main_nr, invert)
-  if not config.cfg.handle_leading_whitespace then return end
-
-  local sign = invert and -1 or 1
-  if obj.range then
-    local start = obj.range.start
-    local end_ = obj.range["end"]
-    local offset = M.get_leading_offset(start.line, main_nr) * sign
-    obj.range.start.character = start.character + offset
-    obj.range["end"].character = end_.character + offset
-  end
-
-  if obj.position then
-    local pos = obj.position
-    obj.position.character = pos.character + M.get_leading_offset(pos.line, main_nr) * sign
-  end
-
-  if obj.documentChanges then
-    for _, change in ipairs(obj.documentChanges) do
-      for _, edit in ipairs(change.edits) do
-        modify_position(edit, main_nr, invert)
       end
     end
   end
@@ -359,9 +413,17 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       start = { line = start_row, character = start_col },
       ["end"] = { line = end_row, character = end_col },
     }
+    assert(end_row)
+    local line = vim.api.nvim_buf_get_lines(otter_nr, end_row, end_row + 1, false)[1]
+    if line then
+      params.range["end"].character = #line
+    end
+    M.modify_position(params, main_nr, true, true)
+  else
+    -- formatting gets its own special treatment, everything else gets the same
+    M.modify_position(params, main_nr, true)
   end
 
-  modify_position(params, main_nr, true)
 
   vim.lsp.buf_request(otter_nr, request, params, function(err, response, ctx, ...)
     if response == nil then
@@ -373,7 +435,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       for _, res in ipairs(response) do
         local filtered_res = filter(res)
         if filtered_res then
-          modify_position(filtered_res, main_nr)
+          M.modify_position(filtered_res, main_nr)
           table.insert(responses, filtered_res)
         end
       end
@@ -381,7 +443,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     else
       -- otherwise apply the filter to the one response
       response = filter(response)
-      modify_position(response, main_nr)
+      M.modify_position(response, main_nr)
     end
     if response == nil then
       return

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/jmbuhr/otter.nvim/compare/v1.7.1...v1.7.2) (2024-02-19)
+
+
+### Bug Fixes
+
+* make helper function is_otter_language_context actually return ([5572d0b](https://github.com/jmbuhr/otter.nvim/commit/5572d0ba84d775f3510848611065838c4632a63f))
+
 ## [1.7.1](https://github.com/jmbuhr/otter.nvim/compare/v1.7.0...v1.7.1) (2024-02-12)
 
 

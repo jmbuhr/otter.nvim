@@ -200,9 +200,11 @@ M.get_current_language_context = function(main_nr)
     if language then
       if config.cfg.handle_leading_whitespace then
         local buf = M._otters_attached[main_nr].buffers[language]
-        local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
-        if lines[1] then
-          end_col = #lines[1]
+        if buf then
+          local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
+          if lines[1] then
+            end_col = #lines[1]
+          end
         end
       end
       return language, start_row, start_col, end_row, end_col

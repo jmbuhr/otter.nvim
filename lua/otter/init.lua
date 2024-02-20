@@ -78,6 +78,13 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
   -- create otter buffers
   for _, lang in ipairs(languages) do
+    if not extensions[lang] then
+      vim.notify(
+        ("[Otter] %s is an unknown language. Please open an issue/PR to get it added"):format(lang),
+        vim.log.levels.ERROR
+      )
+      goto continue
+    end
     local extension = "." .. extensions[lang]
     if extension ~= nil then
       local otter_path = path_to_otterpath(main_path, extension)
@@ -106,11 +113,9 @@ M.activate = function(languages, completion, diagnostics, tsquery)
           group = api.nvim_create_augroup("OtterAutowrite" .. otter_nr, {}),
           callback = function(_, _)
             if api.nvim_buf_is_loaded(otter_nr) then
-              api.nvim_buf_call(otter_nr,
-                function()
-                  vim.cmd("write! " .. otter_path)
-                end
-              )
+              api.nvim_buf_call(otter_nr, function()
+                vim.cmd("write! " .. otter_path)
+              end)
             end
           end,
         })
@@ -118,6 +123,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
         api.nvim_buf_set_option(otter_nr, "buftype", "nowrite")
       end
     end
+    ::continue::
   end
 
   keeper.sync_raft(main_nr)

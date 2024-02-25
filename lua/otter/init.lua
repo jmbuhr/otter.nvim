@@ -78,7 +78,9 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- create otter buffers
   for _, lang in ipairs(languages) do
     local ext = extensions[lang]
-    if ext ~= nil then
+    if ext == nil then
+      vim.notify("No extension found for language " .. lang, vim.log.levels.WARN)
+    else
       local extension = "." .. ext
       local otter_path = path_to_otterpath(main_path, extension)
       local otter_uri = "file://" .. otter_path

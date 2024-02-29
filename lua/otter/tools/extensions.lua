@@ -13,6 +13,7 @@ return {
   lua = "lua",
   markdown = "md",
   nix = "nix",
+  ojs = "js",
   php = "php",
   python = "py",
   r = "R",

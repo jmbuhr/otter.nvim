@@ -57,7 +57,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     query = ts.query.get(parsername, "injections")
   end
   keeper._otters_attached[main_nr] = {}
-  keeper._otters_attached[main_nr].languages = languages
+  keeper._otters_attached[main_nr].languages = {}
   keeper._otters_attached[main_nr].buffers = {}
   keeper._otters_attached[main_nr].otter_nr_to_lang = {}
   keeper._otters_attached[main_nr].tsquery = tsquery
@@ -74,7 +74,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
   end
   languages = found_languages
-  keeper._otters_attached[main_nr].languages = languages
 
   -- create otter buffers
   for _, lang in ipairs(languages) do
@@ -94,6 +93,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       api.nvim_buf_set_option(otter_nr, "swapfile", false)
       keeper._otters_attached[main_nr].buffers[lang] = otter_nr
       keeper._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
+      table.insert(keeper._otters_attached[main_nr].languages, lang)
 
       if config.cfg.buffers.write_to_disk then
         -- remove otter buffer when main buffer is closed
@@ -132,7 +132,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- without setting the filetype
   -- to prevent other plugins we don't need in the otter buffers
   -- from automatically attaching when ft is set
-  for _, lang in ipairs(languages) do
+  for _, lang in ipairs(keeper._otters_attached[main_nr].languages) do
     local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
 
     if config.cfg.buffers.set_filetype then

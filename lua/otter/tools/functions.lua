@@ -93,6 +93,9 @@ M.is_otter_language_context = function(lang)
   local current = require("otter.keeper").get_current_language_context()
   if current == lang then
     vim.b["quarto_is_" .. lang .. "_chunk"] = true
+    return true
+  else
+    return false
   end
 end
 

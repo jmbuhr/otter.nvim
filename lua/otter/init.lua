@@ -37,11 +37,12 @@ end
 
 --- Activate the current buffer by adding and syncronizing
 --- otter buffers.
----@param languages table
+---@param languages table|nil
 ---@param completion boolean|nil
 ---@param diagnostics boolean|nil
 ---@param tsquery string|nil
 M.activate = function(languages, completion, diagnostics, tsquery)
+  languages = languages or vim.tbl_keys(require("otter.tools.extensions"))
   completion = completion ~= false
   diagnostics = diagnostics ~= false
   local main_nr = api.nvim_get_current_buf()

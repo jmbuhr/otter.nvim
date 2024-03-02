@@ -35,7 +35,7 @@ M.dev_setup = function()
   vim.api.nvim_buf_set_keymap(0, "n", "<leader>lf", ":lua require'otter'.ask_format()<cr>", { silent = true })
 end
 
---- Activate the current buffer by adding and syncronizing
+--- Activate the current buffer by adding and synchronizing
 --- otter buffers.
 ---@param languages table|nil
 ---@param completion boolean|nil
@@ -78,11 +78,15 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
   -- create otter buffers
   for _, lang in ipairs(languages) do
-    local ext = extensions[lang]
-    if ext == nil then
-      vim.notify("No extension found for language " .. lang, vim.log.levels.WARN)
-    else
-      local extension = "." .. ext
+    if not extensions[lang] then
+      vim.notify(
+        ("[Otter] %s is an unknown language. Please open an issue/PR to get it added"):format(lang),
+        vim.log.levels.ERROR
+      )
+      goto continue
+    end
+    local extension = "." .. extensions[lang]
+    if extension ~= nil then
       local otter_path = path_to_otterpath(main_path, extension)
       local otter_uri = "file://" .. otter_path
       local otter_nr = vim.uri_to_bufnr(otter_uri)
@@ -110,11 +114,9 @@ M.activate = function(languages, completion, diagnostics, tsquery)
           group = api.nvim_create_augroup("OtterAutowrite" .. otter_nr, {}),
           callback = function(_, _)
             if api.nvim_buf_is_loaded(otter_nr) then
-              api.nvim_buf_call(otter_nr,
-                function()
-                  vim.cmd("write! " .. otter_path)
-                end
-              )
+              api.nvim_buf_call(otter_nr, function()
+                vim.cmd("write! " .. otter_path)
+              end)
             end
           end,
         })
@@ -122,11 +124,12 @@ M.activate = function(languages, completion, diagnostics, tsquery)
         api.nvim_buf_set_option(otter_nr, "buftype", "nowrite")
       end
     end
+    ::continue::
   end
 
   keeper.sync_raft(main_nr)
 
-  -- manually attach language server the corresponds to the fileytype
+  -- manually attach language server the corresponds to the filetype
   -- without setting the filetype
   -- to prevent other plugins we don't need in the otter buffers
   -- from automatically attaching when ft is set
@@ -159,9 +162,16 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     local sync_diagnostics = function(_, _)
       M.sync_raft(main_nr)
       for bufnr, ns in pairs(nss) do
-        local diag = vim.diagnostic.get(bufnr)
+        local diags = vim.diagnostic.get(bufnr)
         vim.diagnostic.reset(ns, main_nr)
-        vim.diagnostic.set(ns, main_nr, diag, {})
+        if config.cfg.handle_leading_whitespace then
+          for _, diag in ipairs(diags) do
+            local offset = keeper.get_leading_offset(diag.lnum, main_nr)
+            diag.col = diag.col + offset
+            diag.end_col = diag.end_col + offset
+          end
+        end
+        vim.diagnostic.set(ns, main_nr, diags, {})
       end
     end
 

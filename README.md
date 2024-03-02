@@ -22,7 +22,6 @@ Example in a markdown (or quarto markdown) document `index.md`:
 
 ````
 # Some markdown
-
 Hello world
 
 ```python
@@ -39,8 +38,9 @@ We create a hidden buffer for a file `index.md.tmp.py`
  
  
  
-  import numpy as np
-  np.zeros(10)
+import numpy as np
+np.zeros(10)
+
 ````
 
 This contains just the python code and blank lines for all other lines (this keeps line numbers the same, which comes straight from the trick that the quarto dev team uses for the vs code extension as well).
@@ -101,6 +101,9 @@ otter.setup{
     write_to_disk = false,
   },
   strip_wrapping_quote_characters = { "'", '"', "`" },
+  -- Otter may not work the way you expect when entire code blocks are indented (eg. in Org files)
+  -- When true, otter handles these cases fully. This is a (minor) performance hit
+  handle_leading_whitespace = false,
 }
 ```
 

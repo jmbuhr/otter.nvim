@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.8.0](https://github.com/jmbuhr/otter.nvim/compare/v1.7.2...v1.8.0) (2024-03-02)
+
+
+### Features
+
+* activate all languages for which extensions are known by passing nil ([#95](https://github.com/jmbuhr/otter.nvim/issues/95)) ([6234723](https://github.com/jmbuhr/otter.nvim/commit/6234723e8852de72da29e045a39c0d0f8e1be0e6))
+* add observable js (ojs) as js extension ([0674acb](https://github.com/jmbuhr/otter.nvim/commit/0674acbbebd842e7df65d4cc81d21b93e5e5bb71))
+* otter.deactivate function ([#96](https://github.com/jmbuhr/otter.nvim/issues/96)) ([519c777](https://github.com/jmbuhr/otter.nvim/commit/519c777704c01d6951b78379843f84e38726ebc0))
+
+
+### Bug Fixes
+
+* only attempt to activate found languages with found extension ([5a4967c](https://github.com/jmbuhr/otter.nvim/commit/5a4967c8970ebb80c8d67327008f43a97d1c1ec6))
+* sync diagnostics on activate ([#98](https://github.com/jmbuhr/otter.nvim/issues/98)) ([dad5c46](https://github.com/jmbuhr/otter.nvim/commit/dad5c46495f16cc47e82618ac0ee7391aa77388e))
+* use proper treesiter iteration from nvim nightly to handle offsets ([#100](https://github.com/jmbuhr/otter.nvim/issues/100)) ([53165d7](https://github.com/jmbuhr/otter.nvim/commit/53165d7b4d5ecb861092e4f4b9d8b61bb83de78f))
+
 ## [1.7.2](https://github.com/jmbuhr/otter.nvim/compare/v1.7.1...v1.7.2) (2024-02-19)
 
 

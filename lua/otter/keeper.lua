@@ -53,6 +53,12 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
   for pattern, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
       local name = query.captures[id]
+
+      -- TODO: maybe can be removed with nvim v0.10
+      if type(nodes) ~= "table" then
+        nodes = { nodes }
+      end
+
       for _, node in ipairs(nodes) do
         local text
         local was_stripped
@@ -144,6 +150,12 @@ M.get_current_language_context = function(main_nr)
   for pattern, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
       local name = query.captures[id]
+
+      -- TODO: maybe can be removed with nvim v0.10
+      if type(nodes) ~= "table" then
+        nodes = { nodes }
+      end
+
       for _, node in ipairs(nodes) do
         lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
 
@@ -389,6 +401,12 @@ M.get_language_lines_around_cursor = function()
   for pattern, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
       local name = query.captures[id]
+
+      -- TODO: maybe can be removed with nvim v0.10
+      if type(nodes) ~= "table" then
+        nodes = { nodes }
+      end
+
       for _, node in ipairs(nodes) do
         if name == "content" then
           if ts.is_in_node_range(node, row, col) then

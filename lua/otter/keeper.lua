@@ -87,6 +87,7 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
   local lang_capture = nil
   for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
+      local name = query.captures[id]
 
       -- TODO: maybe can be removed with nvim v0.10
       if type(nodes) ~= "table" then
@@ -94,7 +95,6 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
       end
 
       for _, node in ipairs(nodes) do
-        local name = query.captures[id]
         local text
         local was_stripped
         lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
@@ -168,7 +168,6 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
       end
     end
   end
-  P(code_chunks)
   return code_chunks
 end
 

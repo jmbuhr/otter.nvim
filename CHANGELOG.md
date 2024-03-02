@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/jmbuhr/otter.nvim/compare/v1.8.0...v1.9.0) (2024-03-02)
+
+
+### Features
+
+* handle leading whitespace ([#86](https://github.com/jmbuhr/otter.nvim/issues/86)) ([9c2bc06](https://github.com/jmbuhr/otter.nvim/commit/9c2bc061f2890835d65fc6fd75703f16169bf507))
+
 ## [1.8.0](https://github.com/jmbuhr/otter.nvim/compare/v1.7.2...v1.8.0) (2024-03-02)
 
 

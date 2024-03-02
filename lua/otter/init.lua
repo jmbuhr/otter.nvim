@@ -178,6 +178,9 @@ M.deactivate = function(completion, diagnostics)
   diagnostics = diagnostics ~= false
 
   local main_nr = api.nvim_get_current_buf()
+  if keeper._otters_attached[main_nr] == nil then
+    return
+  end
 
   if diagnostics then
     for _, ns in pairs(keeper._otters_attached[main_nr].nss) do

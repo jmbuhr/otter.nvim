@@ -2,7 +2,6 @@ local M = {}
 
 local fn = require("otter.tools.functions")
 local extensions = require("otter.tools.extensions")
-local treesitter_iterator = require("otter.tools.treesitter_iterator")
 local api = vim.api
 local ts = vim.treesitter
 
@@ -51,72 +50,85 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
 
   local code_chunks = {}
   local lang_capture = nil
-  for id, node, metadata in treesitter_iterator.iter_captures(root, main_nr, query) do
-    local name = query.captures[id]
-    local text
-    local was_stripped
-    lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
-    if
-        lang_capture
-        and (name == "content" or name == "injection.content")
-        and (lang == nil or lang_capture == lang)
-    then
-      -- the actual code content
-      text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-      -- remove surrounding quotes (workaround for treesitter offets
-      -- not properly processed)
-      text, was_stripped = fn.strip_wrapping_quotes(text)
-      if exclude_eval_false and string.find(text, "| *eval: *false") then
-        text = ""
+  for pattern, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
+    for id, nodes in pairs(match) do
+      local name = query.captures[id]
+
+      -- TODO: maybe can be removed with nvim v0.10
+      if type(nodes) ~= "table" then
+        nodes = { nodes }
       end
-      local row1, col1, row2, col2 = node:range()
-      -- TODO: modify rows and cols accordingly
-      -- requires more logic to test if the code
-      -- and the wrapping quotes where on separate lines
-      -- and how to handle inline-code.
-      -- also for lsp request translation
-      -- if was_stripped then
-      --   col1 = col1 + 1
-      --   col2 = col2 - 1
-      -- end
-      if row_from ~= nil and row_to ~= nil and ((row1 >= row_to and row_to > 0) or row2 < row_from) then
-        goto continue
-      end
-      local result = {
-        range = { from = { row1, col1 }, to = { row2, col2 } },
-        lang = lang_capture,
-        node = node,
-        text = fn.lines(text),
-      }
-      if code_chunks[lang_capture] == nil then
-        code_chunks[lang_capture] = {}
-      end
-      table.insert(code_chunks[lang_capture], result)
-      -- reset current language
-      lang_capture = nil
-    elseif fn.contains(injectable_languages, name) then
-      -- chunks where the name of the language is the name of the capture
-      if lang == nil or name == lang then
-        text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-        text, was_stripped = fn.strip_wrapping_quotes(text)
-        local row1, col1, row2, col2 = node:range()
-        -- if was_stripped then
-        --   col1 = col1 + 1
-        --   col2 = col2 - 1
-        -- end
-        local result = {
-          range = { from = { row1, col1 }, to = { row2, col2 } },
-          lang = name,
-          node = node,
-          text = fn.lines(text),
-        }
-        if code_chunks[name] == nil then
-          code_chunks[name] = {}
+
+      for _, node in ipairs(nodes) do
+        local text
+        local was_stripped
+        lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
+        if
+            lang_capture
+            and (name == "content" or name == "injection.content")
+            and (lang == nil or lang_capture == lang)
+        then
+          -- the actual code content
+          text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
+
+          -- remove surrounding quotes (workaround for treesitter offets
+          -- not properly processed)
+          -- TODO: evaluate if this is still necessary after the fix
+          text, was_stripped = fn.strip_wrapping_quotes(text)
+          if exclude_eval_false and string.find(text, "| *eval: *false") then
+            text = ""
+          end
+
+          local row1, col1, row2, col2 = node:range()
+          -- TODO: modify rows and cols accordingly
+          -- requires more logic to test if the code
+          -- and the wrapping quotes where on separate lines
+          -- and how to handle inline-code.
+          -- also for lsp request translation
+          -- if was_stripped then
+          --   col1 = col1 + 1
+          --   col2 = col2 - 1
+          -- end
+          if row_from ~= nil and row_to ~= nil and ((row1 >= row_to and row_to > 0) or row2 < row_from) then
+            goto continue
+          end
+          local result = {
+            range = { from = { row1, col1 }, to = { row2, col2 } },
+            lang = lang_capture,
+            node = node,
+            text = fn.lines(text),
+          }
+          if code_chunks[lang_capture] == nil then
+            code_chunks[lang_capture] = {}
+          end
+          table.insert(code_chunks[lang_capture], result)
+          -- reset current language
+          lang_capture = nil
+        elseif fn.contains(injectable_languages, name) then
+          -- chunks where the name of the language is the name of the capture
+          if lang == nil or name == lang then
+            text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
+            text, was_stripped = fn.strip_wrapping_quotes(text)
+            local row1, col1, row2, col2 = node:range()
+            -- if was_stripped then
+            --   col1 = col1 + 1
+            --   col2 = col2 - 1
+            -- end
+            local result = {
+              range = { from = { row1, col1 }, to = { row2, col2 } },
+              lang = name,
+              node = node,
+              text = fn.lines(text),
+            }
+            if code_chunks[name] == nil then
+              code_chunks[name] = {}
+            end
+            table.insert(code_chunks[name], result)
+          end
         end
-        table.insert(code_chunks[name], result)
+        ::continue::
       end
     end
-    ::continue::
   end
   return code_chunks
 end
@@ -135,21 +147,30 @@ M.get_current_language_context = function(main_nr)
   local tree = parser:parse()
   local root = tree[1]:root()
   local lang_capture = nil
-  for id, node, metadata in treesitter_iterator.iter_captures(root, main_nr, query) do
-    local name = query.captures[id]
+  for pattern, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
+    for id, nodes in pairs(match) do
+      local name = query.captures[id]
 
-    lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
-
-    if lang_capture and (name == "content" or name == "injection.content") then
-      -- chunks where the name of the injected language is dynamic
-      -- e.g. markdown code chunks
-      if ts.is_in_node_range(node, row, col) then
-        return lang_capture, node:range()
+      -- TODO: maybe can be removed with nvim v0.10
+      if type(nodes) ~= "table" then
+        nodes = { nodes }
       end
-      -- chunks where the name of the language is the name of the capture
-    elseif fn.contains(injectable_languages, name) then
-      if ts.is_in_node_range(node, row, col) then
-        return name, node:range()
+
+      for _, node in ipairs(nodes) do
+        lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
+
+        if lang_capture and (name == "content" or name == "injection.content") then
+          -- chunks where the name of the injected language is dynamic
+          -- e.g. markdown code chunks
+          if ts.is_in_node_range(node, row, col) then
+            return lang_capture, node:range()
+          end
+          -- chunks where the name of the language is the name of the capture
+        elseif fn.contains(injectable_languages, name) then
+          if ts.is_in_node_range(node, row, col) then
+            return name, node:range()
+          end
+        end
       end
     end
   end
@@ -377,16 +398,26 @@ M.get_language_lines_around_cursor = function()
   local tree = parser:parse()
   local root = tree[1]:root()
 
-  for id, node, metadata in treesitter_iterator.iter_captures(root, main_nr, query) do
-    local name = query.captures[id]
-    if name == "content" then
-      if ts.is_in_node_range(node, row, col) then
-        return ts.get_node_text(node, main_nr, metadata)
+  for pattern, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
+    for id, nodes in pairs(match) do
+      local name = query.captures[id]
+
+      -- TODO: maybe can be removed with nvim v0.10
+      if type(nodes) ~= "table" then
+        nodes = { nodes }
       end
-      -- chunks where the name of the language is the name of the capture
-    elseif fn.contains(injectable_languages, name) then
-      if ts.is_in_node_range(node, row, col) then
-        return ts.get_node_text(node, main_nr, metadata)
+
+      for _, node in ipairs(nodes) do
+        if name == "content" then
+          if ts.is_in_node_range(node, row, col) then
+            return ts.get_node_text(node, main_nr, metadata)
+          end
+          -- chunks where the name of the language is the name of the capture
+        elseif fn.contains(injectable_languages, name) then
+          if ts.is_in_node_range(node, row, col) then
+            return ts.get_node_text(node, main_nr, metadata)
+          end
+        end
       end
     end
   end

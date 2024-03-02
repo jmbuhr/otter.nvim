@@ -37,11 +37,12 @@ end
 
 --- Activate the current buffer by adding and syncronizing
 --- otter buffers.
----@param languages table
+---@param languages table|nil
 ---@param completion boolean|nil
 ---@param diagnostics boolean|nil
 ---@param tsquery string|nil
 M.activate = function(languages, completion, diagnostics, tsquery)
+  languages = languages or vim.tbl_keys(require("otter.tools.extensions"))
   completion = completion ~= false
   diagnostics = diagnostics ~= false
   local main_nr = api.nvim_get_current_buf()
@@ -155,18 +156,21 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
     keeper._otters_attached[main_nr].nss = nss
 
+    local sync_diagnostics = function(_, _)
+      M.sync_raft(main_nr)
+      for bufnr, ns in pairs(nss) do
+        local diag = vim.diagnostic.get(bufnr)
+        vim.diagnostic.reset(ns, main_nr)
+        vim.diagnostic.set(ns, main_nr, diag, {})
+      end
+    end
+
     api.nvim_create_autocmd("BufWritePost", {
       buffer = main_nr,
       group = api.nvim_create_augroup("OtterDiagnostics" .. main_nr, {}),
-      callback = function(_, _)
-        M.sync_raft(main_nr)
-        for bufnr, ns in pairs(nss) do
-          local diag = vim.diagnostic.get(bufnr)
-          vim.diagnostic.reset(ns, main_nr)
-          vim.diagnostic.set(ns, main_nr, diag, {})
-        end
-      end,
+      callback = sync_diagnostics,
     })
+    sync_diagnostics(nil, nil)
   end
 end
 

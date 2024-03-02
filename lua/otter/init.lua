@@ -153,10 +153,11 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       local ns = api.nvim_create_namespace("otter-lang-" .. lang)
       nss[bufnr] = ns
     end
+    keeper._otters_attached[main_nr].nss = nss
 
     api.nvim_create_autocmd("BufWritePost", {
       buffer = main_nr,
-      group = api.nvim_create_augroup("OtterDiagnostics", {}),
+      group = api.nvim_create_augroup("OtterDiagnostics" .. main_nr, {}),
       callback = function(_, _)
         M.sync_raft(main_nr)
         for bufnr, ns in pairs(nss) do
@@ -167,6 +168,35 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       end,
     })
   end
+end
+
+---Deactivate the current buffer by removing otter buffers and clearing diagnostics
+---@param completion boolean | nil
+---@param diagnostics boolean | nil
+M.deactivate = function(completion, diagnostics)
+  completion = completion ~= false
+  diagnostics = diagnostics ~= false
+
+  local main_nr = api.nvim_get_current_buf()
+
+  if diagnostics then
+    for _, ns in pairs(keeper._otters_attached[main_nr].nss) do
+      vim.diagnostic.reset(ns, main_nr)
+    end
+  end
+
+  if completion then
+    api.nvim_del_augroup_by_name("cmp_otter" .. main_nr)
+  end
+
+  for _, otter_bufnr in pairs(keeper._otters_attached[main_nr].buffers) do
+    -- Avoid 'textlock' with schedule
+    vim.schedule(function()
+      api.nvim_buf_delete(otter_bufnr, { force = true })
+    end)
+  end
+
+  keeper._otters_attached[main_nr] = nil
 end
 
 --- Got to definition of the symbol under the cursor

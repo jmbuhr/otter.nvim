@@ -154,18 +154,21 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       nss[bufnr] = ns
     end
 
-    api.nvim_create_autocmd("BufWritePost", {
-      buffer = main_nr,
-      group = api.nvim_create_augroup("OtterDiagnostics", {}),
-      callback = function(_, _)
+    local sync_diagnostics = function(_, _)
         M.sync_raft(main_nr)
         for bufnr, ns in pairs(nss) do
           local diag = vim.diagnostic.get(bufnr)
           vim.diagnostic.reset(ns, main_nr)
           vim.diagnostic.set(ns, main_nr, diag, {})
         end
-      end,
+      end
+
+    api.nvim_create_autocmd("BufWritePost", {
+      buffer = main_nr,
+      group = api.nvim_create_augroup("OtterDiagnostics", {}),
+      callback = sync_diagnostics,
     })
+    sync_diagnostics(nil, nil)
   end
 end
 

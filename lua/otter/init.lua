@@ -57,6 +57,13 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   else
     query = ts.query.get(parsername, "injections")
   end
+  if query == nil then
+    vim.notify_once(
+      "[otter] No explicit query provided and no injections found for current buffer. Can't activate.",
+      vim.log.levels.WARN,
+    )
+    return
+  end
   keeper._otters_attached[main_nr] = {}
   keeper._otters_attached[main_nr].languages = {}
   keeper._otters_attached[main_nr].buffers = {}

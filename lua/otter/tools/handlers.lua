@@ -47,8 +47,8 @@ function M.hover(_, result, ctx, config)
 end
 
 --see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentSymbol
-function M.document_symbol(_, result, ctx, config)
-  config = config or {}
+function M.document_symbol(err, result, ctx, conf)
+  conf = conf or {}
   if not result then
     return
   end
@@ -57,12 +57,12 @@ function M.document_symbol(_, result, ctx, config)
   local fname = vim.fn.fnamemodify(vim.uri_to_fname(ctx.params.textDocument.uri), ":.")
   local title = string.format("Symbols in %s", fname)
 
-  if config.loclist then
+  if conf.loclist then
     vim.fn.setloclist(0, {}, " ", { title = title, items = items, context = ctx })
     api.nvim_command("lopen")
-  elseif config.on_list then
-    assert(type(config.on_list) == "function", "on_list is not a function")
-    config.on_list({ title = title, items = items, context = ctx })
+  elseif conf.on_list then
+    assert(type(conf.on_list) == "function", "on_list is not a function")
+    conf.on_list({ title = title, items = items, context = ctx })
   elseif has_telescope then
     vim.fn.setqflist({}, " ", { title = title, items = items, context = ctx })
     vim.cmd([[Telescope quickfix]])
@@ -72,16 +72,16 @@ function M.document_symbol(_, result, ctx, config)
   end
 end
 
-M.format = function(_, result, ctx, _)
-  if not result then
+M.format = function(err, response, ctx, conf)
+  conf = conf or {}
+  if not response then
     return
   end
   local client = vim.lsp.get_client_by_id(ctx.client_id)
   if not client then
     return
   end
-  -- use the current buffer, 0
-  util.apply_text_edits(result, 0, client.offset_encoding)
+  util.apply_text_edits(response, conf.main_nr, client.offset_encoding)
 end
 
 return M

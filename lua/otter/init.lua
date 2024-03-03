@@ -390,7 +390,14 @@ M.ask_format = function()
     return res
   end
 
-  M.send_request(main_nr, "textDocument/rangeFormatting", redirect, vim.lsp.buf.format, handlers.format)
+  M.send_request(
+    main_nr,
+    "textDocument/rangeFormatting",
+    redirect,
+    vim.lsp.buf.format,
+    handlers.format,
+    { main_nr = main_nr }
+  )
 end
 
 return M

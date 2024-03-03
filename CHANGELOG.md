@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/jmbuhr/otter.nvim/compare/v1.9.0...v1.9.1) (2024-03-03)
+
+
+### Bug Fixes
+
+* fix lsp formatting response handling ([528f14d](https://github.com/jmbuhr/otter.nvim/commit/528f14d32159dd360fb8ca0d31df65cfb433659b))
+
 ## [1.9.0](https://github.com/jmbuhr/otter.nvim/compare/v1.8.0...v1.9.0) (2024-03-02)
 
 

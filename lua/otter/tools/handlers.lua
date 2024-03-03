@@ -28,32 +28,32 @@ local function trim_empty_lines(lines)
   return vim.list_extend({}, lines, start, finish)
 end
 
-function M.hover(_, result, ctx, config)
-  config = config or {}
-  config.focus_id = ctx.method
+function M.hover(_, response, ctx, conf)
+  conf = conf or {}
+  conf.focus_id = ctx.method
   -- don't ignore hover responses from other buffers
-  if not (result and result.contents) then
+  if not (response and response.contents) then
     return
   end
-  local markdown_lines = util.convert_input_to_markdown_lines(result.contents)
+  local markdown_lines = util.convert_input_to_markdown_lines(response.contents)
   markdown_lines = trim_empty_lines(markdown_lines)
   if vim.tbl_isempty(markdown_lines) then
     return
   end
   -- returns bufnr,winnr buffer and window number of the newly created floating
-  local bufnr, _ = util.open_floating_preview(markdown_lines, "markdown", config)
+  local bufnr, _ = util.open_floating_preview(markdown_lines, "markdown", conf)
   -- vim.api.nvim_buf_set_option(bufnr, 'filetype', 'markdown')
-  return result
+  return response
 end
 
 --see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentSymbol
-function M.document_symbol(err, result, ctx, conf)
+function M.document_symbol(err, response, ctx, conf)
   conf = conf or {}
-  if not result then
+  if not response then
     return
   end
   ctx.params.textDocument.uri = otterpath_to_path(ctx.params.textDocument.uri)
-  local items = util.symbols_to_items(result)
+  local items = util.symbols_to_items(response)
   local fname = vim.fn.fnamemodify(vim.uri_to_fname(ctx.params.textDocument.uri), ":.")
   local title = string.format("Symbols in %s", fname)
 

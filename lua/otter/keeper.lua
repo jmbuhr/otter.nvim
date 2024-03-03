@@ -96,7 +96,6 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
 
       for _, node in ipairs(nodes) do
         local text
-        local was_stripped
         lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
         if
           lang_capture
@@ -107,20 +106,11 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
           text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
           -- remove surrounding quotes (workaround for treesitter offsets
           -- not properly processed)
-          text, was_stripped = fn.strip_wrapping_quotes(text)
+          text, _ = fn.strip_wrapping_quotes(text)
           if exclude_eval_false and string.find(text, "| *eval: *false") then
             text = ""
           end
           local row1, col1, row2, col2 = node:range()
-          -- TODO: modify rows and cols accordingly
-          -- requires more logic to test if the code
-          -- and the wrapping quotes where on separate lines
-          -- and how to handle inline-code.
-          -- also for lsp request translation
-          -- if was_stripped then
-          --   col1 = col1 + 1
-          --   col2 = col2 - 1
-          -- end
           if row_from ~= nil and row_to ~= nil and ((row1 >= row_to and row_to > 0) or row2 < row_from) then
             goto continue
           end
@@ -143,7 +133,7 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
           -- chunks where the name of the language is the name of the capture
           if lang == nil or name == lang then
             text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-            text, was_stripped = fn.strip_wrapping_quotes(text)
+            text, _ = fn.strip_wrapping_quotes(text)
             local row1, col1, row2, col2 = node:range()
             -- if was_stripped then
             --   col1 = col1 + 1

@@ -24,6 +24,8 @@ M.debug = function()
   end)
 end
 
+--- Activate otter for the current buffer and set up keymaps.
+--- Only for development purposes
 M.dev_setup = function()
   M.activate({ "r", "python", "lua", "html", "css" }, true)
   vim.api.nvim_buf_set_keymap(0, "n", "gS", ":lua require'otter'.ask_document_symbols()<cr>", { silent = true })
@@ -37,17 +39,17 @@ end
 
 --- Activate the current buffer by adding and synchronizing
 --- otter buffers.
----@param languages table|nil
----@param completion boolean|nil
----@param diagnostics boolean|nil
----@param tsquery string|nil
+---@param languages table|nil List of languages to activate. If nil, all available languages will be activated.
+---@param completion boolean|nil Enable completion for otter buffers. Default: true
+---@param diagnostics boolean|nil Enable diagnostics for otter buffers. Default: true
+---@param tsquery string|nil Explicitly provide a treesitter query. If nil, the injections query for the current filetyepe will be used. See :h treesitter-language-injections.
 M.activate = function(languages, completion, diagnostics, tsquery)
   languages = languages or vim.tbl_keys(require("otter.tools.extensions"))
   completion = completion ~= false
   diagnostics = diagnostics ~= false
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
-  local parsername = vim.treesitter.language.get_lang(api.nvim_buf_get_option(main_nr, "filetype"))
+  local parsername = vim.treesitter.language.get_lang(api.nvim_get_option_value("filetype", { buf = main_nr }))
   if not parsername then
     return
   end
@@ -61,6 +63,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     vim.notify_once(
       "[otter] No explicit query provided and no injections found for current buffer. Can't activate.",
       vim.log.levels.WARN,
+      {}
     )
     return
   end
@@ -98,7 +101,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       local otter_uri = "file://" .. otter_path
       local otter_nr = vim.uri_to_bufnr(otter_uri)
       api.nvim_buf_set_name(otter_nr, otter_path)
-      api.nvim_buf_set_option(otter_nr, "swapfile", false)
+      api.nvim_set_option_value("swapfile", false, { buf = otter_nr })
       keeper._otters_attached[main_nr].buffers[lang] = otter_nr
       keeper._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
       table.insert(keeper._otters_attached[main_nr].languages, lang)
@@ -128,7 +131,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
           end,
         })
       else
-        api.nvim_buf_set_option(otter_nr, "buftype", "nowrite")
+        api.nvim_set_option_value("buftype", "nowrite", { buf = otter_nr })
       end
     end
     ::continue::
@@ -144,7 +147,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
 
     if config.cfg.buffers.set_filetype then
-      api.nvim_buf_set_option(otter_nr, "filetype", lang)
+      api.nvim_set_option_value("filetype", lang, { buf = otter_nr })
     else
       local autocommands = api.nvim_get_autocmds({ group = "lspconfig", pattern = lang })
       for _, command in ipairs(autocommands) do

@@ -1,4 +1,4 @@
-*otter.nvim.txt*         For Neovim >= 0.9.0        Last change: 2024 March 03
+*otter.nvim.txt*         For Neovim >= 0.9.0        Last change: 2024 March 04
 
 ==============================================================================
 Table of Contents                               *otter.nvim-table-of-contents*
@@ -115,6 +115,10 @@ If you want to use the default config below you don’t need to call `setup`.
         hover = {
           border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
         },
+        -- `:h events` that cause the diagnostics to update. Set to:
+        -- { "BufWritePost", "InsertLeave", "TextChanged" } for less performant
+        -- but more instant diagnostic updates
+        diagnostic_update_events = { "BufWritePost" },
       },
       buffers = {
         -- if set to true, the filetype of the otterbuffers will be set.
@@ -142,13 +146,13 @@ Apart from its own functions, `otter.nvim` comes with a completion source for
 
 >lua
     local cmp = require'cmp'
-    cmp.setup(
+    cmp.setup({
         -- <rest of your nvim-cmp config>
         sources = {
             { name = "otter" },
             -- <other sources>
-        }
-    }
+        },
+    })
 <
 
 

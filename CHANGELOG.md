@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.9.2](https://github.com/jmbuhr/otter.nvim/compare/v1.9.1...v1.9.2) (2024-03-04)
+
+
+### Bug Fixes
+
+* diagnostics not updating ([#105](https://github.com/jmbuhr/otter.nvim/issues/105)) ([8bdc078](https://github.com/jmbuhr/otter.nvim/commit/8bdc07896241a1ba32819146492a7cce4f621a14))
+* fix [#101](https://github.com/jmbuhr/otter.nvim/issues/101) ([a16df0a](https://github.com/jmbuhr/otter.nvim/commit/a16df0a1b77576b0ef4e808328e6e3434675703a))
+* replace deprecated nvim_buf_set_option ([91883c2](https://github.com/jmbuhr/otter.nvim/commit/91883c210c3739c57013eaefd20d13ecdf9faba3))
+
 ## [1.9.1](https://github.com/jmbuhr/otter.nvim/compare/v1.9.0...v1.9.1) (2024-03-03)
 
 

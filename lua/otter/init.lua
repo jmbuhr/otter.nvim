@@ -169,11 +169,10 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
     keeper._otters_attached[main_nr].nss = nss
 
-    local sync_diagnostics = function(_, _)
-      M.sync_raft(main_nr)
-      for bufnr, ns in pairs(nss) do
-        local diags = vim.diagnostic.get(bufnr)
-        vim.diagnostic.reset(ns, main_nr)
+    local sync_diagnostics = function(args)
+      if vim.tbl_contains(vim.tbl_values(keeper._otters_attached[main_nr].buffers), args.buf) then
+        local diags = args.data.diagnostics
+        vim.diagnostic.reset(nss[args.buf], main_nr)
         if config.cfg.handle_leading_whitespace then
           for _, diag in ipairs(diags) do
             local offset = keeper.get_leading_offset(diag.lnum, main_nr)
@@ -181,16 +180,23 @@ M.activate = function(languages, completion, diagnostics, tsquery)
             diag.end_col = diag.end_col + offset
           end
         end
-        vim.diagnostic.set(ns, main_nr, diags, {})
+        vim.diagnostic.set(nss[args.buf], main_nr, diags, {})
       end
     end
 
-    api.nvim_create_autocmd("BufWritePost", {
-      buffer = main_nr,
-      group = api.nvim_create_augroup("OtterDiagnostics" .. main_nr, {}),
+    local group = api.nvim_create_augroup("OtterDiagnostics" .. main_nr, {})
+    api.nvim_create_autocmd("DiagnosticChanged", {
+      group = group,
       callback = sync_diagnostics,
     })
-    sync_diagnostics(nil, nil)
+
+    api.nvim_create_autocmd(config.cfg.lsp.diagnostic_update_events, {
+      buffer = main_nr,
+      group = group,
+      callback = function(_)
+        M.sync_raft(main_nr)
+      end,
+    })
   end
 end
 

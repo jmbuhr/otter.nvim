@@ -5,6 +5,7 @@ local default_config = {
     hover = {
       border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
     },
+    diagnostic_update_events = { "BufWritePost" },
   },
   buffers = {
     -- if set to true, the filetype of the otterbuffers will be set.

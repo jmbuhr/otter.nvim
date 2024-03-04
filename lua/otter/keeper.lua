@@ -305,7 +305,7 @@ M.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
   end
 end
 
---- Syncronize the raft of otters attached to a buffer
+--- Synchronize the raft of otters attached to a buffer
 ---@param main_nr integer bufnr of the parent buffer
 ---@param lang string|nil only sync one otter buffer matching a language
 M.sync_raft = function(main_nr, lang)
@@ -314,6 +314,7 @@ M.sync_raft = function(main_nr, lang)
     local changetick = api.nvim_buf_get_changedtick(main_nr)
     if M._otters_attached[main_nr].last_changetick == changetick then
       all_code_chunks = M._otters_attached[main_nr].code_chunks
+      return
     else
       all_code_chunks = M.extract_code_chunks(main_nr)
     end
@@ -321,9 +322,6 @@ M.sync_raft = function(main_nr, lang)
     M._otters_attached[main_nr].last_changetick = changetick
     M._otters_attached[main_nr].code_chunks = all_code_chunks
 
-    if next(all_code_chunks) == nil then
-      return {}
-    end
     local langs
     if lang == nil then
       langs = M._otters_attached[main_nr].languages
@@ -350,10 +348,10 @@ M.sync_raft = function(main_nr, lang)
             end
           end
 
-          -- clear buffer
+          -- replace language lines
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
+        else -- no code chunks so we wipe the otter buffer
           api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
-          -- add language lines
-          api.nvim_buf_set_lines(otter_nr, 0, nmax, false, ls)
         end
       end
     end

@@ -322,9 +322,6 @@ M.sync_raft = function(main_nr, lang)
     M._otters_attached[main_nr].last_changetick = changetick
     M._otters_attached[main_nr].code_chunks = all_code_chunks
 
-    if next(all_code_chunks) == nil then
-      return
-    end
     local langs
     if lang == nil then
       langs = M._otters_attached[main_nr].languages
@@ -352,7 +349,9 @@ M.sync_raft = function(main_nr, lang)
           end
 
           -- replace language lines
-          api.nvim_buf_set_lines(otter_nr, 0, nmax, false, ls)
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
+        else -- no code chunks so we wipe the otter buffer
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
         end
       end
     end

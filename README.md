@@ -88,6 +88,10 @@ otter.setup{
     hover = {
       border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
     },
+    -- `:h events` that cause the diagnostics to update. Set to:
+    -- { "BufWritePost", "InsertLeave", "TextChanged" } for less performant
+    -- but more instant diagnostic updates
+    diagnostic_update_events = { "BufWritePost" },
   },
   buffers = {
     -- if set to true, the filetype of the otterbuffers will be set.
@@ -114,13 +118,13 @@ the embedded code. Use it as follows:
 
 ```lua
 local cmp = require'cmp'
-cmp.setup(
+cmp.setup({
     -- <rest of your nvim-cmp config>
     sources = {
         { name = "otter" },
         -- <other sources>
-    }
-}
+    },
+})
 ```
 
 

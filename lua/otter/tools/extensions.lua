@@ -8,6 +8,7 @@ return {
   go = "go",
   haskell = "hs",
   html = "html",
+  htmldjango = "htmldjango",
   javascript = "js",
   julia = "jl",
   lua = "lua",

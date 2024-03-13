@@ -28,6 +28,8 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     needs: tests
+    permissions:
+      contents: write
     if: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +47,8 @@ jobs:
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
           commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          file_pattern: "docs/"
+          push_options: "--force"
   release:
     name: release
     needs:

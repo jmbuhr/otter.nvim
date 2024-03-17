@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/jmbuhr/otter.nvim/compare/v1.9.2...v1.10.0) (2024-03-17)
+
+
+### Features
+
+* add htmldjango extension ([#107](https://github.com/jmbuhr/otter.nvim/issues/107)) ([12894e0](https://github.com/jmbuhr/otter.nvim/commit/12894e015eb2aedb8f2a1d23e68aa91c917fcc66))
+
 ## [1.9.2](https://github.com/jmbuhr/otter.nvim/compare/v1.9.1...v1.9.2) (2024-03-04)
 
 

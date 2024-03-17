@@ -134,7 +134,8 @@ Activate otter for the current document with
 
 ```lua
 -- table of embedded languages to look for.
--- required (no default)
+-- default = nil, which will activate
+-- any embedded languages found
 local languages = {'python', 'lua' }
 
 -- enable completion/diagnostics

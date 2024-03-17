@@ -27,7 +27,7 @@ end
 --- Activate otter for the current buffer and set up keymaps.
 --- Only for development purposes
 M.dev_setup = function()
-  M.activate({ "r", "python", "lua", "html", "css" }, true)
+  M.activate()
   vim.api.nvim_buf_set_keymap(0, "n", "gS", ":lua require'otter'.ask_document_symbols()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, "n", "gd", ":lua require'otter'.ask_definition()<cr>", { silent = true })
   vim.api.nvim_buf_set_keymap(0, "n", "gD", ":lua require'otter'.ask_type_definition()<cr>", { silent = true })

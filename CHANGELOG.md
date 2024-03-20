@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/jmbuhr/otter.nvim/compare/v1.10.0...v1.11.0) (2024-03-20)
+
+
+### Features
+
+* add .sh to extensions.lua ([#110](https://github.com/jmbuhr/otter.nvim/issues/110)) ([b368b6f](https://github.com/jmbuhr/otter.nvim/commit/b368b6f4656be65e6ce9dabf4ff5c2b4c9fa67a8))
+
 ## [1.10.0](https://github.com/jmbuhr/otter.nvim/compare/v1.9.2...v1.10.0) (2024-03-17)
 
 

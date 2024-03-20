@@ -20,6 +20,7 @@ return {
   r = "R",
   ruby = "rb",
   rust = "rs",
+  sh = "sh",
   sql = "sql",
   typescript = "ts",
   typst = "typ",

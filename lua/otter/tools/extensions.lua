@@ -10,6 +10,7 @@ return {
   html = "html",
   htmldjango = "htmldjango",
   javascript = "js",
+  json = "json",
   julia = "jl",
   lua = "lua",
   markdown = "md",

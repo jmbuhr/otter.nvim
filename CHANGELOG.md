@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/jmbuhr/otter.nvim/compare/v1.11.0...v1.12.0) (2024-03-24)
+
+
+### Features
+
+* add .json to extensions.lua ([#112](https://github.com/jmbuhr/otter.nvim/issues/112)) ([6b81cef](https://github.com/jmbuhr/otter.nvim/commit/6b81cefd0445d277b473c57e873a1cf97e6cca81))
+
 ## [1.11.0](https://github.com/jmbuhr/otter.nvim/compare/v1.10.0...v1.11.0) (2024-03-20)
 
 

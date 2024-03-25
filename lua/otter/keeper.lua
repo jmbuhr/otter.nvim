@@ -76,8 +76,11 @@ end
 ---Updates M._otters_attached[main_nr].code_chunks
 ---@param main_nr integer The main buffer number
 ---@param lang string|nil language to extract. All languages if nil.
+---@param exclude_eval_false boolean | nil Exclude code chunks with eval: false
+---@param row_start integer|nil Row to start from, inclusive, 1-indexed.
+---@param row_end integer|nil Row to end at, inclusive, 1-indexed.
 ---@return CodeChunk[]
-M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, row_to)
+M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_start, row_end)
   local query = M._otters_attached[main_nr].query
   local parser = M._otters_attached[main_nr].parser
   local tree = parser:parse()
@@ -111,7 +114,7 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_from, ro
             text = ""
           end
           local row1, col1, row2, col2 = node:range()
-          if row_from ~= nil and row_to ~= nil and ((row1 >= row_to and row_to > 0) or row2 < row_from) then
+          if row_start ~= nil and row_end ~= nil and ((row1 >= row_end and row_end > 0) or row2 < row_start) then
             goto continue
           end
           local leading_offset
@@ -307,8 +310,8 @@ end
 
 --- Synchronize the raft of otters attached to a buffer
 ---@param main_nr integer bufnr of the parent buffer
----@param lang string|nil only sync one otter buffer matching a language
-M.sync_raft = function(main_nr, lang)
+---@param language string|nil only sync one otter buffer matching a language
+M.sync_raft = function(main_nr, language)
   if M._otters_attached[main_nr] ~= nil then
     local all_code_chunks
     local changetick = api.nvim_buf_get_changedtick(main_nr)
@@ -323,10 +326,10 @@ M.sync_raft = function(main_nr, lang)
     M._otters_attached[main_nr].code_chunks = all_code_chunks
 
     local langs
-    if lang == nil then
+    if language == nil then
       langs = M._otters_attached[main_nr].languages
     else
-      langs = { lang }
+      langs = { language }
     end
     for _, lang in ipairs(langs) do
       local otter_nr = M._otters_attached[main_nr].buffers[lang]
@@ -400,7 +403,6 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       includeDeclaration = true,
     }
   end
-  -- for 'textDocument/rename'
   if request == "textDocument/rename" then
     local cword = vim.fn.expand("<cword>")
     local prompt_opts = {
@@ -484,7 +486,7 @@ M.export_raft = function(force)
   end
 end
 
---- Export only one language to a pre-specified filename
+---Export only one language to a pre-specified filename
 ---@param language string
 ---@param fname string
 ---@param force boolean
@@ -505,7 +507,12 @@ M.export_otter_as = function(language, fname, force)
   end
 end
 
-M.get_curent_language_lines = function(exclude_eval_false, row_start, row_end)
+---Get lines of code chunks managed by otter in a range of the current buffer.
+---@param exclude_eval_false boolean | nil Exclude code chunks with eval: false
+---@param row_start integer Row to start from, inclusive, 1-indexed.
+---@param row_end integer Row to end at, inclusive, 1-indexed.
+---@return string[]|nil Lines of code
+M.get_language_lines = function(exclude_eval_false, row_start, row_end)
   local main_nr = vim.api.nvim_get_current_buf()
   M.sync_raft(main_nr)
   local lang = M.get_current_language_context()
@@ -524,6 +531,8 @@ M.get_curent_language_lines = function(exclude_eval_false, row_start, row_end)
   return code
 end
 
+---Get lines of code chunks managed by otter around the cursor in the current buffer.
+---@return string[]|nil Lines of code
 M.get_language_lines_around_cursor = function()
   local main_nr = vim.api.nvim_get_current_buf()
   local row, col = unpack(api.nvim_win_get_cursor(0))
@@ -535,7 +544,7 @@ M.get_language_lines_around_cursor = function()
   local tree = parser:parse()
   local root = tree[1]:root()
 
-  for pattern, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
+  for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
       local name = query.captures[id]
 
@@ -560,22 +569,24 @@ M.get_language_lines_around_cursor = function()
   end
 end
 
+---Get lines of code chunks managed by otter in the current buffer up to the cursor.
+---@param exclude_eval_false boolean|nil Exclude code chunks with eval: false
 M.get_language_lines_to_cursor = function(exclude_eval_false)
   local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
   row = row + 1
-  return M.get_curent_language_lines(exclude_eval_false, 0, row)
+  return M.get_language_lines(exclude_eval_false, 0, row)
 end
 
+---Get lines of code chunks managed by otter in the current buffer from the cursor to the end.
+---@param exclude_eval_false boolean|nil Exclude code chunks with eval: false
 M.get_language_lines_from_cursor = function(exclude_eval_false)
   local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
   row = row + 1
-  return M.get_curent_language_lines(exclude_eval_false, row, -1)
+  return M.get_language_lines(exclude_eval_false, row, -1)
 end
 
-M.get_language_lines = function(exclude_eval_false)
-  return M.get_curent_language_lines(exclude_eval_false)
-end
-
+---Get lines of code chunks managed by otter in the current buffer from the cursor to the end.
+---@param exclude_eval_false boolean|nil Exclude code chunks with eval: false
 M.get_language_lines_in_visual_selection = function(exclude_eval_false)
   local lang = M.get_current_language_context()
   if lang == nil then
@@ -583,9 +594,7 @@ M.get_language_lines_in_visual_selection = function(exclude_eval_false)
   end
   local row_start, _ = unpack(api.nvim_buf_get_mark(0, "<"))
   local row_end, _ = unpack(api.nvim_buf_get_mark(0, ">"))
-  row_start = row_start - 1
-  row_end = row_end - 1
-  return M.get_curent_language_lines(exclude_eval_false, row_start, row_end)
+  return M.get_language_lines(exclude_eval_false, row_start, row_end)
 end
 
 return M

@@ -193,5 +193,5 @@ otter.export_otter_as()
 }
 ```
 
-![An otter eagerly awaiting your lsp requests. Generated with DALL-E 2.](img/2022-12-23-15-59-24.png)
+![An otter eagerly awaiting your lsp requests.](https://github.com/jmbuhr/otter.nvim/assets/17450586/e4dcce8d-674b-40d3-99c5-db42bda2faeb)
 

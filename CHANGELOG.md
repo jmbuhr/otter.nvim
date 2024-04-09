@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.2](https://github.com/jmbuhr/otter.nvim/compare/v1.12.1...v1.12.2) (2024-04-09)
+
+
+### Bug Fixes
+
+* write out file once before lsp attach if config.buffers.write_to_disk ([b90f0e5](https://github.com/jmbuhr/otter.nvim/commit/b90f0e5e3f3cf421aa95c0f8d9139430f4bac0b7)), closes [#116](https://github.com/jmbuhr/otter.nvim/issues/116)
+
 ## [1.12.1](https://github.com/jmbuhr/otter.nvim/compare/v1.12.0...v1.12.1) (2024-03-25)
 
 

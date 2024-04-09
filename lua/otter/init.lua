@@ -70,6 +70,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   keeper._otters_attached[main_nr] = {}
   keeper._otters_attached[main_nr].languages = {}
   keeper._otters_attached[main_nr].buffers = {}
+  keeper._otters_attached[main_nr].paths = {}
   keeper._otters_attached[main_nr].otter_nr_to_lang = {}
   keeper._otters_attached[main_nr].tsquery = tsquery
   keeper._otters_attached[main_nr].query = query
@@ -103,6 +104,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       api.nvim_buf_set_name(otter_nr, otter_path)
       api.nvim_set_option_value("swapfile", false, { buf = otter_nr })
       keeper._otters_attached[main_nr].buffers[lang] = otter_nr
+      keeper._otters_attached[main_nr].paths[lang] = otter_path
       keeper._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
       table.insert(keeper._otters_attached[main_nr].languages, lang)
 
@@ -145,6 +147,15 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- from automatically attaching when ft is set
   for _, lang in ipairs(keeper._otters_attached[main_nr].languages) do
     local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
+
+    if config.cfg.buffers.write_to_disk then
+      -- and also write out once before lsps can complain
+      local otter_path = keeper._otters_attached[main_nr].paths[lang]
+      vim.print(otter_path)
+      api.nvim_buf_call(otter_nr, function()
+        vim.cmd("write! " .. otter_path)
+      end)
+    end
 
     if config.cfg.buffers.set_filetype then
       api.nvim_set_option_value("filetype", lang, { buf = otter_nr })

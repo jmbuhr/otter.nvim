@@ -27,4 +27,5 @@ return {
   typst = "typ",
   yaml = "yml",
   clojure = "clj",
+  asm = "asm"
 }

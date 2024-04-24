@@ -26,5 +26,5 @@ return {
   typescript = "ts",
   typst = "typ",
   yaml = "yml",
-  clojure = "clojure",
+  clojure = "clj",
 }

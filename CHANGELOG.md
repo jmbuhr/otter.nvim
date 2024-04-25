@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.13.0](https://github.com/jmbuhr/otter.nvim/compare/v1.12.2...v1.13.0) (2024-04-25)
+
+
+### Features
+
+* **extensions.lua:** add clojure ([#120](https://github.com/jmbuhr/otter.nvim/issues/120)) ([ab3d90f](https://github.com/jmbuhr/otter.nvim/commit/ab3d90faa7b7eb596a0d66f67a8ff16a830f872d))
+* **extensions.lua:** add conjure ([#118](https://github.com/jmbuhr/otter.nvim/issues/118)) ([3b636d8](https://github.com/jmbuhr/otter.nvim/commit/3b636d8040d2357bcd47d40a91b1700a20bdf09b))
+
 ## [1.12.2](https://github.com/jmbuhr/otter.nvim/compare/v1.12.1...v1.12.2) (2024-04-09)
 
 

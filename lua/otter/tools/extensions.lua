@@ -27,5 +27,13 @@ return {
   typst = "typ",
   yaml = "yml",
   clojure = "clj",
-  asm = "asm"
+  asm = "asm",
+  fsharp="fs",
+  csharp="cs",
+  roc="roc",
+  ocaml="ml",
+  nim="nim",
+  zig="zig",
+  svelte="svelte"
+  
 }

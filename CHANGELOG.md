@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.0](https://github.com/jmbuhr/otter.nvim/compare/v1.13.0...v1.14.0) (2024-05-01)
+
+
+### Features
+
+* forward custom fallbacks from ask_ functions to send_request ([#123](https://github.com/jmbuhr/otter.nvim/issues/123)) ([f963beb](https://github.com/jmbuhr/otter.nvim/commit/f963beb52d0e02c55bb903ad4b49957bbcc455f3)), closes [#122](https://github.com/jmbuhr/otter.nvim/issues/122)
+
 ## [1.13.0](https://github.com/jmbuhr/otter.nvim/compare/v1.12.2...v1.13.0) (2024-04-25)
 
 

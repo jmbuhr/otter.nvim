@@ -244,7 +244,8 @@ M.deactivate = function(completion, diagnostics)
 end
 
 --- Got to definition of the symbol under the cursor
-M.ask_definition = function()
+M.ask_definition = function(fallback)
+  local f = fallback or vim.lsp.buf.definition
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
 
@@ -272,7 +273,7 @@ M.ask_definition = function()
       table.insert(modified_response, redirect_definition(res))
     end
     return modified_response
-  end, vim.lsp.buf.definition)
+  end, f)
 end
 
 --- Got to type definition of the symbol under the cursor
@@ -315,7 +316,8 @@ end
 
 --- Open hover documentation of symbol under the cursor
 -- See <https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/buf.lua>
-M.ask_hover = function()
+M.ask_hover = function(fallback)
+  local f = fallback or vim.lsp.buf.hover
   local main_nr = api.nvim_get_current_buf()
   M.send_request(main_nr, "textDocument/hover", function(response)
     local ok, filtered_response = pcall(replace_header_div, response)
@@ -324,11 +326,12 @@ M.ask_hover = function()
     else
       return response
     end
-  end, vim.lsp.buf.hover, handlers.hover, config.cfg.lsp.hover)
+  end, f, handlers.hover, config.cfg.lsp.hover)
 end
 
 --- Open quickfix list of references of the symbol under the cursor
-M.ask_references = function()
+M.ask_references = function(fallback)
+  local f = fallback or vim.lsp.buf.references
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
 
@@ -343,11 +346,12 @@ M.ask_references = function()
     return res
   end
 
-  M.send_request(main_nr, "textDocument/references", redirect, vim.lsp.buf.references)
+  M.send_request(main_nr, "textDocument/references", redirect, f)
 end
 
 --- Open list of symbols of the current document
-M.ask_document_symbols = function()
+M.ask_document_symbols = function(fallback)
+  local f = fallback or vim.lsp.buf.document_symbol
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
 
@@ -362,17 +366,12 @@ M.ask_document_symbols = function()
     return res
   end
 
-  M.send_request(
-    main_nr,
-    "textDocument/documentSymbol",
-    redirect,
-    vim.lsp.buf.document_symbol,
-    handlers.document_symbol
-  )
+  M.send_request(main_nr, "textDocument/documentSymbol", redirect, f, handlers.document_symbol)
 end
 
 --- Rename symbol under cursor
-M.ask_rename = function()
+M.ask_rename = function(fallback)
+  local f = fallback or vim.lsp.buf.rename
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
 
@@ -403,11 +402,12 @@ M.ask_rename = function()
     end
   end
 
-  M.send_request(main_nr, "textDocument/rename", redirect, vim.lsp.buf.rename)
+  M.send_request(main_nr, "textDocument/rename", redirect, f)
 end
 
 --- Reformat current otter context
-M.ask_format = function()
+M.ask_format = function(fallback)
+  local f = fallback or vim.lsp.buf.format
   local main_nr = api.nvim_get_current_buf()
 
   -- redirection has to happen in the handler instead,
@@ -417,14 +417,7 @@ M.ask_format = function()
     return res
   end
 
-  M.send_request(
-    main_nr,
-    "textDocument/rangeFormatting",
-    redirect,
-    vim.lsp.buf.format,
-    handlers.format,
-    { main_nr = main_nr }
-  )
+  M.send_request(main_nr, "textDocument/rangeFormatting", redirect, f, handlers.format, { main_nr = main_nr })
 end
 
 return M

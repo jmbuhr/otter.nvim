@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.15.0](https://github.com/jmbuhr/otter.nvim/compare/v1.14.0...v1.15.0) (2024-05-09)
+
+
+### Features
+
+* add fallback to type definition + type annotations ([#126](https://github.com/jmbuhr/otter.nvim/issues/126)) ([8198492](https://github.com/jmbuhr/otter.nvim/commit/819849249ec87b4dc429c24513df7e6efcacf56c))
+* add webc + sort alphabetically ([#128](https://github.com/jmbuhr/otter.nvim/issues/128)) ([0504278](https://github.com/jmbuhr/otter.nvim/commit/0504278089a6f08e08d64245717171cdc15b33f6))
+
 ## [1.14.0](https://github.com/jmbuhr/otter.nvim/compare/v1.13.0...v1.14.0) (2024-05-01)
 
 

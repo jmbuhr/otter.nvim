@@ -159,6 +159,7 @@ and you will see code completion and diagnostics (on save).
 Then use the `otter.ask_...` functions to e.g. ask for hover documentation, references or the definition.
 
 `otter.ask_` functions fall back to regular lsp requests on the main buffer when not in an otter context.
+Alternatively, you can pass a custom fallback to use instead of the default lsp request.
 Currently implemented functions are:
 
 ```lua

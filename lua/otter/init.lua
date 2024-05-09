@@ -244,6 +244,7 @@ M.deactivate = function(completion, diagnostics)
 end
 
 --- Got to definition of the symbol under the cursor
+---@param fallback function|nil
 M.ask_definition = function(fallback)
   local f = fallback or vim.lsp.buf.definition
   local main_nr = api.nvim_get_current_buf()
@@ -277,7 +278,9 @@ M.ask_definition = function(fallback)
 end
 
 --- Got to type definition of the symbol under the cursor
-M.ask_type_definition = function()
+---@param fallback function|nil
+M.ask_type_definition = function(fallback)
+  local f = fallback or vim.lsp.buf.type_definition
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
 
@@ -305,7 +308,7 @@ M.ask_type_definition = function()
       table.insert(modified_response, redirect_definition(res))
     end
     return modified_response
-  end, vim.lsp.buf.type_definition)
+  end, f)
 end
 
 local function replace_header_div(response)
@@ -316,6 +319,7 @@ end
 
 --- Open hover documentation of symbol under the cursor
 -- See <https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/buf.lua>
+---@param fallback function|nil
 M.ask_hover = function(fallback)
   local f = fallback or vim.lsp.buf.hover
   local main_nr = api.nvim_get_current_buf()
@@ -330,6 +334,7 @@ M.ask_hover = function(fallback)
 end
 
 --- Open quickfix list of references of the symbol under the cursor
+---@param fallback function|nil
 M.ask_references = function(fallback)
   local f = fallback or vim.lsp.buf.references
   local main_nr = api.nvim_get_current_buf()
@@ -350,6 +355,7 @@ M.ask_references = function(fallback)
 end
 
 --- Open list of symbols of the current document
+---@param fallback function|nil
 M.ask_document_symbols = function(fallback)
   local f = fallback or vim.lsp.buf.document_symbol
   local main_nr = api.nvim_get_current_buf()
@@ -370,6 +376,7 @@ M.ask_document_symbols = function(fallback)
 end
 
 --- Rename symbol under cursor
+---@param fallback function|nil
 M.ask_rename = function(fallback)
   local f = fallback or vim.lsp.buf.rename
   local main_nr = api.nvim_get_current_buf()
@@ -406,6 +413,7 @@ M.ask_rename = function(fallback)
 end
 
 --- Reformat current otter context
+---@param fallback function|nil
 M.ask_format = function(fallback)
   local f = fallback or vim.lsp.buf.format
   local main_nr = api.nvim_get_current_buf()

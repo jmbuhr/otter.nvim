@@ -34,7 +34,7 @@ M.cmp_on_insert_enter = function(main_nr, opts)
 
   for lang, otter_nr in pairs(keeper._otters_attached[main_nr].buffers) do
     -- register all active clients.
-    for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = otter_nr })) do
+    for _, client in ipairs((vim.lsp.get_clients or vim.lsp.get_active_clients)({ bufnr = otter_nr })) do
       M.allowed_clients[client.id] = client
       if not M.cmp_client_source_map[client.id] then
         local updater = function()

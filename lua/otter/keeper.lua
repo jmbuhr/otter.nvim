@@ -308,57 +308,66 @@ M.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
   end
 end
 
+---@param main_nr integer bufnr of the parent buffer
+---@return boolean has_raft true if the buffer has otters attached
+M.has_raft = function(main_nr)
+  return M._otters_attached[main_nr] ~= nil
+end
+
 --- Synchronize the raft of otters attached to a buffer
 ---@param main_nr integer bufnr of the parent buffer
 ---@param language string|nil only sync one otter buffer matching a language
+---@return boolean success true on success, otherwise false
 M.sync_raft = function(main_nr, language)
-  if M._otters_attached[main_nr] ~= nil then
-    local all_code_chunks
-    local changetick = api.nvim_buf_get_changedtick(main_nr)
-    if M._otters_attached[main_nr].last_changetick == changetick then
-      all_code_chunks = M._otters_attached[main_nr].code_chunks
-      return
-    else
-      all_code_chunks = M.extract_code_chunks(main_nr)
-    end
+  if not M.has_raft(main_nr) then
+    return false
+  end
+  local all_code_chunks
+  local changetick = api.nvim_buf_get_changedtick(main_nr)
+  if M._otters_attached[main_nr].last_changetick == changetick then
+    all_code_chunks = M._otters_attached[main_nr].code_chunks
+    return true
+  else
+    all_code_chunks = M.extract_code_chunks(main_nr)
+  end
 
-    M._otters_attached[main_nr].last_changetick = changetick
-    M._otters_attached[main_nr].code_chunks = all_code_chunks
+  M._otters_attached[main_nr].last_changetick = changetick
+  M._otters_attached[main_nr].code_chunks = all_code_chunks
 
-    local langs
-    if language == nil then
-      langs = M._otters_attached[main_nr].languages
-    else
-      langs = { language }
-    end
-    for _, lang in ipairs(langs) do
-      local otter_nr = M._otters_attached[main_nr].buffers[lang]
-      if otter_nr ~= nil then
-        local code_chunks = all_code_chunks[lang]
-        if code_chunks ~= nil then
-          local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
+  local langs
+  if language == nil then
+    langs = M._otters_attached[main_nr].languages
+  else
+    langs = { language }
+  end
+  for _, lang in ipairs(langs) do
+    local otter_nr = M._otters_attached[main_nr].buffers[lang]
+    if otter_nr ~= nil then
+      local code_chunks = all_code_chunks[lang]
+      if code_chunks ~= nil then
+        local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
 
-          -- create list with empty lines the length of the buffer
-          local ls = fn.empty_lines(nmax)
+        -- create list with empty lines the length of the buffer
+        local ls = fn.empty_lines(nmax)
 
-          -- collect language lines
-          for _, t in ipairs(code_chunks) do
-            local start_index = t.range["from"][1]
-            for i, l in ipairs(t.text) do
-              local index = start_index + i
-              table.remove(ls, index)
-              table.insert(ls, index, l)
-            end
+        -- collect language lines
+        for _, t in ipairs(code_chunks) do
+          local start_index = t.range["from"][1]
+          for i, l in ipairs(t.text) do
+            local index = start_index + i
+            table.remove(ls, index)
+            table.insert(ls, index, l)
           end
-
-          -- replace language lines
-          api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
-        else -- no code chunks so we wipe the otter buffer
-          api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
         end
+
+        -- replace language lines
+        api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
+      else -- no code chunks so we wipe the otter buffer
+        api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
       end
     end
   end
+  return true
 end
 
 --- Send a request to the otter buffers and handle the response.
@@ -374,7 +383,13 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
   filter = filter or function(x)
     return x
   end
-  M.sync_raft(main_nr)
+  local has_raft = M.sync_raft(main_nr)
+  if not has_raft then
+    if fallback then
+      fallback()
+    end
+    return
+  end
 
   local lang, start_row, start_col, end_row, end_col = M.get_current_language_context()
 

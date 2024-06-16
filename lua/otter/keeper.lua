@@ -164,6 +164,13 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_start, r
   return code_chunks
 end
 
+--- Get the language context of the current cursor position.
+--- @param main_nr integer bufnr of the parent buffer
+--- @return string|nil language nil if no language context is found
+--- @return integer|nil start_row
+--- @return integer|nil start_col
+--- @return integer|nil end_row
+--- @return integer|nil end_col
 M.get_current_language_context = function(main_nr)
   main_nr = main_nr or api.nvim_get_current_buf()
   if M._otters_attached[main_nr] == nil then

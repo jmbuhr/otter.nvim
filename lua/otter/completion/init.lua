@@ -10,7 +10,7 @@ M.cmp_client_source_map = {}
 M.allowed_clients = {}
 
 ---Setup nvim-cmp otter source.
-M.setup_sources = function(main_nr, otters_attached)
+M.setup_sources = function(main_nr)
   local callback = function(opts)
     M.cmp_on_insert_enter(main_nr, opts)
   end

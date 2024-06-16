@@ -208,6 +208,60 @@ M.activate = function(languages, completion, diagnostics, tsquery)
         M.sync_raft(main_nr)
       end,
     })
+
+    -- remove the need to use keybindings for otter ask_ functions
+    -- by being our own lsp server
+    if config.cfg.lsp.hijack then
+      local otterclient_id = vim.lsp.start({
+        name = "OtterLSP",
+        capabilities = vim.lsp.protocol.make_client_capabilities(),
+        cmd = function(dispatchers)
+          local members = {
+            request = function(method, params, callback, notify_reply_callback)
+              if method == "initialize" then
+                local initializeResult = {
+                  capabilities = {
+                    hoverProvider = true,
+                    definitionProvider = true,
+                    typeDefinitionProvider = true,
+                    referencesProvider = true,
+                    renameProvider = true,
+                    documentSymbolProvider = true,
+                    rangeFormattingProvider = true,
+                  },
+                }
+                callback(nil, initializeResult)
+              elseif method == "textDocument/hover" then
+                M.ask_hover()
+              elseif method == "textDocument/definition" then
+                M.ask_definition()
+              elseif method == "textDocument/typeDefinition" then
+                M.ask_type_definition()
+              elseif method == "textDocument/rename" then
+                M.ask_rename()
+              elseif method == "textDocument/rangeFormatting" then
+                M.ask_format()
+              elseif method == "textDocument/references" then
+                M.ask_references()
+              elseif method == "textDocument/documentSymbol" then
+                -- TODO: ask_ function interfers with dropbar plugin,
+                -- need to adher better to lsp spec
+                -- M.ask_document_symbols()
+              end
+            end,
+            notify = function(method, params) end,
+            is_closing = function() end,
+            terminate = function() end,
+          }
+          return members
+        end,
+        before_init = function(_, _)
+          print("before_init")
+        end,
+        on_init = function(client, init_result) end,
+        root_dir = vim.fn.getcwd(),
+      })
+    end
   end
 end
 

@@ -424,8 +424,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     params.context = {
       includeDeclaration = true,
     }
-  end
-  if request == "textDocument/rename" then
+  elseif request == "textDocument/rename" then
     local cword = vim.fn.expand("<cword>")
     local prompt_opts = {
       prompt = "New Name: ",
@@ -434,8 +433,7 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     vim.ui.input(prompt_opts, function(input)
       params.newName = input
     end)
-  end
-  if request == "textDocument/rangeFormatting" then
+  elseif request == "textDocument/rangeFormatting" then
     params = vim.lsp.util.make_formatting_params()
     params.textDocument = {
       uri = otter_uri,
@@ -450,6 +448,12 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
       params.range["end"].character = #line
     end
     M.modify_position(params, main_nr, true, true)
+  elseif request == "textDocument/completion" then
+    params.position.character = params.position.character - M.get_leading_offset(params.position.line, main_nr)
+    params.textDocument = {
+      uri = vim.uri_from_bufnr(otter_nr),
+    }
+    M.modify_position(params, main_nr, true)
   else
     -- formatting gets its own special treatment, everything else gets the same
     M.modify_position(params, main_nr, true)

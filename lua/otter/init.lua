@@ -168,7 +168,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
   end
 
-  if completion then
+  if completion and not config.cfg.lsp.hijack then
     require("otter.completion").setup_sources(main_nr, keeper._otters_attached[main_nr])
   end
 
@@ -213,7 +213,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     -- by being our own lsp server
     if config.cfg.lsp.hijack then
       local otterclient_id = vim.lsp.start({
-        name = "OtterLSP",
+        name = "otter-ls",
         capabilities = vim.lsp.protocol.make_client_capabilities(),
         cmd = function(dispatchers)
           local members = {
@@ -224,10 +224,19 @@ M.activate = function(languages, completion, diagnostics, tsquery)
                     hoverProvider = true,
                     definitionProvider = true,
                     typeDefinitionProvider = true,
-                    referencesProvider = true,
                     renameProvider = true,
-                    documentSymbolProvider = true,
                     rangeFormattingProvider = true,
+                    referencesProvider = true,
+                    completionProvider = {
+                      -- TODO: get these from lsps attached to otter buffers
+                      triggerCharacters = { ".", ":", "(", "[", "{", ",", " ", "\n" },
+                      resolveProvider = true,
+                    },
+                    -- documentSymbolProvider = true, -- TODO:
+                  },
+                  serverInfo = {
+                    name = "otter-ls",
+                    version = "0.1",
                   },
                 }
                 callback(nil, initializeResult)
@@ -243,10 +252,37 @@ M.activate = function(languages, completion, diagnostics, tsquery)
                 M.ask_format()
               elseif method == "textDocument/references" then
                 M.ask_references()
+              elseif method == "textDocument/completion" then
+                -- TODO: not implemented yet
+                M.ask_completion()
               elseif method == "textDocument/documentSymbol" then
                 -- TODO: ask_ function interfers with dropbar plugin,
                 -- need to adher better to lsp spec
                 -- M.ask_document_symbols()
+                -- Error executing vim.schedule lua callback: stack overflow
+                -- stack traceback:
+                --         [C]: in function 'match'
+                --         vim/inspect.lua: in function ''
+                --         vim/inspect.lua: in function 'putValue'
+                --         vim/inspect.lua: in function 'inspect'
+                --         vim/_editor.lua: in function 'print'
+                --         /home/jannik/projects/otter.nvim/lua/otter/init.lua:249: in function 'request'
+                --         /usr/local/share/nvim/runtime/lua/vim/lsp/client.lua:679: in function 'request'
+                --         /usr/local/share/nvim/runtime/lua/vim/lsp.lua:876: in function 'request'
+                --         /usr/local/share/nvim/runtime/lua/vim/lsp/buf.lua:47: in function 'request_with_opts'
+                --         /usr/local/share/nvim/runtime/lua/vim/lsp/buf.lua:431: in function 'fallback'
+                --         /home/jannik/projects/otter.nvim/lua/otter/keeper.lua:405: in function 'send_request'
+                --         ...
+                --         /usr/local/share/nvim/runtime/lua/vim/lsp/client.lua:679: in function 'request'
+                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:281: in function 'update_symbols'
+                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:307: in function '_update'
+                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:317: in function 'attach'
+                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:345: in function 'init'
+                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:386: in function 'get_symbols'
+                --         ...hare/nvim/lazy/dropbar.nvim/lua/dropbar/utils/source.lua:9: in function 'get_symbols'
+                --         .../.local/share/nvim/lazy/dropbar.nvim/lua/dropbar/bar.lua:568: in function ''
+                --         vim/_editor.lua: in function ''
+                --         vim/_editor.lua: in function <vim/_editor.lua:0>
               end
             end,
             notify = function(method, params) end,
@@ -255,9 +291,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
           }
           return members
         end,
-        before_init = function(_, _)
-          print("before_init")
-        end,
+        before_init = function(_, _) end,
         on_init = function(client, init_result) end,
         root_dir = vim.fn.getcwd(),
       })
@@ -397,7 +431,7 @@ M.ask_references = function(fallback)
   local function redirect(res)
     local uri = res.uri
     if not res.uri then
-      return
+      return res
     end
     if require("otter.tools.functions").is_otterpath(uri) then
       res.uri = main_uri
@@ -406,6 +440,30 @@ M.ask_references = function(fallback)
   end
 
   M.send_request(main_nr, "textDocument/references", redirect, f)
+end
+
+--- Get completion results form otter buffers
+M.ask_completion = function()
+  local main_nr = api.nvim_get_current_buf()
+  local main_uri = vim.uri_from_bufnr(main_nr)
+
+  local function redirect(res)
+    local items = {}
+    for i, item in ipairs(res.items) do
+      if item.data == nil then
+        item.data = {}
+      end
+      local uri = item.data.uri
+      if uri ~= nil and require("otter.tools.functions").is_otterpath(uri) then
+        item.data.uri = main_uri
+      end
+      table.insert(items, item)
+    end
+    res.items = items
+    return res
+  end
+
+  M.send_request(main_nr, "textDocument/completion", redirect, nil)
 end
 
 --- Open list of symbols of the current document

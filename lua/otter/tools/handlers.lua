@@ -1,6 +1,13 @@
+-- custom handlers for otter-ls where the default handlers are not sufficient
+-- example:
+-- vim.lsp.handlers.hover(_?, result, ctx, config)
 local util = vim.lsp.util
 local otterpath_to_path = require("otter.tools.functions").otterpath_to_path
 local api = vim.api
+local otterconfig = require("otter.config").cfg
+local ms = vim.lsp.protocol.Methods
+
+local M = {}
 
 local has_telescope = false
 local ok, mod = pcall(require, "telescope")
@@ -26,9 +33,14 @@ local function trim_empty_lines(lines)
   return vim.list_extend({}, lines, start, finish)
 end
 
-local function hover(_, response, ctx, conf)
-  conf = conf or vim.lsp.handlers.hover
-  conf.focus_id = ctx.method
+---@param _ lsp.ResponseError?
+---@param result lsp.Hover
+---@param ctx lsp.HandlerContext
+--- see
+--- vim.lsp.handlers.hover(_, result, ctx, config)
+M[ms.textDocument_hover] = function(_, response, ctx, _)
+  local opts = otterconfig.lsp.hover
+  opts.focus_id = ctx.method
   -- don't ignore hover responses from other buffers
   if not (response and response.contents) then
     return
@@ -39,13 +51,65 @@ local function hover(_, response, ctx, conf)
     return
   end
   -- returns bufnr,winnr buffer and window number of the newly created floating
-  local bufnr, _ = util.open_floating_preview(markdown_lines, "markdown", conf)
-  -- vim.api.nvim_buf_set_option(bufnr, 'filetype', 'markdown')
-  return response
+  return util.open_floating_preview(markdown_lines, "markdown", opts)
+end
+
+-- elseif method == "textDocument/definition" then
+--   local function redirect_definition(res)
+--     if res.uri ~= nil then
+--       if require("otter.tools.functions").is_otterpath(res.uri) then
+--         res.uri = main_uri
+--       end
+--     end
+--     if res.targetUri ~= nil then
+--       if require("otter.tools.functions").is_otterpath(res.targetUri) then
+--         res.targetUri = main_uri
+--       end
+--     end
+--     return res
+--   end
+--   M.send_request(main_nr, method, params, function(response)
+--     if #response == 0 then
+--       return redirect_definition(response)
+--     end
+--
+--     local modified_response = {}
+--     for _, res in ipairs(response) do
+--       table.insert(modified_response, redirect_definition(res))
+--     end
+--     return modified_response
+--   end)
+M[ms.textDocument_definition] = function(_, response, ctx)
+  if #response == 0 then
+    if response.uri ~= nil then
+      if require("otter.tools.functions").is_otterpath(response.uri) then
+        response.uri = ctx.params.otter.main_uri
+      end
+    end
+    if response.targetUri ~= nil then
+      if require("otter.tools.functions").is_otterpath(response.targetUri) then
+        response.targetUri = ctx.params.otter.main_uri
+      end
+    end
+  else
+    for _, resp in ipairs(response) do
+      if resp.uri ~= nil then
+        if require("otter.tools.functions").is_otterpath(resp.uri) then
+          resp.uri = ctx.params.otter.main_uri
+        end
+      end
+      if resp.targetUri ~= nil then
+        if require("otter.tools.functions").is_otterpath(resp.targetUri) then
+          resp.targetUri = ctx.params.otter.main_uri
+        end
+      end
+    end
+  end
+  vim.lsp.handlers["textDocument/definition"](_, response, ctx)
 end
 
 --see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentSymbol
-local function document_symbol(err, response, ctx, conf)
+M[ms.textDocument_documentSymbol] = function(err, response, ctx, conf)
   conf = conf or {}
   if not response then
     return
@@ -70,7 +134,7 @@ local function document_symbol(err, response, ctx, conf)
   end
 end
 
-local format = function(err, response, ctx, conf)
+M[ms.textDocument_rangeFormatting] = function(err, response, ctx, conf)
   conf = conf or {}
   if not response then
     return
@@ -81,11 +145,5 @@ local format = function(err, response, ctx, conf)
   end
   util.apply_text_edits(response, conf.main_nr, client.offset_encoding)
 end
-
-M = {
-  ["textDocument/hover"] = hover,
-  ["textDocument/documentSymbol"] = document_symbol,
-  ["textDocument/rangeFormatting"] = format,
-}
 
 return M

@@ -6,7 +6,7 @@ local default_config = {
       border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
     },
     diagnostic_update_events = { "BufWritePost" },
-    hijack = true, -- hijack lsp requests and responses via lsp-events
+    root_dir = require("lspconfig").util.root_pattern({ ".git", "_quarto.yml", "package.json" }),
   },
   buffers = {
     -- if set to true, the filetype of the otterbuffers will be set.

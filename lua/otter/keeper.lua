@@ -165,7 +165,7 @@ M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_start, r
 end
 
 --- Get the language context of the current cursor position.
---- @param main_nr integer bufnr of the parent buffer
+--- @param main_nr integer|nil bufnr of the parent buffer
 --- @return string|nil language nil if no language context is found
 --- @return integer|nil start_row
 --- @return integer|nil start_col
@@ -377,6 +377,10 @@ M.sync_raft = function(main_nr, language)
   return true
 end
 
+M.request_otter = function(otter_nr, method, params, handler)
+  vim.lsp.buf_request(otter_nr, method, params, handler)
+end
+
 --- Send a request to the otter buffers and handle the response.
 --- The response can optionally be filtered through a function.
 ---@param main_nr integer bufnr of main buffer
@@ -413,15 +417,6 @@ M.send_request = function(main_nr, request, params, filter, handler, conf)
     params.context = {
       includeDeclaration = true,
     }
-  -- elseif request == "textDocument/rename" then
-  --   local cword = vim.fn.expand("<cword>")
-  --   local prompt_opts = {
-  --     prompt = "New Name: ",
-  --     default = cword,
-  --   }
-  --   vim.ui.input(prompt_opts, function(input)
-  --     params.newName = input
-  --   end)
   elseif request == "textDocument/rangeFormatting" then
     params = vim.lsp.util.make_formatting_params()
     params.textDocument = {

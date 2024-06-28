@@ -8,8 +8,6 @@ if ok then
   has_telescope = true
 end
 
-local M = {}
-
 local function trim_empty_lines(lines)
   local start = 1
   for i = 1, #lines do
@@ -28,8 +26,8 @@ local function trim_empty_lines(lines)
   return vim.list_extend({}, lines, start, finish)
 end
 
-function M.hover(_, response, ctx, conf)
-  conf = conf or {}
+local function hover(_, response, ctx, conf)
+  conf = conf or vim.lsp.handlers.hover
   conf.focus_id = ctx.method
   -- don't ignore hover responses from other buffers
   if not (response and response.contents) then
@@ -47,7 +45,7 @@ function M.hover(_, response, ctx, conf)
 end
 
 --see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentSymbol
-function M.document_symbol(err, response, ctx, conf)
+local function document_symbol(err, response, ctx, conf)
   conf = conf or {}
   if not response then
     return
@@ -72,7 +70,7 @@ function M.document_symbol(err, response, ctx, conf)
   end
 end
 
-M.format = function(err, response, ctx, conf)
+local format = function(err, response, ctx, conf)
   conf = conf or {}
   if not response then
     return
@@ -83,5 +81,11 @@ M.format = function(err, response, ctx, conf)
   end
   util.apply_text_edits(response, conf.main_nr, client.offset_encoding)
 end
+
+M = {
+  ["textDocument/hover"] = hover,
+  ["textDocument/documentSymbol"] = document_symbol,
+  ["textDocument/rangeFormatting"] = format,
+}
 
 return M

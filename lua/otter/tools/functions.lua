@@ -11,6 +11,12 @@ M.contains = function(list, x)
   return false
 end
 
+M.replace_header_div = function(response)
+  response.contents = response.contents:gsub('<div class="container">', "")
+  -- response.contents = response.contents:gsub('``` R', '```r')
+  return response
+end
+
 ---strip wrapping quotes from a string
 ---@param s string
 ---@return string s, boolean stripped The stripped string and a boolean indicating whether the string was stripped

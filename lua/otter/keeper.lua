@@ -381,40 +381,29 @@ end
 --- The response can optionally be filtered through a function.
 ---@param main_nr integer bufnr of main buffer
 ---@param request string lsp request
+---@param params table params for the request created by vim.lsp.buf.<request>
 ---@param filter function|nil function to process the response
----@param fallback function|nil optional function to call if not in an otter context
 ---@param handler function|nil optional function to handle the filtered lsp request for cases in which the default handler does not suffice
 ---@param conf table|nil optional config to pass to the handler.
-M.send_request = function(main_nr, request, filter, fallback, handler, conf)
-  fallback = fallback or nil
+M.send_request = function(main_nr, request, params, filter, handler, conf)
   filter = filter or function(x)
     return x
   end
   local has_raft = M.sync_raft(main_nr)
   if not has_raft then
-    if fallback then
-      fallback()
-    end
     return
   end
 
-  local lang, start_row, start_col, end_row, end_col = M.get_current_language_context()
+  local lang, start_row, start_col, end_row, end_col = M.get_current_language_context(main_nr)
 
   if not fn.contains(M._otters_attached[main_nr].languages, lang) then
-    if fallback then
-      fallback()
-    end
     return
   end
 
   local otter_nr = M._otters_attached[main_nr].buffers[lang]
   local otter_uri = vim.uri_from_bufnr(otter_nr)
-  local params
   if request == "textDocument/documentSymbol" then
-    params = vim.lsp.util.make_text_document_params()
     params.uri = otter_uri
-  else
-    params = vim.lsp.util.make_position_params()
   end
   -- general
   params.textDocument = {
@@ -424,15 +413,15 @@ M.send_request = function(main_nr, request, filter, fallback, handler, conf)
     params.context = {
       includeDeclaration = true,
     }
-  elseif request == "textDocument/rename" then
-    local cword = vim.fn.expand("<cword>")
-    local prompt_opts = {
-      prompt = "New Name: ",
-      default = cword,
-    }
-    vim.ui.input(prompt_opts, function(input)
-      params.newName = input
-    end)
+  -- elseif request == "textDocument/rename" then
+  --   local cword = vim.fn.expand("<cword>")
+  --   local prompt_opts = {
+  --     prompt = "New Name: ",
+  --     default = cword,
+  --   }
+  --   vim.ui.input(prompt_opts, function(input)
+  --     params.newName = input
+  --   end)
   elseif request == "textDocument/rangeFormatting" then
     params = vim.lsp.util.make_formatting_params()
     params.textDocument = {

@@ -7,6 +7,7 @@ local handlers = require("otter.tools.handlers")
 local keeper = require("otter.keeper")
 local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
 local config = require("otter.config")
+local replace_header_div = require("otter.tools.functions").replace_header_div
 
 M.setup = function(opts)
   config.cfg = vim.tbl_deep_extend("force", config.cfg, opts or {})
@@ -48,6 +49,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   completion = completion ~= false
   diagnostics = diagnostics ~= false
   local main_nr = api.nvim_get_current_buf()
+  local main_uri = vim.uri_from_bufnr(main_nr)
   local main_path = api.nvim_buf_get_name(main_nr)
   local parsername = vim.treesitter.language.get_lang(api.nvim_get_option_value("filetype", { buf = main_nr }))
   if not parsername then
@@ -168,7 +170,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
   end
 
-  if completion and not config.cfg.lsp.hijack then
+  if completion then
     require("otter.completion").setup_sources(main_nr, keeper._otters_attached[main_nr])
   end
 
@@ -209,6 +211,10 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       end,
     })
 
+    -- TODO:
+    -- local handler = client.handlers[ms.textDocument_rename]
+    -- is a thing!
+
     -- remove the need to use keybindings for otter ask_ functions
     -- by being our own lsp server
     if config.cfg.lsp.hijack then
@@ -218,6 +224,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
         cmd = function(dispatchers)
           local members = {
             request = function(method, params, callback, notify_reply_callback)
+              local handler = handlers[method] or vim.lsp.handlers[method]
               if method == "initialize" then
                 local initializeResult = {
                   capabilities = {
@@ -227,11 +234,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
                     renameProvider = true,
                     rangeFormattingProvider = true,
                     referencesProvider = true,
-                    completionProvider = {
-                      -- TODO: get these from lsps attached to otter buffers
-                      triggerCharacters = { ".", ":", "(", "[", "{", ",", " ", "\n" },
-                      resolveProvider = true,
-                    },
                     -- documentSymbolProvider = true, -- TODO:
                   },
                   serverInfo = {
@@ -241,13 +243,94 @@ M.activate = function(languages, completion, diagnostics, tsquery)
                 }
                 callback(nil, initializeResult)
               elseif method == "textDocument/hover" then
-                M.ask_hover()
+                M.send_request(main_nr, "textDocument/hover", params, function(response)
+                  local ok, filtered_response = pcall(replace_header_div, response)
+                  if ok then
+                    return filtered_response
+                  else
+                    return response
+                  end
+                end, handler, config.cfg.lsp.hover)
               elseif method == "textDocument/definition" then
-                M.ask_definition()
+                local function redirect_definition(res)
+                  if res.uri ~= nil then
+                    if require("otter.tools.functions").is_otterpath(res.uri) then
+                      res.uri = main_uri
+                    end
+                  end
+                  if res.targetUri ~= nil then
+                    if require("otter.tools.functions").is_otterpath(res.targetUri) then
+                      res.targetUri = main_uri
+                    end
+                  end
+                  return res
+                end
+
+                M.send_request(main_nr, method, params, function(response)
+                  if #response == 0 then
+                    return redirect_definition(response)
+                  end
+
+                  local modified_response = {}
+                  for _, res in ipairs(response) do
+                    table.insert(modified_response, redirect_definition(res))
+                  end
+                  return modified_response
+                end)
               elseif method == "textDocument/typeDefinition" then
-                M.ask_type_definition()
+                local function redirect_definition(res)
+                  if res.uri ~= nil then
+                    if require("otter.tools.functions").is_otterpath(res.uri) then
+                      res.uri = main_uri
+                    end
+                  end
+                  if res.targetUri ~= nil then
+                    if require("otter.tools.functions").is_otterpath(res.targetUri) then
+                      res.targetUri = main_uri
+                    end
+                  end
+                  return res
+                end
+
+                M.send_request(main_nr, method, params, function(response)
+                  if #response == 0 then
+                    return redirect_definition(response)
+                  end
+
+                  local modified_response = {}
+                  for _, res in ipairs(response) do
+                    table.insert(modified_response, redirect_definition(res))
+                  end
+                  return modified_response
+                end)
               elseif method == "textDocument/rename" then
-                M.ask_rename()
+                local function redirect(res)
+                  local changes = res.changes
+                  if changes ~= nil then
+                    local new_changes = {}
+                    for uri, change in pairs(changes) do
+                      if require("otter.tools.functions").is_otterpath(uri) then
+                        uri = main_uri
+                      end
+                      new_changes[uri] = change
+                    end
+                    res.changes = new_changes
+                    return res
+                  else
+                    changes = res.documentChanges
+                    local new_changes = {}
+                    for _, change in ipairs(changes) do
+                      local uri = change.textDocument.uri
+                      if require("otter.tools.functions").is_otterpath(uri) then
+                        change.textDocument.uri = main_uri
+                      end
+                      table.insert(new_changes, change)
+                    end
+                    res.documentChanges = new_changes
+                    return res
+                  end
+                end
+                M.send_request(main_nr, method, params, redirect)
               elseif method == "textDocument/rangeFormatting" then
                 M.ask_format()
               elseif method == "textDocument/references" then
@@ -256,33 +339,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
                 -- TODO: not implemented yet
                 M.ask_completion()
               elseif method == "textDocument/documentSymbol" then
-                -- TODO: ask_ function interfers with dropbar plugin,
-                -- need to adher better to lsp spec
-                -- M.ask_document_symbols()
-                -- Error executing vim.schedule lua callback: stack overflow
-                -- stack traceback:
-                --         [C]: in function 'match'
-                --         vim/inspect.lua: in function ''
-                --         vim/inspect.lua: in function 'putValue'
-                --         vim/inspect.lua: in function 'inspect'
-                --         vim/_editor.lua: in function 'print'
-                --         /home/jannik/projects/otter.nvim/lua/otter/init.lua:249: in function 'request'
-                --         /usr/local/share/nvim/runtime/lua/vim/lsp/client.lua:679: in function 'request'
-                --         /usr/local/share/nvim/runtime/lua/vim/lsp.lua:876: in function 'request'
-                --         /usr/local/share/nvim/runtime/lua/vim/lsp/buf.lua:47: in function 'request_with_opts'
-                --         /usr/local/share/nvim/runtime/lua/vim/lsp/buf.lua:431: in function 'fallback'
-                --         /home/jannik/projects/otter.nvim/lua/otter/keeper.lua:405: in function 'send_request'
-                --         ...
-                --         /usr/local/share/nvim/runtime/lua/vim/lsp/client.lua:679: in function 'request'
-                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:281: in function 'update_symbols'
-                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:307: in function '_update'
-                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:317: in function 'attach'
-                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:345: in function 'init'
-                --         ...share/nvim/lazy/dropbar.nvim/lua/dropbar/sources/lsp.lua:386: in function 'get_symbols'
-                --         ...hare/nvim/lazy/dropbar.nvim/lua/dropbar/utils/source.lua:9: in function 'get_symbols'
-                --         .../.local/share/nvim/lazy/dropbar.nvim/lua/dropbar/bar.lua:568: in function ''
-                --         vim/_editor.lua: in function ''
-                --         vim/_editor.lua: in function <vim/_editor.lua:0>
+                M.ask_document_symbols()
               end
             end,
             notify = function(method, params) end,
@@ -399,12 +456,6 @@ M.ask_type_definition = function(fallback)
   end, f)
 end
 
-local function replace_header_div(response)
-  response.contents = response.contents:gsub('<div class="container">', "")
-  -- response.contents = response.contents:gsub('``` R', '```r')
-  return response
-end
-
 --- Open hover documentation of symbol under the cursor
 -- See <https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/buf.lua>
 ---@param fallback function|nil
@@ -467,9 +518,7 @@ M.ask_completion = function()
 end
 
 --- Open list of symbols of the current document
----@param fallback function|nil
-M.ask_document_symbols = function(fallback)
-  local f = fallback or vim.lsp.buf.document_symbol
+M.ask_document_symbols = function()
   local main_nr = api.nvim_get_current_buf()
   local main_uri = vim.uri_from_bufnr(main_nr)
 
@@ -484,7 +533,8 @@ M.ask_document_symbols = function(fallback)
     return res
   end
 
-  M.send_request(main_nr, "textDocument/documentSymbol", redirect, f, handlers.document_symbol)
+  print("asking for symbols")
+  M.send_request(main_nr, "textDocument/documentSymbol", redirect, nil, handlers.document_symbol)
 end
 
 --- Rename symbol under cursor

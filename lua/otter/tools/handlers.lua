@@ -39,6 +39,9 @@ end
 --- see
 --- vim.lsp.handlers.hover(_, result, ctx, config)
 M[ms.textDocument_hover] = function(_, response, ctx, _)
+  if not response then
+    return
+  end
   local opts = otterconfig.lsp.hover
   opts.focus_id = ctx.method
   -- don't ignore hover responses from other buffers
@@ -54,32 +57,10 @@ M[ms.textDocument_hover] = function(_, response, ctx, _)
   return util.open_floating_preview(markdown_lines, "markdown", opts)
 end
 
--- elseif method == "textDocument/definition" then
---   local function redirect_definition(res)
---     if res.uri ~= nil then
---       if require("otter.tools.functions").is_otterpath(res.uri) then
---         res.uri = main_uri
---       end
---     end
---     if res.targetUri ~= nil then
---       if require("otter.tools.functions").is_otterpath(res.targetUri) then
---         res.targetUri = main_uri
---       end
---     end
---     return res
---   end
---   M.send_request(main_nr, method, params, function(response)
---     if #response == 0 then
---       return redirect_definition(response)
---     end
---
---     local modified_response = {}
---     for _, res in ipairs(response) do
---       table.insert(modified_response, redirect_definition(res))
---     end
---     return modified_response
---   end)
 M[ms.textDocument_definition] = function(_, response, ctx)
+  if not response then
+    return
+  end
   if #response == 0 then
     if response.uri ~= nil then
       if require("otter.tools.functions").is_otterpath(response.uri) then
@@ -114,24 +95,29 @@ M[ms.textDocument_documentSymbol] = function(err, response, ctx, conf)
   if not response then
     return
   end
-  ctx.params.textDocument.uri = otterpath_to_path(ctx.params.textDocument.uri)
-  local items = util.symbols_to_items(response)
-  local fname = vim.fn.fnamemodify(vim.uri_to_fname(ctx.params.textDocument.uri), ":.")
-  local title = string.format("Symbols in %s", fname)
 
-  if conf.loclist then
-    vim.fn.setloclist(0, {}, " ", { title = title, items = items, context = ctx })
-    api.nvim_command("lopen")
-  elseif conf.on_list then
-    assert(type(conf.on_list) == "function", "on_list is not a function")
-    conf.on_list({ title = title, items = items, context = ctx })
-  elseif has_telescope then
-    vim.fn.setqflist({}, " ", { title = title, items = items, context = ctx })
-    vim.cmd([[Telescope quickfix]])
-  else
-    vim.fn.setqflist({}, " ", { title = title, items = items, context = ctx })
-    api.nvim_command("botright copen")
+  local function redirect(res)
+    if not res.location or not res.location.uri then
+      return res
+    end
+    local uri = res.location.uri
+    if require("otter.tools.functions").is_otterpath(uri) then
+      res.location.uri = ctx.params.otter.main_uri
+    end
+    return res
   end
+  if #response == 0 then
+    response = redirect(response)
+  else
+    local modified_response = {}
+    for _, res in ipairs(response) do
+      table.insert(modified_response, redirect(res))
+    end
+    response = modified_response
+  end
+
+  ctx.params.textDocument.uri = otterpath_to_path(ctx.params.textDocument.uri)
+  vim.lsp.handlers["textDocument/documentSymbol"](err, response, ctx, conf)
 end
 
 M[ms.textDocument_rangeFormatting] = function(err, response, ctx, conf)
@@ -144,6 +130,96 @@ M[ms.textDocument_rangeFormatting] = function(err, response, ctx, conf)
     return
   end
   util.apply_text_edits(response, conf.main_nr, client.offset_encoding)
+end
+
+M[ms.textDocument_typeDefinition] = function(err, response, ctx, conf)
+  local function redirect_definition(res)
+    if res.uri ~= nil then
+      if require("otter.tools.functions").is_otterpath(res.uri) then
+        res.uri = ctx.params.otter.main_uri
+      end
+    end
+    if res.targetUri ~= nil then
+      if require("otter.tools.functions").is_otterpath(res.targetUri) then
+        res.targetUri = ctx.params.otter.main_uri
+      end
+    end
+    return res
+  end
+  if #response == 0 then
+    response = redirect_definition(response)
+  else
+    local modified_response = {}
+    for _, res in ipairs(response) do
+      table.insert(modified_response, redirect_definition(res))
+    end
+    response = modified_response
+  end
+  vim.lsp.handlers[ms.textDocument_typeDefinition](err, response, ctx, conf)
+end
+
+M[ms.textDocument_rename] = function(err, response, ctx, conf)
+  local function redirect(res)
+    local changes = res.changes
+    if changes ~= nil then
+      local new_changes = {}
+      for uri, change in pairs(changes) do
+        if require("otter.tools.functions").is_otterpath(uri) then
+          uri = ctx.params.otter.main_uri
+        end
+        new_changes[uri] = change
+      end
+      res.changes = new_changes
+      return res
+    else
+      changes = res.documentChanges
+      local new_changes = {}
+      for _, change in ipairs(changes) do
+        local uri = change.textDocument.uri
+        if require("otter.tools.functions").is_otterpath(uri) then
+          change.textDocument.uri = ctx.params.otter.main_uri
+        end
+        table.insert(new_changes, change)
+      end
+      res.documentChanges = new_changes
+      return res
+    end
+  end
+  if #response == 0 then
+    response = redirect(response)
+  else
+    local modified_response = {}
+    for _, res in ipairs(response) do
+      table.insert(modified_response, redirect(res))
+    end
+    response = modified_response
+  end
+  vim.lsp.handlers[ms.textDocument_rename](err, response, ctx, conf)
+end
+
+M[ms.textDocument_references] = function(err, response, ctx, conf)
+  local function redirect(res)
+    local uri = res.uri
+    if not res.uri then
+      return res
+    end
+    if require("otter.tools.functions").is_otterpath(uri) then
+      res.uri = ctx.params.otter.main_uri
+    end
+    return res
+  end
+  if #response == 0 then
+    response = redirect(response)
+  else
+    local modified_response = {}
+    for _, res in ipairs(response) do
+      table.insert(modified_response, redirect(res))
+    end
+    response = modified_response
+  end
+  -- change the ctx after the otter buffer has responded
+  ctx.params.textDocument.uri = otterpath_to_path(ctx.params.textDocument.uri)
+  vim.lsp.handlers[ms.textDocument_references](err, response, ctx, conf)
 end
 
 return M

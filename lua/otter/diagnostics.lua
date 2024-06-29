@@ -5,14 +5,14 @@ local keeper = require("otter.keeper")
 M = {}
 M.setup = function(main_nr)
   local nss = {}
-  for lang, bufnr in pairs(keeper._otters_attached[main_nr].buffers) do
+  for lang, bufnr in pairs(keeper.rafts[main_nr].buffers) do
     local ns = api.nvim_create_namespace("otter-lang-" .. lang)
     nss[bufnr] = ns
   end
-  keeper._otters_attached[main_nr].nss = nss
+  keeper.rafts[main_nr].nss = nss
 
   local sync_diagnostics = function(args)
-    if vim.tbl_contains(vim.tbl_values(keeper._otters_attached[main_nr].buffers), args.buf) then
+    if vim.tbl_contains(vim.tbl_values(keeper.rafts[main_nr].buffers), args.buf) then
       local diags = args.data.diagnostics
       vim.diagnostic.reset(nss[args.buf], main_nr)
       if config.cfg.handle_leading_whitespace then

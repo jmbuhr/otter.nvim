@@ -1,4 +1,9 @@
-local M = {}
+--- The otter.keeep takes care of all the otters
+--- attached to the main buffers.
+--- Each main buffer is associated with a raft of
+--- otter buffers and their respective languages
+--- and code chunks
+local keeper = {}
 
 local extensions = require("otter.tools.extensions")
 local fn = require("otter.tools.functions")
@@ -6,7 +11,7 @@ local api = vim.api
 local ts = vim.treesitter
 local config = require("otter.config")
 
-M._otters_attached = {}
+keeper.rafts = {}
 
 local injectable_languages = {}
 for key, _ in pairs(extensions) do
@@ -73,16 +78,16 @@ end
 ---@field leading_offset number
 
 ---Extract code chunks from the specified buffer.
----Updates M._otters_attached[main_nr].code_chunks
+---Updates M.rafts[main_nr].code_chunks
 ---@param main_nr integer The main buffer number
 ---@param lang string|nil language to extract. All languages if nil.
 ---@param exclude_eval_false boolean | nil Exclude code chunks with eval: false
 ---@param row_start integer|nil Row to start from, inclusive, 1-indexed.
 ---@param row_end integer|nil Row to end at, inclusive, 1-indexed.
 ---@return CodeChunk[]
-M.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_start, row_end)
-  local query = M._otters_attached[main_nr].query
-  local parser = M._otters_attached[main_nr].parser
+keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_start, row_end)
+  local query = keeper.rafts[main_nr].query
+  local parser = keeper.rafts[main_nr].parser
   local tree = parser:parse()
   local root = tree[1]:root()
 
@@ -171,17 +176,17 @@ end
 --- @return integer|nil start_col
 --- @return integer|nil end_row
 --- @return integer|nil end_col
-M.get_current_language_context = function(main_nr)
+keeper.get_current_language_context = function(main_nr)
   main_nr = main_nr or api.nvim_get_current_buf()
-  if M._otters_attached[main_nr] == nil then
+  if keeper.rafts[main_nr] == nil then
     return nil
   end
   local row, col = unpack(api.nvim_win_get_cursor(0))
   row = row - 1
   col = col
 
-  local query = M._otters_attached[main_nr].query
-  local parser = M._otters_attached[main_nr].parser
+  local query = keeper.rafts[main_nr].query
+  local parser = keeper.rafts[main_nr].parser
   local tree = parser:parse()
   local root = tree[1]:root()
   local lang_capture = nil
@@ -215,7 +220,7 @@ M.get_current_language_context = function(main_nr)
 
         if language then
           if config.cfg.handle_leading_whitespace then
-            local buf = M._otters_attached[main_nr].buffers[language]
+            local buf = keeper.rafts[main_nr].buffers[language]
             if buf then
               local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
               if lines[1] then
@@ -235,12 +240,12 @@ end
 ---isn't in a chunk.
 ---@param line_nr number
 ---@param main_nr number
-M.get_leading_offset = function(line_nr, main_nr)
+keeper.get_leading_offset = function(line_nr, main_nr)
   if not config.cfg.handle_leading_whitespace then
     return 0
   end
 
-  local lang_chunks = M._otters_attached[main_nr].code_chunks
+  local lang_chunks = keeper.rafts[main_nr].code_chunks
   for _, chunks in pairs(lang_chunks) do
     for _, chunk in ipairs(chunks) do
       if line_nr >= chunk.range.from[1] and line_nr <= chunk.range.to[1] then
@@ -257,7 +262,7 @@ end
 ---@param invert boolean?
 ---@param exclude_end boolean?
 ---@param known_offset number?
-M.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
+keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
   if not config.cfg.handle_leading_whitespace or known_offset == 0 then
     return
   end
@@ -271,7 +276,7 @@ M.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
     if obj[range] then
       local start = obj[range].start
       local end_ = obj[range]["end"]
-      offset = offset or M.get_leading_offset(start.line, main_nr) * sign
+      offset = offset or keeper.get_leading_offset(start.line, main_nr) * sign
       obj[range].start.character = start.character + offset
       if not exclude_end then
         obj[range]["end"].character = end_.character + offset
@@ -281,7 +286,7 @@ M.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
 
   if obj.position then
     local pos = obj.position
-    offset = offset or M.get_leading_offset(pos.line, main_nr) * sign
+    offset = offset or keeper.get_leading_offset(pos.line, main_nr) * sign
     obj.position.character = pos.character + offset
   end
 
@@ -289,7 +294,7 @@ M.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
     for _, change in ipairs(obj.documentChanges) do
       if change.edits then
         for _, edit in ipairs(change.edits) do
-          M.modify_position(edit, main_nr, invert, exclude_end, offset)
+          keeper.modify_position(edit, main_nr, invert, exclude_end, offset)
         end
       end
     end
@@ -298,13 +303,13 @@ M.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
   if obj.changes then
     for _, change in pairs(obj.changes) do
       for _, edit in ipairs(change) do
-        M.modify_position(edit, main_nr, invert, exclude_end, offset)
+        keeper.modify_position(edit, main_nr, invert, exclude_end, offset)
       end
     end
   end
 
   if obj.newText then
-    offset = offset or M.get_leading_offset(obj.range.start, main_nr) * sign
+    offset = offset or keeper.get_leading_offset(obj.range.start, main_nr) * sign
     local str = ""
     for _ = 1, offset, 1 do
       str = str .. " "
@@ -317,38 +322,38 @@ end
 
 ---@param main_nr integer bufnr of the parent buffer
 ---@return boolean has_raft true if the buffer has otters attached
-M.has_raft = function(main_nr)
-  return M._otters_attached[main_nr] ~= nil
+keeper.has_raft = function(main_nr)
+  return keeper.rafts[main_nr] ~= nil
 end
 
 --- Synchronize the raft of otters attached to a buffer
 ---@param main_nr integer bufnr of the parent buffer
 ---@param language string|nil only sync one otter buffer matching a language
 ---@return boolean success true on success, otherwise false
-M.sync_raft = function(main_nr, language)
-  if not M.has_raft(main_nr) then
+keeper.sync_raft = function(main_nr, language)
+  if not keeper.has_raft(main_nr) then
     return false
   end
   local all_code_chunks
   local changetick = api.nvim_buf_get_changedtick(main_nr)
-  if M._otters_attached[main_nr].last_changetick == changetick then
-    all_code_chunks = M._otters_attached[main_nr].code_chunks
+  if keeper.rafts[main_nr].last_changetick == changetick then
+    all_code_chunks = keeper.rafts[main_nr].code_chunks
     return true
   else
-    all_code_chunks = M.extract_code_chunks(main_nr)
+    all_code_chunks = keeper.extract_code_chunks(main_nr)
   end
 
-  M._otters_attached[main_nr].last_changetick = changetick
-  M._otters_attached[main_nr].code_chunks = all_code_chunks
+  keeper.rafts[main_nr].last_changetick = changetick
+  keeper.rafts[main_nr].code_chunks = all_code_chunks
 
   local langs
   if language == nil then
-    langs = M._otters_attached[main_nr].languages
+    langs = keeper.rafts[main_nr].languages
   else
     langs = { language }
   end
   for _, lang in ipairs(langs) do
-    local otter_nr = M._otters_attached[main_nr].buffers[lang]
+    local otter_nr = keeper.rafts[main_nr].buffers[lang]
     if otter_nr ~= nil then
       local code_chunks = all_code_chunks[lang]
       if code_chunks ~= nil then
@@ -377,112 +382,15 @@ M.sync_raft = function(main_nr, language)
   return true
 end
 
-M.request_otter = function(otter_nr, method, params, handler)
-  vim.lsp.buf_request(otter_nr, method, params, handler)
-end
-
---- Send a request to the otter buffers and handle the response.
---- The response can optionally be filtered through a function.
----@param main_nr integer bufnr of main buffer
----@param request string lsp request
----@param params table params for the request created by vim.lsp.buf.<request>
----@param filter function|nil function to process the response
----@param handler function|nil optional function to handle the filtered lsp request for cases in which the default handler does not suffice
----@param conf table|nil optional config to pass to the handler.
-M.send_request = function(main_nr, request, params, filter, handler, conf)
-  filter = filter or function(x)
-    return x
-  end
-  local has_raft = M.sync_raft(main_nr)
-  if not has_raft then
-    return
-  end
-
-  local lang, start_row, start_col, end_row, end_col = M.get_current_language_context(main_nr)
-
-  if not fn.contains(M._otters_attached[main_nr].languages, lang) then
-    return
-  end
-
-  local otter_nr = M._otters_attached[main_nr].buffers[lang]
-  local otter_uri = vim.uri_from_bufnr(otter_nr)
-  if request == "textDocument/documentSymbol" then
-    params.uri = otter_uri
-  end
-  -- general
-  params.textDocument = {
-    uri = otter_uri,
-  }
-  if request == "textDocument/references" then
-    params.context = {
-      includeDeclaration = true,
-    }
-  elseif request == "textDocument/rangeFormatting" then
-    params = vim.lsp.util.make_formatting_params()
-    params.textDocument = {
-      uri = otter_uri,
-    }
-    params.range = {
-      start = { line = start_row, character = start_col },
-      ["end"] = { line = end_row, character = end_col },
-    }
-    assert(end_row)
-    local line = vim.api.nvim_buf_get_lines(otter_nr, end_row, end_row + 1, false)[1]
-    if line then
-      params.range["end"].character = #line
-    end
-    M.modify_position(params, main_nr, true, true)
-  elseif request == "textDocument/completion" then
-    params.position.character = params.position.character - M.get_leading_offset(params.position.line, main_nr)
-    params.textDocument = {
-      uri = vim.uri_from_bufnr(otter_nr),
-    }
-    M.modify_position(params, main_nr, true)
-  else
-    -- formatting gets its own special treatment, everything else gets the same
-    M.modify_position(params, main_nr, true)
-  end
-
-  vim.lsp.buf_request(otter_nr, request, params, function(err, response, ctx, ...)
-    if response == nil then
-      return
-    end
-    -- if response is a list of responses, filter every response
-    if #response > 0 then
-      local responses = {}
-      for _, res in ipairs(response) do
-        local filtered_res = filter(res)
-        if filtered_res then
-          M.modify_position(filtered_res, main_nr)
-          table.insert(responses, filtered_res)
-        end
-      end
-      response = responses
-    else
-      -- otherwise apply the filter to the one response
-      response = filter(response)
-      M.modify_position(response, main_nr)
-    end
-    if response == nil then
-      return
-    end
-    if handler ~= nil then
-      handler(err, response, ctx, conf)
-    else
-      vim.lsp.handlers[request](err, response, ctx, ...)
-    end
-  end)
-end
-
 --- Export the raft of otters as files.
 --- Asks for filename for each language.
 ---@param force boolean
-M.export_raft = function(force)
+keeper.export_raft = function(force)
   local main_nr = api.nvim_get_current_buf()
-  M.sync_raft(main_nr)
-  for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
+  keeper.sync_raft(main_nr)
+  for _, otter_nr in pairs(keeper.rafts[main_nr].buffers) do
     local path = api.nvim_buf_get_name(otter_nr)
-    local lang = M._otters_attached[main_nr].otter_nr_to_lang[otter_nr]
+    local lang = keeper.rafts[main_nr].otter_nr_to_lang[otter_nr]
     local extension = extensions[lang] or lang
     path = fn.otterpath_to_plain_path(path) .. "." .. extension
     vim.notify("Exporting otter: " .. lang)
@@ -500,12 +408,12 @@ end
 ---@param language string
 ---@param fname string
 ---@param force boolean
-M.export_otter_as = function(language, fname, force)
+keeper.export_otter_as = function(language, fname, force)
   local main_nr = api.nvim_get_current_buf()
-  M.sync_raft(main_nr)
-  for _, otter_nr in pairs(M._otters_attached[main_nr].buffers) do
+  keeper.sync_raft(main_nr)
+  for _, otter_nr in pairs(keeper.rafts[main_nr].buffers) do
     local path = api.nvim_buf_get_name(otter_nr)
-    local lang = M._otters_attached[main_nr].otter_nr_to_lang[otter_nr]
+    local lang = keeper.rafts[main_nr].otter_nr_to_lang[otter_nr]
     if lang ~= language then
       return
     end
@@ -522,15 +430,15 @@ end
 ---@param row_start integer Row to start from, inclusive, 1-indexed.
 ---@param row_end integer Row to end at, inclusive, 1-indexed.
 ---@return string[]|nil Lines of code
-M.get_language_lines = function(exclude_eval_false, row_start, row_end)
+keeper.get_language_lines = function(exclude_eval_false, row_start, row_end)
   local main_nr = vim.api.nvim_get_current_buf()
-  M.sync_raft(main_nr)
-  local lang = M.get_current_language_context()
+  keeper.sync_raft(main_nr)
+  local lang = keeper.get_current_language_context()
   if lang == nil then
     return
   end
 
-  local chunks = M.extract_code_chunks(main_nr, lang, exclude_eval_false, row_start, row_end)[lang]
+  local chunks = keeper.extract_code_chunks(main_nr, lang, exclude_eval_false, row_start, row_end)[lang]
   if not chunks or next(chunks) == nil then
     return
   end
@@ -542,15 +450,15 @@ M.get_language_lines = function(exclude_eval_false, row_start, row_end)
 end
 
 ---Get lines of code chunks managed by otter around the cursor in the current buffer.
----@return string[]|nil Lines of code
-M.get_language_lines_around_cursor = function()
+---@return string|nil Lines of code
+keeper.get_language_lines_around_cursor = function()
   local main_nr = vim.api.nvim_get_current_buf()
   local row, col = unpack(api.nvim_win_get_cursor(0))
   row = row - 1
   col = col
 
-  local query = M._otters_attached[main_nr].query
-  local parser = M._otters_attached[main_nr].parser
+  local query = keeper.rafts[main_nr].query
+  local parser = keeper.rafts[main_nr].parser
   local tree = parser:parse()
   local root = tree[1]:root()
 
@@ -581,30 +489,30 @@ end
 
 ---Get lines of code chunks managed by otter in the current buffer up to the cursor.
 ---@param exclude_eval_false boolean|nil Exclude code chunks with eval: false
-M.get_language_lines_to_cursor = function(exclude_eval_false)
+keeper.get_language_lines_to_cursor = function(exclude_eval_false)
   local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
   row = row + 1
-  return M.get_language_lines(exclude_eval_false, 0, row)
+  return keeper.get_language_lines(exclude_eval_false, 0, row)
 end
 
 ---Get lines of code chunks managed by otter in the current buffer from the cursor to the end.
 ---@param exclude_eval_false boolean|nil Exclude code chunks with eval: false
-M.get_language_lines_from_cursor = function(exclude_eval_false)
+keeper.get_language_lines_from_cursor = function(exclude_eval_false)
   local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
   row = row + 1
-  return M.get_language_lines(exclude_eval_false, row, -1)
+  return keeper.get_language_lines(exclude_eval_false, row, -1)
 end
 
 ---Get lines of code chunks managed by otter in the current buffer from the cursor to the end.
 ---@param exclude_eval_false boolean|nil Exclude code chunks with eval: false
-M.get_language_lines_in_visual_selection = function(exclude_eval_false)
-  local lang = M.get_current_language_context()
+keeper.get_language_lines_in_visual_selection = function(exclude_eval_false)
+  local lang = keeper.get_current_language_context()
   if lang == nil then
     return
   end
   local row_start, _ = unpack(api.nvim_buf_get_mark(0, "<"))
   local row_end, _ = unpack(api.nvim_buf_get_mark(0, ">"))
-  return M.get_language_lines(exclude_eval_false, row_start, row_end)
+  return keeper.get_language_lines(exclude_eval_false, row_start, row_end)
 end
 
-return M
+return keeper

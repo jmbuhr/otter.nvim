@@ -2,9 +2,22 @@
 
 Just ask an otter! 🦦
 
+> [!NOTE]
+> Otter has grown up! It is now a language server-client combo,
+> which means you don't have to configure keybindings for it.
+> Just call `otter.activate()`!.
+> 
+> If you previously used e.g. `otter.ask_hover()`, you now just use the normal
+> lsp request functions `vim.lsp.buf.hover()` and the otters take it from there.
+> If you previously used the `otter` `nvim-cmp` source, you can remove it,
+> as the completion results now come directly via the `cmp-nvim-lsp` source
+> together with other language servers.
+
 ## What is otter.nvim?
 
 **tldr: Otter.nvim provides lsp features and a code completion source for code embedded in other documents**
+
+![An otter eagerly awaiting your lsp requests.](https://github.com/jmbuhr/otter.nvim/assets/17450586/e4dcce8d-674b-40d3-99c5-db42bda2faeb)
 
 Demo
 
@@ -16,7 +29,7 @@ One key feature is that these `qmd` documents can contain exectuable code blocks
 
 How do we get all the cool language features we get for a pure e.g. `python` file -- like code completion, documentation hover windows, diagnostics -- when the code is just embedded as code blocks in a document?
 Well, if one document can't give us the answer, we ask an otter (another)!
-`otter.nvim` creates and synchronizes hidden buffers containing a single language each and directs requests for completion and lsp requests from the main buffer to those other buffers (otter buffers).
+`otter.nvim` creates and synchronizes hidden buffers containing a single language each and directs requests for completion and other lsp requests from the main buffer to those other buffers (otter buffers).
 
 Example in a markdown (or quarto markdown) document `index.md`:
 
@@ -53,29 +66,46 @@ Each otter-activated buffer can maintain a set of other buffers synchronized to 
 
 > In other words, each buffer can have a raft of otters!
 
-`otter.nvim` contains a completion source for [nvim-cmp](https://github.com/hrsh7th/cmp-nvim-lua).
-When a completion request is made, the whole raft of otters is synchronized and the question is directed to the otters.
-The accumulated answers are then displayed in the main buffer.
+The otter keeper looks after the otters associated with each main buffer
+to keep them in sync:
 
-```mermaid
+```{mermaid}
 stateDiagram-v2
-    Main --> 🦦1
-    Main --> 🦦2
-    Main --> 🦦3
-    🦦1 --> response
-    🦦2 --> response
-    🦦3 --> response
-    response --> Main: filter
+Main --> otterkeeper
+otterkeeper --> 🦦1
+otterkeeper --> 🦦2
+otterkeeper --> 🦦3
 ```
 
+The otter language server directs lsp requests to the main
+buffer to the otter responsible for the language of the
+current code section.
+It modifies the parameters accordingly e.g. to change the
+uri of the file of which a position is requested.
+If does so both ways, first with the request and then
+when handling the request.
+Once the response has been properly modifed it is passed on
+to be handled by Neovim's default handlers `vim.lsp.handlers[<...>]`.
+
+```{mermaid}
+stateDiagram-v2
+otterls : otter-ls
+params : modified request params
+ls : ls attached to otter buffer 🦦1
+handler: otter-ls handler
+defaultHandler: default handler of nvim
+request --> otterls
+otterls --> params
+params --> ls
+ls --> response
+response --> handler
+handler --> defaultHandler
+```
+
+There are some exceptions in which the otter-ls handler has to completely
+handle the response and doesn't pass it on to the default handler.
+
 ## How do I use otter.nvim?
-
-The easiest way to get started is try it out in [quarto-nvim](https://github.com/quarto-dev/quarto-nvim) or look at the usecases there.
-Specifically, you'll want to look at the `lua/plugins/quarto.lua` file
-in the [quarto-nvim-kickstarter](https://github.com/jmbuhr/quarto-nvim-kickstarter)
-configuration.
-
-In short:
 
 ### Configure otter
 
@@ -111,23 +141,6 @@ otter.setup{
 }
 ```
 
-### Configure autocompletion
-
-Apart from its own functions, `otter.nvim` comes with a completion source for `nvim-cmp` for
-the embedded code. Use it as follows:
-
-```lua
-local cmp = require'cmp'
-cmp.setup({
-    -- <rest of your nvim-cmp config>
-    sources = {
-        { name = "otter" },
-        -- <other sources>
-    },
-})
-```
-
-
 ### Activate otter
 
 Activate otter for the current document with
@@ -151,26 +164,11 @@ otter.activate(languages, completion, diagnostics, tsquery)
 
 ### Use otter
 
-Assuming `otter.nvim` is configured and added to `nvim-cmp` as a completion source,
+Assuming `otter.nvim` is configured,
 call `require'otter'.activate({'python', 'r', <more languages you want to embed> })` on any
 buffer that has injections (see `:h treesitter-language-injections`) defined
 and you will see code completion and diagnostics (on save).
 
-Then use the `otter.ask_...` functions to e.g. ask for hover documentation, references or the definition.
-
-`otter.ask_` functions fall back to regular lsp requests on the main buffer when not in an otter context.
-Alternatively, you can pass a custom fallback to use instead of the default lsp request.
-Currently implemented functions are:
-
-```lua
-otter.ask_definition()
-otter.ask_type_definition()
-otter.ask_hover()
-otter.ask_references()
-otter.ask_document_symbols()
-otter.ask_rename()
-otter.ask_format()
-```
 
 Additional functions:
 
@@ -181,18 +179,34 @@ otter.export()
 otter.export_otter_as()
 ```
 
-
 ### Dependencies
 
 `otter.nvim` requires the following plugins:
 
 ```lua
 {
-  'hrsh7th/nvim-cmp', -- optional, for completion
   'neovim/nvim-lspconfig',
   'nvim-treesitter/nvim-treesitter'
 }
 ```
 
-![An otter eagerly awaiting your lsp requests.](https://github.com/jmbuhr/otter.nvim/assets/17450586/e4dcce8d-674b-40d3-99c5-db42bda2faeb)
+## Current limitations
+
+- Otter-ls currently runs only in single file mode. So while the language servers associated with
+  each otter can know about a complete project, only one notebook is looked at by one instance of otter-ls.
+  This means, you can e.g. rename a python variable across a bunch of modules directly from a quarto notebook
+  managed by otter.nvim, but this (currently) won't automatically affect the same variable should used in a different notebook.
+- Likewise, the other language servers don't know they are being fed by the otter-ls and otter.nvim doesn't hear about
+  things that happen directly with the other language server.
+  In a similar example as above: If I send a rename request while in a quarto file it is handled by otter-ls and
+  properly passed on to pyright in a modified form. The variable gets rename in the qmd file and in all python files
+  of the project. However, if I send the request while in a python file it get's handled directly by pyright.
+  Otter-ls never hears of this, so the variable stays as it is in the qmd file.
+- Diagnostics are handled via an autocommand instead of lsp requests to otter-ls for now,
+  because they don't require the cursor to be in an otter context. Could be solved more elegantly in the future.
+- `telescope` have their own builtin pickers for e.g. lsp references. However, they don't function as a lsp response
+  handler but instead create their own params, send their own request and immidiately handle it.
+  As such, you can't use e.g. `require'telescope.builtin'.lsp_references` instead of `vim.lsp.buf.references` with
+  otter.nvim for now. A pure handler version of telescope's pickers that can receive our already modified
+  responses can change this in the future.
 

@@ -34,17 +34,22 @@ end
 
 --- see e.g.
 --- vim.lsp.handlers.hover(_, result, ctx, config)
----@param _ lsp.ResponseError?
+---@param err lsp.ResponseError?
 ---@param response lsp.Hover
 ---@param ctx lsp.HandlerContext
 ---@return integer? bufnr of the floating window
 ---@return integer? winnr of the floating window
-M[ms.textDocument_hover] = function(_, response, ctx, _)
+M[ms.textDocument_hover] = function(err, response, ctx, _)
   if not response then
     return
   end
+
+  -- pretend the response is coming from the main buffer
+  ctx.params.textDocument.uri = ctx.params.otter.main_uri
+
   local opts = otterconfig.lsp.hover
   opts.focus_id = ctx.method
+
   -- don't ignore hover responses from other buffers
   if not (response and response.contents) then
     return

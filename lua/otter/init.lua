@@ -3,8 +3,8 @@ local M = {}
 local api = vim.api
 local ts = vim.treesitter
 local extensions = require("otter.tools.extensions")
-local handlers = require("otter.tools.handlers")
 local keeper = require("otter.keeper")
+local otterls = require("otter.lsp")
 local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
 local config = require("otter.config")
 
@@ -12,30 +12,10 @@ M.setup = function(opts)
   config.cfg = vim.tbl_deep_extend("force", config.cfg, opts or {})
 end
 
+-- expose some functions from the otter keeper directly
 M.sync_raft = keeper.sync_raft
-M.send_request = keeper.send_request
 M.export = keeper.export_raft
 M.export_otter_as = keeper.export_otter_as
-
-M.debug = function()
-  local main_nr = api.nvim_get_current_buf()
-  M.send_request(main_nr, "textDocument/hover", function(response)
-    return response
-  end)
-end
-
---- Activate otter for the current buffer and set up keymaps.
---- Only for development purposes
-M.dev_setup = function()
-  M.activate()
-  vim.api.nvim_buf_set_keymap(0, "n", "gS", ":lua require'otter'.ask_document_symbols()<cr>", { silent = true })
-  vim.api.nvim_buf_set_keymap(0, "n", "gd", ":lua require'otter'.ask_definition()<cr>", { silent = true })
-  vim.api.nvim_buf_set_keymap(0, "n", "gD", ":lua require'otter'.ask_type_definition()<cr>", { silent = true })
-  vim.api.nvim_buf_set_keymap(0, "n", "K", ":lua require'otter'.ask_hover()<cr>", { silent = true })
-  vim.api.nvim_buf_set_keymap(0, "n", "gr", ":lua require'otter'.ask_references()<cr>", { silent = true })
-  vim.api.nvim_buf_set_keymap(0, "n", "<leader>lR", ":lua require'otter'.ask_rename()<cr>", { silent = true })
-  vim.api.nvim_buf_set_keymap(0, "n", "<leader>lf", ":lua require'otter'.ask_format()<cr>", { silent = true })
-end
 
 --- Activate the current buffer by adding and synchronizing
 --- otter buffers.
@@ -51,6 +31,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   local main_path = api.nvim_buf_get_name(main_nr)
   local parsername = vim.treesitter.language.get_lang(api.nvim_get_option_value("filetype", { buf = main_nr }))
   if not parsername then
+    vim.notify_once("[otter] No treesitter parser found for current buffer. Can't activate.", vim.log.levels.WARN, {})
     return
   end
   local query
@@ -67,16 +48,16 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     )
     return
   end
-  keeper._otters_attached[main_nr] = {}
-  keeper._otters_attached[main_nr].languages = {}
-  keeper._otters_attached[main_nr].buffers = {}
-  keeper._otters_attached[main_nr].paths = {}
-  keeper._otters_attached[main_nr].otter_nr_to_lang = {}
-  keeper._otters_attached[main_nr].tsquery = tsquery
-  keeper._otters_attached[main_nr].query = query
-  keeper._otters_attached[main_nr].parser = ts.get_parser(main_nr, parsername)
-  keeper._otters_attached[main_nr].code_chunks = nil
-  keeper._otters_attached[main_nr].last_changetick = nil
+  keeper.rafts[main_nr] = {}
+  keeper.rafts[main_nr].languages = {}
+  keeper.rafts[main_nr].buffers = {}
+  keeper.rafts[main_nr].paths = {}
+  keeper.rafts[main_nr].otter_nr_to_lang = {}
+  keeper.rafts[main_nr].tsquery = tsquery
+  keeper.rafts[main_nr].query = query
+  keeper.rafts[main_nr].parser = ts.get_parser(main_nr, parsername)
+  keeper.rafts[main_nr].code_chunks = nil
+  keeper.rafts[main_nr].last_changetick = nil
 
   local all_code_chunks = keeper.extract_code_chunks(main_nr)
   local found_languages = {}
@@ -91,7 +72,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   for _, lang in ipairs(languages) do
     if not extensions[lang] then
       vim.notify(
-        ("[Otter] %s is an unknown language. Please open an issue/PR to get it added"):format(lang),
+        ("[otter] %s is an unknown language. Please open an issue/PR to get it added"):format(lang),
         vim.log.levels.ERROR
       )
       goto continue
@@ -103,10 +84,10 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       local otter_nr = vim.uri_to_bufnr(otter_uri)
       api.nvim_buf_set_name(otter_nr, otter_path)
       api.nvim_set_option_value("swapfile", false, { buf = otter_nr })
-      keeper._otters_attached[main_nr].buffers[lang] = otter_nr
-      keeper._otters_attached[main_nr].paths[lang] = otter_path
-      keeper._otters_attached[main_nr].otter_nr_to_lang[otter_nr] = lang
-      table.insert(keeper._otters_attached[main_nr].languages, lang)
+      keeper.rafts[main_nr].buffers[lang] = otter_nr
+      keeper.rafts[main_nr].paths[lang] = otter_path
+      keeper.rafts[main_nr].otter_nr_to_lang[otter_nr] = lang
+      table.insert(keeper.rafts[main_nr].languages, lang)
 
       if config.cfg.buffers.write_to_disk then
         -- remove otter buffer when main buffer is closed
@@ -145,12 +126,12 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- without setting the filetype
   -- to prevent other plugins we don't need in the otter buffers
   -- from automatically attaching when ft is set
-  for _, lang in ipairs(keeper._otters_attached[main_nr].languages) do
-    local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
+  for _, lang in ipairs(keeper.rafts[main_nr].languages) do
+    local otter_nr = keeper.rafts[main_nr].buffers[lang]
 
     if config.cfg.buffers.write_to_disk then
       -- and also write out once before lsps can complain
-      local otter_path = keeper._otters_attached[main_nr].paths[lang]
+      local otter_path = keeper.rafts[main_nr].paths[lang]
       vim.print(otter_path)
       api.nvim_buf_call(otter_nr, function()
         vim.cmd("write! " .. otter_path)
@@ -168,47 +149,28 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
   end
 
-  if completion then
-    require("otter.completion").setup_sources(main_nr, keeper._otters_attached[main_nr])
-  end
-
   if diagnostics then
-    local nss = {}
-    for lang, bufnr in pairs(keeper._otters_attached[main_nr].buffers) do
-      local ns = api.nvim_create_namespace("otter-lang-" .. lang)
-      nss[bufnr] = ns
-    end
-    keeper._otters_attached[main_nr].nss = nss
-
-    local sync_diagnostics = function(args)
-      if vim.tbl_contains(vim.tbl_values(keeper._otters_attached[main_nr].buffers), args.buf) then
-        local diags = args.data.diagnostics
-        vim.diagnostic.reset(nss[args.buf], main_nr)
-        if config.cfg.handle_leading_whitespace then
-          for _, diag in ipairs(diags) do
-            local offset = keeper.get_leading_offset(diag.lnum, main_nr)
-            diag.col = diag.col + offset
-            diag.end_col = diag.end_col + offset
-          end
-        end
-        vim.diagnostic.set(nss[args.buf], main_nr, diags, {})
-      end
-    end
-
-    local group = api.nvim_create_augroup("OtterDiagnostics" .. main_nr, {})
-    api.nvim_create_autocmd("DiagnosticChanged", {
-      group = group,
-      callback = sync_diagnostics,
-    })
-
-    api.nvim_create_autocmd(config.cfg.lsp.diagnostic_update_events, {
-      buffer = main_nr,
-      group = group,
-      callback = function(_)
-        M.sync_raft(main_nr)
-      end,
-    })
+    require("otter.diagnostics").setup(main_nr)
   end
+
+  -- check that we don't already have otter-ls running
+  -- for main buffer
+  local clients = vim.lsp.get_clients()
+  for _, client in pairs(clients) do
+    if client.name == "otter-ls" .. "[" .. main_nr .. "]" then
+      return
+    end
+  end
+
+  -- remove the need to use keybindings for otter ask_ functions
+  -- by being our own lsp server-client combo
+  local client_id = otterls.start(main_nr, completion)
+  if client_id == nil then
+    vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
+  end
+
+  keeper.rafts[main_nr].otterls = {}
+  keeper.rafts[main_nr].otterls.client_id = client_id
 end
 
 ---Deactivate the current buffer by removing otter buffers and clearing diagnostics
@@ -219,213 +181,57 @@ M.deactivate = function(completion, diagnostics)
   diagnostics = diagnostics ~= false
 
   local main_nr = api.nvim_get_current_buf()
-  if keeper._otters_attached[main_nr] == nil then
+  if keeper.rafts[main_nr] == nil then
     return
   end
 
   if diagnostics then
-    for _, ns in pairs(keeper._otters_attached[main_nr].nss) do
+    for _, ns in pairs(keeper.rafts[main_nr].nss) do
       vim.diagnostic.reset(ns, main_nr)
     end
   end
 
-  if completion then
-    api.nvim_del_augroup_by_name("cmp_otter" .. main_nr)
-  end
-
-  for _, otter_bufnr in pairs(keeper._otters_attached[main_nr].buffers) do
+  for _, otter_bufnr in pairs(keeper.rafts[main_nr].buffers) do
     -- Avoid 'textlock' with schedule
     vim.schedule(function()
       api.nvim_buf_delete(otter_bufnr, { force = true })
     end)
   end
 
-  keeper._otters_attached[main_nr] = nil
+  keeper.rafts[main_nr] = nil
 end
 
---- Got to definition of the symbol under the cursor
----@param fallback function|nil
-M.ask_definition = function(fallback)
-  local f = fallback or vim.lsp.buf.definition
-  local main_nr = api.nvim_get_current_buf()
-  local main_uri = vim.uri_from_bufnr(main_nr)
-
-  local function redirect_definition(res)
-    if res.uri ~= nil then
-      if require("otter.tools.functions").is_otterpath(res.uri) then
-        res.uri = main_uri
-      end
-    end
-    if res.targetUri ~= nil then
-      if require("otter.tools.functions").is_otterpath(res.targetUri) then
-        res.targetUri = main_uri
-      end
-    end
-    return res
-  end
-
-  M.send_request(main_nr, "textDocument/definition", function(response)
-    if #response == 0 then
-      return redirect_definition(response)
-    end
-
-    local modified_response = {}
-    for _, res in ipairs(response) do
-      table.insert(modified_response, redirect_definition(res))
-    end
-    return modified_response
-  end, f)
+M.ask_definition = function()
+  vim.deprecate("otter.ask_definition", "vim.lsp.buf.definition", "2.0.0", "otter.nvim", true)
 end
 
---- Got to type definition of the symbol under the cursor
----@param fallback function|nil
-M.ask_type_definition = function(fallback)
-  local f = fallback or vim.lsp.buf.type_definition
-  local main_nr = api.nvim_get_current_buf()
-  local main_uri = vim.uri_from_bufnr(main_nr)
-
-  local function redirect_definition(res)
-    if res.uri ~= nil then
-      if require("otter.tools.functions").is_otterpath(res.uri) then
-        res.uri = main_uri
-      end
-    end
-    if res.targetUri ~= nil then
-      if require("otter.tools.functions").is_otterpath(res.targetUri) then
-        res.targetUri = main_uri
-      end
-    end
-    return res
-  end
-
-  M.send_request(main_nr, "textDocument/typeDefinition", function(response)
-    if #response == 0 then
-      return redirect_definition(response)
-    end
-
-    local modified_response = {}
-    for _, res in ipairs(response) do
-      table.insert(modified_response, redirect_definition(res))
-    end
-    return modified_response
-  end, f)
+M.ask_type_definition = function()
+  vim.deprecate("otter.ask_type_definition", "vim.lsp.buf.type_definition", "2.0.0", "otter.nvim", true)
 end
 
-local function replace_header_div(response)
-  response.contents = response.contents:gsub('<div class="container">', "")
-  -- response.contents = response.contents:gsub('``` R', '```r')
-  return response
+M.ask_hover = function()
+  vim.deprecate("otter.ask_hover", "vim.lsp.buf.hover", "2.0.0", "otter.nvim", true)
 end
 
---- Open hover documentation of symbol under the cursor
--- See <https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/buf.lua>
----@param fallback function|nil
-M.ask_hover = function(fallback)
-  local f = fallback or vim.lsp.buf.hover
-  local main_nr = api.nvim_get_current_buf()
-  M.send_request(main_nr, "textDocument/hover", function(response)
-    local ok, filtered_response = pcall(replace_header_div, response)
-    if ok then
-      return filtered_response
-    else
-      return response
-    end
-  end, f, handlers.hover, config.cfg.lsp.hover)
-end
-
---- Open quickfix list of references of the symbol under the cursor
----@param fallback function|nil
-M.ask_references = function(fallback)
-  local f = fallback or vim.lsp.buf.references
-  local main_nr = api.nvim_get_current_buf()
-  local main_uri = vim.uri_from_bufnr(main_nr)
-
-  local function redirect(res)
-    local uri = res.uri
-    if not res.uri then
-      return
-    end
-    if require("otter.tools.functions").is_otterpath(uri) then
-      res.uri = main_uri
-    end
-    return res
-  end
-
-  M.send_request(main_nr, "textDocument/references", redirect, f)
+M.ask_references = function()
+  vim.deprecate("otter.ask_references", "vim.lsp.buf.references", "2.0.0", "otter.nvim", true)
 end
 
 --- Open list of symbols of the current document
----@param fallback function|nil
-M.ask_document_symbols = function(fallback)
-  local f = fallback or vim.lsp.buf.document_symbol
-  local main_nr = api.nvim_get_current_buf()
-  local main_uri = vim.uri_from_bufnr(main_nr)
-
-  local function redirect(res)
-    if not res.location or not res.location.uri then
-      return
-    end
-    local uri = res.location.uri
-    if require("otter.tools.functions").is_otterpath(uri) then
-      res.location.uri = main_uri
-    end
-    return res
-  end
-
-  M.send_request(main_nr, "textDocument/documentSymbol", redirect, f, handlers.document_symbol)
+M.ask_document_symbols = function()
+  vim.deprecate("otter.ask_document_symbols", "vim.lsp.buf.document_symbol", "2.0.0", "otter.nvim", true)
 end
 
 --- Rename symbol under cursor
 ---@param fallback function|nil
 M.ask_rename = function(fallback)
-  local f = fallback or vim.lsp.buf.rename
-  local main_nr = api.nvim_get_current_buf()
-  local main_uri = vim.uri_from_bufnr(main_nr)
-
-  local function redirect(res)
-    local changes = res.changes
-    if changes ~= nil then
-      local new_changes = {}
-      for uri, change in pairs(changes) do
-        if require("otter.tools.functions").is_otterpath(uri) then
-          uri = main_uri
-        end
-        new_changes[uri] = change
-      end
-      res.changes = new_changes
-      return res
-    else
-      changes = res.documentChanges
-      local new_changes = {}
-      for _, change in ipairs(changes) do
-        local uri = change.textDocument.uri
-        if require("otter.tools.functions").is_otterpath(uri) then
-          change.textDocument.uri = main_uri
-        end
-        table.insert(new_changes, change)
-      end
-      res.documentChanges = new_changes
-      return res
-    end
-  end
-
-  M.send_request(main_nr, "textDocument/rename", redirect, f)
+  vim.deprecate("otter.ask_rename", "vim.lsp.buf.rename", "2.0.0", "otter.nvim", true)
 end
 
 --- Reformat current otter context
 ---@param fallback function|nil
 M.ask_format = function(fallback)
-  local f = fallback or vim.lsp.buf.format
-  local main_nr = api.nvim_get_current_buf()
-
-  -- redirection has to happen in the handler instead,
-  -- because the response doesn't contain a mention
-  -- of the buffer.
-  local function redirect(res)
-    return res
-  end
-
-  M.send_request(main_nr, "textDocument/rangeFormatting", redirect, f, handlers.format, { main_nr = main_nr })
+  vim.deprecate("otter.ask_format", "vim.lsp.buf.format", "2.0.0", "otter.nvim", true)
 end
 
 return M

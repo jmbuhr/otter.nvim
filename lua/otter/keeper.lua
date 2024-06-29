@@ -9,7 +9,7 @@ local extensions = require("otter.tools.extensions")
 local fn = require("otter.tools.functions")
 local api = vim.api
 local ts = vim.treesitter
-local config = require("otter.config")
+local cfg = require("otter.config").cfg
 
 keeper.rafts = {}
 
@@ -49,7 +49,7 @@ end
 ---@param starting_ln number
 ---@return string, number
 local function trim_leading_witespace(text, bufnr, starting_ln)
-  if not config.cfg.handle_leading_whitespace then
+  if not cfg.handle_leading_whitespace then
     return text, 0
   end
 
@@ -219,7 +219,7 @@ keeper.get_current_language_context = function(main_nr)
         end
 
         if language then
-          if config.cfg.handle_leading_whitespace then
+          if cfg.handle_leading_whitespace then
             local buf = keeper.rafts[main_nr].buffers[language]
             if buf then
               local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
@@ -241,7 +241,7 @@ end
 ---@param line_nr number
 ---@param main_nr number
 keeper.get_leading_offset = function(line_nr, main_nr)
-  if not config.cfg.handle_leading_whitespace then
+  if not cfg.handle_leading_whitespace then
     return 0
   end
 
@@ -263,7 +263,7 @@ end
 ---@param exclude_end boolean?
 ---@param known_offset number?
 keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
-  if not config.cfg.handle_leading_whitespace or known_offset == 0 then
+  if not cfg.handle_leading_whitespace or known_offset == 0 then
     return
   end
 

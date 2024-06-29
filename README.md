@@ -115,13 +115,12 @@ If you want to use the default config below you don't need to call `setup`.
 local otter = require'otter'
 otter.setup{
   lsp = {
-    hover = {
-      border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
-    },
     -- `:h events` that cause the diagnostics to update. Set to:
     -- { "BufWritePost", "InsertLeave", "TextChanged" } for less performant
     -- but more instant diagnostic updates
     diagnostic_update_events = { "BufWritePost" },
+    -- function to find the root dir where the otter-ls is started
+    root_dir = require("lspconfig").util.root_pattern({ ".git", "_quarto.yml", "package.json" }),
   },
   buffers = {
     -- if set to true, the filetype of the otterbuffers will be set.
@@ -135,8 +134,8 @@ otter.setup{
     write_to_disk = false,
   },
   strip_wrapping_quote_characters = { "'", '"', "`" },
-  -- Otter may not work the way you expect when entire code blocks are indented (eg. in Org files)
-  -- When true, otter handles these cases fully. This is a (minor) performance hit
+  -- otter may not work the way you expect when entire code blocks are indented (eg. in Org files)
+  -- When true, otter handles these cases fully.
   handle_leading_whitespace = false,
 }
 ```
@@ -209,4 +208,6 @@ otter.export_otter_as()
   As such, you can't use e.g. `require'telescope.builtin'.lsp_references` instead of `vim.lsp.buf.references` with
   otter.nvim for now. A pure handler version of telescope's pickers that can receive our already modified
   responses can change this in the future.
+- Formatting is better handled by [conform.nvim](https://github.com/stevearc/conform.nvim) via their `injected`
+  formatter.
 

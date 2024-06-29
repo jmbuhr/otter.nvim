@@ -156,7 +156,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- remove the need to use keybindings for otter ask_ functions
   -- by being our own lsp server-client combo
   local otterclient_id = otterlsp.start(main_nr, completion)
-
   if otterclient_id == nil then
     vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
   end

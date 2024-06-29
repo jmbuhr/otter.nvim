@@ -8,10 +8,11 @@ Just ask an otter! 🦦
 > Just call `otter.activate()`!.
 > 
 > If you previously used e.g. `otter.ask_hover()`, you now just use the normal
-> lsp request functions `vim.lsp.buf.hover()` and the otters take it from there.
+> lsp request functions like `vim.lsp.buf.hover()` and the otters take it from there.
 > If you previously used the `otter` `nvim-cmp` source, you can remove it,
 > as the completion results now come directly via the `cmp-nvim-lsp` source
 > together with other language servers.
+> If you want to stick to the old way, you have to pin the version to `v1.15.1`.
 
 ## What is otter.nvim?
 
@@ -118,6 +119,22 @@ handle the response and doesn't pass it on to the default handler.
 }
 ```
 
+### Minimal lazy.nvim spec:
+
+```lua
+{
+    'jmbuhr/otter.nvim',
+    dev = true,
+    dependencies = {
+      {
+        'neovim/nvim-lspconfig',
+        'nvim-treesitter/nvim-treesitter',
+      },
+    },
+    opts = {},
+},
+```
+
 ### Configure otter
 
 If you want to use the default config below you don't need to call `setup`.
@@ -170,7 +187,7 @@ Use your normal lsp keybindings for e.g. `vim.lsp.buf.hover`, `vim.lsp.buf.refer
 
 #### LSP Methods currently implemented
 
-| Method | `nvim.lsp.buf.<function>`
+| Method | `nvim.lsp.buf.<function>` |
 | ------------- | ---- |
 | textDocument/hover             | `hover`                           |
 | textDocument/signatureHelp     | `signature_help`                  |
@@ -193,7 +210,6 @@ otter.export()
 otter.export_otter_as()
 ```
 
-
 ## Current limitations
 
 - Otter-ls currently runs only in single file mode. So while the language servers associated with
@@ -215,4 +231,5 @@ otter.export_otter_as()
   responses can change this in the future.
 - Formatting requests are tricky. But formatting is handled very well by [conform.nvim](https://github.com/stevearc/conform.nvim)
   also for injected code via their `injected` formatter. (TODO: link my conform configs as an example)
+
 

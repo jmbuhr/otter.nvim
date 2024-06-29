@@ -123,6 +123,7 @@ otterls.start = function(main_nr, completion)
   return client_id
 end
 
+--- for reference
 --- lsp._request_name_to_capability = {
 ---   [ms.textDocument_hover] = { 'hoverProvider' },
 ---   [ms.textDocument_signatureHelp] = { 'signatureHelpProvider' },

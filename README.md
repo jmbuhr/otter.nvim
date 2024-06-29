@@ -230,6 +230,8 @@ otter.export_otter_as()
   otter.nvim for now. A pure handler version of telescope's pickers that can receive our already modified
   responses can change this in the future.
 - Formatting requests are tricky. But formatting is handled very well by [conform.nvim](https://github.com/stevearc/conform.nvim)
-  also for injected code via their `injected` formatter. (TODO: link my conform configs as an example)
-
+  also for injected code via their `injected` formatter.
+  (TODO: link my conform configs as an example)
+- The new implementation is more consistent and reliable, but currently at the expense of being less reliable with completion
+  for cases with globally offset code chunks. I'm happy about hints or PR's for those.
 

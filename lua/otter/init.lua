@@ -153,12 +153,24 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     require("otter.diagnostics").setup(main_nr)
   end
 
+  -- check that we don't already have otter-ls running
+  -- for main buffer
+  local clients = vim.lsp.get_clients()
+  for _, client in pairs(clients) do
+    if client.name == "otter-ls" .. "[" .. main_nr .. "]" then
+      return
+    end
+  end
+
   -- remove the need to use keybindings for otter ask_ functions
   -- by being our own lsp server-client combo
-  local otterclient_id = otterlsp.start(main_nr, completion)
-  if otterclient_id == nil then
+  local client_id = otterlsp.start(main_nr, completion)
+  if client_id == nil then
     vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
   end
+
+  keeper.rafts[main_nr].otterls = {}
+  keeper.rafts[main_nr].otterls.client_id = client_id
 end
 
 ---Deactivate the current buffer by removing otter buffers and clearing diagnostics

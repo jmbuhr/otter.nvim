@@ -12,7 +12,7 @@ local otterlsp = {}
 otterlsp.start = function(main_nr, completion)
   local main_uri = vim.uri_from_bufnr(main_nr)
   local client_id = vim.lsp.start({
-    name = "otter-ls",
+    name = "otter-ls" .. "[" .. main_nr .. "]",
     capabilities = vim.lsp.protocol.make_client_capabilities(),
     handlers = handlers,
     cmd = function(dispatchers)
@@ -91,6 +91,8 @@ otterlsp.start = function(main_nr, completion)
           -- for some methods
           if method == ms.textDocument_documentSymbol then
             params.uri = otter_uri
+          elseif method == ms.textDocument_hover then
+            print("hover request sent")
           elseif method == ms.textDocument_references then
             params.context = {
               includeDeclaration = true,

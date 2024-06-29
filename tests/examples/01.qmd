@@ -14,7 +14,10 @@ plot(1:10)
 
 
 ```{python}
-print('hello world')
+x = 1
+y = "hello"
+print("hello world")
+y.lower()
 ```
 
 <html>
@@ -44,7 +47,7 @@ console.log('hello world')
 
 ```{python}
 def hello():
-  print('hello world')
+    print("hello world")
 ```
 
 ```{python}

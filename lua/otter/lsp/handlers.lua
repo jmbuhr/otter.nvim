@@ -20,7 +20,7 @@ M[ms.textDocument_hover] = function(err, response, ctx, config)
   -- pretend the response is coming from the main buffer
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
 
-  vim.lsp.handlers[ms.textDocument_hover](err, response, ctx, config)
+  return vim.lsp.handlers[ms.textDocument_hover](err, response, ctx, config)
 end
 
 M[ms.textDocument_definition] = function(err, response, ctx)

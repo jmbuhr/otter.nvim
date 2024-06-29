@@ -107,6 +107,17 @@ handle the response and doesn't pass it on to the default handler.
 
 ## How do I use otter.nvim?
 
+### Dependencies
+
+`otter.nvim` requires the following plugins:
+
+```lua
+{
+  'neovim/nvim-lspconfig',
+  'nvim-treesitter/nvim-treesitter'
+}
+```
+
 ### Configure otter
 
 If you want to use the default config below you don't need to call `setup`.
@@ -142,34 +153,35 @@ otter.setup{
 
 ### Activate otter
 
-Activate otter for the current document with
+Activate otter for the current document with `otter.activate()`
 
 ```lua
--- table of embedded languages to look for.
--- default = nil, which will activate
--- any embedded languages found
-local languages = {'python', 'lua' }
-
--- enable completion/diagnostics
--- defaults are true
-local completion = true
-local diagnostics = true
--- treesitter query to look for embedded languages
--- uses injections if nil or not set
-local tsquery = nil
-
+--- Activate the current buffer by adding and synchronizing
+---@param languages table|nil List of languages to activate. If nil, all available languages will be activated.
+---@param completion boolean|nil Enable completion for otter buffers. Default: true
+---@param diagnostics boolean|nil Enable diagnostics for otter buffers. Default: true
+---@param tsquery string|nil Explicitly provide a treesitter query. If nil, the injections query for the current filetyepe will be used. See :h treesitter-language-injections.
 otter.activate(languages, completion, diagnostics, tsquery)
 ```
 
 ### Use otter
 
-Assuming `otter.nvim` is configured,
-call `require'otter'.activate({'python', 'r', <more languages you want to embed> })` on any
-buffer that has injections (see `:h treesitter-language-injections`) defined
-and you will see code completion and diagnostics (on save).
+Use your normal lsp keybindings for e.g. `vim.lsp.buf.hover`, `vim.lsp.buf.references` etc.
+
+#### LSP Methods currently implemented
+
+| Method | `nvim.lsp.buf.<function>`
+| ------------- | ---- |
+| textDocument/hover             | `hover`           |
+| textDocument/definition        | `definition`      |
+| textDocument/documentSymbol    | `document_symbol` |
+| textDocument/typeDefinition    | `type_definition` |
+| textDocument/rename            | `rename`          |
+| textDocument/references        | `references`      |
+| textDocument/completion        | `completion` (though usually handled via nvim-cmp) |
 
 
-Additional functions:
+#### Additional functions
 
 ```lua
 -- Export the raft of otters as files.
@@ -178,16 +190,6 @@ otter.export()
 otter.export_otter_as()
 ```
 
-### Dependencies
-
-`otter.nvim` requires the following plugins:
-
-```lua
-{
-  'neovim/nvim-lspconfig',
-  'nvim-treesitter/nvim-treesitter'
-}
-```
 
 ## Current limitations
 
@@ -203,11 +205,11 @@ otter.export_otter_as()
   Otter-ls never hears of this, so the variable stays as it is in the qmd file.
 - Diagnostics are handled via an autocommand instead of lsp requests to otter-ls for now,
   because they don't require the cursor to be in an otter context. Could be solved more elegantly in the future.
-- `telescope` have their own builtin pickers for e.g. lsp references. However, they don't function as a lsp response
-  handler but instead create their own params, send their own request and immidiately handle it.
+- `telescope` has their own builtin pickers for e.g. lsp references. However, they don't function as a lsp response
+  handler, but instead create their own params, send their own request and immidiately handle it.
   As such, you can't use e.g. `require'telescope.builtin'.lsp_references` instead of `vim.lsp.buf.references` with
   otter.nvim for now. A pure handler version of telescope's pickers that can receive our already modified
   responses can change this in the future.
-- Formatting is better handled by [conform.nvim](https://github.com/stevearc/conform.nvim) via their `injected`
-  formatter.
+- Formatting requests are tricky. But formatting is handled very well by [conform.nvim](https://github.com/stevearc/conform.nvim)
+  also for injected code via their `injected` formatter. (TODO: link my conform configs as an example)
 

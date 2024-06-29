@@ -11,13 +11,35 @@ local api = vim.api
 local ts = vim.treesitter
 local cfg = require("otter.config").cfg
 
+---One raft per main buffer
+---stored in the rafts table
+---contains the following fields:
+---keeper.rafts[main_nr].languages = {}
+---keeper.rafts[main_nr].buffers = {}
+---keeper.rafts[main_nr].paths = {}
+---keeper.rafts[main_nr].otter_nr_to_lang = {}
+---keeper.rafts[main_nr].tsquery = tsquery
+---keeper.rafts[main_nr].query = query
+---keeper.rafts[main_nr].parser = ts.get_parser(main_nr, parsername)
+---keeper.rafts[main_nr].code_chunks = nil
+---keeper.rafts[main_nr].last_changetick = nil
 keeper.rafts = {}
 
+--- table of languages that can be injected
+--- generated from the lanaguages
+--- for which we have extensions
 local injectable_languages = {}
 for key, _ in pairs(extensions) do
   table.insert(injectable_languages, key)
 end
 
+---determine the language of the current node
+---@param main_nr integer bufnr of the main buffer
+---@param name string name of the capture
+---@param node table node of the current capture
+---@param metadata table metadata of the current capture
+---@param current_language string current language
+---@return string?
 local function determine_language(main_nr, name, node, metadata, current_language)
   local injection_language = metadata["injection.language"]
   if injection_language ~= nil then
@@ -112,8 +134,8 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_sta
         then
           -- the actual code content
           text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-          -- remove surrounding quotes (workaround for treesitter offsets
-          -- not properly processed)
+          -- remove surrounding quotes
+          -- (workaround for treesitter offsets not properly processed)
           text, _ = fn.strip_wrapping_quotes(text)
           if exclude_eval_false and string.find(text, "| *eval: *false") then
             text = ""
@@ -143,10 +165,6 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_sta
             text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
             text, _ = fn.strip_wrapping_quotes(text)
             local row1, col1, row2, col2 = node:range()
-            -- if was_stripped then
-            --   col1 = col1 + 1
-            --   col2 = col2 - 1
-            -- end
             local leading_offset
             text, leading_offset = trim_leading_witespace(text, main_nr, row1)
             local result = {

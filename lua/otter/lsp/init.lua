@@ -66,6 +66,12 @@ otterlsp.start = function(main_nr, completion)
             return
           end
 
+          -- empty params
+          -- might be a stop request
+          if params == nil then
+            return
+          end
+
           -- all other methods need to know the current language and
           -- otter responsible for that language
           local lang, start_row, start_col, end_row, end_col = keeper.get_current_language_context(main_nr)

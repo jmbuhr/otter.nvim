@@ -3,7 +3,6 @@
 -- vim.lsp.handlers.hover(_?, result, ctx, config)
 local util = vim.lsp.util
 local otterpath_to_path = require("otter.tools.functions").otterpath_to_path
-local api = vim.api
 local otterconfig = require("otter.config").cfg
 local ms = vim.lsp.protocol.Methods
 
@@ -33,11 +32,13 @@ local function trim_empty_lines(lines)
   return vim.list_extend({}, lines, start, finish)
 end
 
----@param _ lsp.ResponseError?
----@param result lsp.Hover
----@param ctx lsp.HandlerContext
---- see
+--- see e.g.
 --- vim.lsp.handlers.hover(_, result, ctx, config)
+---@param _ lsp.ResponseError?
+---@param response lsp.Hover
+---@param ctx lsp.HandlerContext
+---@return integer? bufnr of the floating window
+---@return integer? winnr of the floating window
 M[ms.textDocument_hover] = function(_, response, ctx, _)
   if not response then
     return
@@ -53,7 +54,6 @@ M[ms.textDocument_hover] = function(_, response, ctx, _)
   if vim.tbl_isempty(markdown_lines) then
     return
   end
-  -- returns bufnr,winnr buffer and window number of the newly created floating
   return util.open_floating_preview(markdown_lines, "markdown", opts)
 end
 

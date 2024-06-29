@@ -153,10 +153,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
   end
 
-  if completion then
-    require("otter.completion").setup_sources(main_nr)
-  end
-
   if diagnostics then
     require("otter.diagnostics").setup(main_nr)
   end
@@ -184,7 +180,17 @@ M.activate = function(languages, completion, diagnostics, tsquery)
           -- additional entry points for configuring the otter handlers should
           -- be provided eventually
 
+          -- handle initialization first
           if method == ms.initialize then
+            local completion_options
+            if completion then
+              completion_options = {
+                triggerCharacters = { "." },
+                resolveProvider = true,
+              }
+            else
+              completion_options = false
+            end
             local initializeResult = {
               capabilities = {
                 hoverProvider = true,
@@ -194,6 +200,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
                 rangeFormattingProvider = true,
                 referencesProvider = true,
                 documentSymbolProvider = true,
+                completionProvider = completion_options,
               },
               serverInfo = {
                 name = "otter-ls",
@@ -205,14 +212,19 @@ M.activate = function(languages, completion, diagnostics, tsquery)
             return
           end
 
-          -- all methods need to know the current language and
+          -- all other methods need to know the current language and
           -- otter responsible for that language
           local lang, start_row, start_col, end_row, end_col = keeper.get_current_language_context(main_nr)
           if not fn.contains(keeper._otters_attached[main_nr].languages, lang) then
+            -- if we are not in na otter context there is nothing to be done
             return
           end
+
+          -- update the otter buffer of that language
+          keeper.sync_raft(main_nr, lang)
           local otter_nr = keeper._otters_attached[main_nr].buffers[lang]
           local otter_uri = vim.uri_from_bufnr(otter_nr)
+
           -- general modifications to params for all methods
           params.textDocument = {
             uri = otter_uri,
@@ -255,6 +267,10 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     on_init = function(client, init_result) end,
     root_dir = config.cfg.lsp.root_dir(),
   })
+
+  if otterclient_id == nil then
+    vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
+  end
 end
 
 ---Deactivate the current buffer by removing otter buffers and clearing diagnostics

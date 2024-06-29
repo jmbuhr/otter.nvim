@@ -222,4 +222,16 @@ M[ms.textDocument_references] = function(err, response, ctx, conf)
   vim.lsp.handlers[ms.textDocument_references](err, response, ctx, conf)
 end
 
+M[ms.textDocument_completion] = function(err, response, ctx, conf)
+  print("handling completion")
+  vim.print(response)
+  vim.lsp.handlers[ms.textDocument_completion](err, response, ctx, conf)
+end
+
+M[ms.completionItem_resolve] = function(err, response, ctx, conf)
+  print("handling completion resolve")
+  vim.print(response)
+  vim.lsp.handlers[ms.completionItem_resolve](err, response, ctx, conf)
+end
+
 return M

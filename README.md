@@ -172,13 +172,16 @@ Use your normal lsp keybindings for e.g. `vim.lsp.buf.hover`, `vim.lsp.buf.refer
 
 | Method | `nvim.lsp.buf.<function>`
 | ------------- | ---- |
-| textDocument/hover             | `hover`           |
-| textDocument/definition        | `definition`      |
-| textDocument/documentSymbol    | `document_symbol` |
-| textDocument/typeDefinition    | `type_definition` |
-| textDocument/rename            | `rename`          |
-| textDocument/references        | `references`      |
-| textDocument/completion        | `completion` (though usually handled via nvim-cmp) |
+| textDocument/hover             | `hover`                           |
+| textDocument/signatureHelp     | `signature_help`                  |
+| textDocument/definition        | `definition`                      |
+| textDocument/implementation    | `implementation`                  |
+| textDocument/declaration       | `declaration`                     |
+| textDocument/documentSymbol    | `document_symbol`                 |
+| textDocument/typeDefinition    | `type_definition`                 |
+| textDocument/rename            | `rename`                          |
+| textDocument/references        | `references`                      |
+| textDocument/completion        | `completion`                      |
 
 
 #### Additional functions

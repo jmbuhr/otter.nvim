@@ -4,7 +4,7 @@ local api = vim.api
 local ts = vim.treesitter
 local extensions = require("otter.tools.extensions")
 local keeper = require("otter.keeper")
-local otterlsp = require("otter.lsp")
+local otterls = require("otter.lsp")
 local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
 local config = require("otter.config")
 
@@ -164,7 +164,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
   -- remove the need to use keybindings for otter ask_ functions
   -- by being our own lsp server-client combo
-  local client_id = otterlsp.start(main_nr, completion)
+  local client_id = otterls.start(main_nr, completion)
   if client_id == nil then
     vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
   end
@@ -189,10 +189,6 @@ M.deactivate = function(completion, diagnostics)
     for _, ns in pairs(keeper.rafts[main_nr].nss) do
       vim.diagnostic.reset(ns, main_nr)
     end
-  end
-
-  if completion then
-    api.nvim_del_augroup_by_name("cmp_otter" .. main_nr)
   end
 
   for _, otter_bufnr in pairs(keeper.rafts[main_nr].buffers) do

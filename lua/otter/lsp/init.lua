@@ -4,12 +4,12 @@ local keeper = require("otter.keeper")
 local ms = vim.lsp.protocol.Methods
 local fn = require("otter.tools.functions")
 
-local otterlsp = {}
+local otterls = {}
 
 --- @param main_nr integer main buffer
 --- @param completion boolean should completion be enabled?
 --- @return integer? client_id
-otterlsp.start = function(main_nr, completion)
+otterls.start = function(main_nr, completion)
   local main_uri = vim.uri_from_bufnr(main_nr)
   local client_id = vim.lsp.start({
     name = "otter-ls" .. "[" .. main_nr .. "]",
@@ -47,11 +47,11 @@ otterlsp.start = function(main_nr, completion)
               capabilities = {
                 hoverProvider = true,
                 definitionProvider = true,
+                implementationProvider = true,
+                declarationProvider = true,
+                signatureHelpProvider = true,
                 typeDefinitionProvider = true,
                 renameProvider = true,
-                -- TODO:
-                -- documentRangeFormattingProvider = true,
-                -- documentFormattingProvider = true,
                 referencesProvider = true,
                 documentSymbolProvider = true,
                 completionProvider = completion_options,
@@ -101,12 +101,6 @@ otterlsp.start = function(main_nr, completion)
             params.context = {
               includeDeclaration = true,
             }
-          elseif method == ms.textDocument_completion then
-            -- params.position.character = params.position.character
-            --   - keeper.get_leading_offset(params.position.line, main_nr)
-            -- params.textDocument = {
-            --   uri = otter_uri,
-            -- }
           end
           -- take care of potential indents
           keeper.modify_position(params, main_nr, true, true)
@@ -129,4 +123,44 @@ otterlsp.start = function(main_nr, completion)
   return client_id
 end
 
-return otterlsp
+--- lsp._request_name_to_capability = {
+---   [ms.textDocument_hover] = { 'hoverProvider' },
+---   [ms.textDocument_signatureHelp] = { 'signatureHelpProvider' },
+---   [ms.textDocument_definition] = { 'definitionProvider' },
+---   [ms.textDocument_implementation] = { 'implementationProvider' },
+---   [ms.textDocument_declaration] = { 'declarationProvider' },
+---   [ms.textDocument_typeDefinition] = { 'typeDefinitionProvider' },
+---   [ms.textDocument_documentSymbol] = { 'documentSymbolProvider' },
+---   [ms.textDocument_prepareCallHierarchy] = { 'callHierarchyProvider' },
+---   [ms.callHierarchy_incomingCalls] = { 'callHierarchyProvider' },
+---   [ms.callHierarchy_outgoingCalls] = { 'callHierarchyProvider' },
+---   [ms.textDocument_prepareTypeHierarchy] = { 'typeHierarchyProvider' },
+---   [ms.typeHierarchy_subtypes] = { 'typeHierarchyProvider' },
+---   [ms.typeHierarchy_supertypes] = { 'typeHierarchyProvider' },
+---   [ms.textDocument_rename] = { 'renameProvider' },
+---   [ms.textDocument_prepareRename] = { 'renameProvider', 'prepareProvider' },
+---   [ms.textDocument_codeAction] = { 'codeActionProvider' },
+---   [ms.textDocument_codeLens] = { 'codeLensProvider' },
+---   [ms.codeLens_resolve] = { 'codeLensProvider', 'resolveProvider' },
+---   [ms.codeAction_resolve] = { 'codeActionProvider', 'resolveProvider' },
+---   [ms.workspace_executeCommand] = { 'executeCommandProvider' },
+---   [ms.workspace_symbol] = { 'workspaceSymbolProvider' },
+---   [ms.textDocument_references] = { 'referencesProvider' },
+---   [ms.textDocument_rangeFormatting] = { 'documentRangeFormattingProvider' },
+---   [ms.textDocument_formatting] = { 'documentFormattingProvider' },
+---   [ms.textDocument_completion] = { 'completionProvider' },
+---   [ms.textDocument_documentHighlight] = { 'documentHighlightProvider' },
+---   [ms.textDocument_semanticTokens_full] = { 'semanticTokensProvider' },
+---   [ms.textDocument_semanticTokens_full_delta] = { 'semanticTokensProvider' },
+---   [ms.textDocument_inlayHint] = { 'inlayHintProvider' },
+---   [ms.textDocument_diagnostic] = { 'diagnosticProvider' },
+---   [ms.inlayHint_resolve] = { 'inlayHintProvider', 'resolveProvider' },
+---   [ms.textDocument_documentLink] = { 'documentLinkProvider' },
+---   [ms.documentLink_resolve] = { 'documentLinkProvider', 'resolveProvider' },
+---   [ms.textDocument_didClose] = { 'textDocumentSync', 'openClose' },
+---   [ms.textDocument_didOpen] = { 'textDocumentSync', 'openClose' },
+---   [ms.textDocument_willSave] = { 'textDocumentSync', 'willSave' },
+---   [ms.textDocument_willSaveWaitUntil] = { 'textDocumentSync', 'willSaveWaitUntil' },
+--- }
+
+return otterls

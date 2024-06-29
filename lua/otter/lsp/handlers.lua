@@ -23,6 +23,17 @@ M[ms.textDocument_hover] = function(err, response, ctx, config)
   return vim.lsp.handlers[ms.textDocument_hover](err, response, ctx, config)
 end
 
+M[ms.textDocument_inlayHint] = function(err, response, ctx, config)
+  if not response then
+    return
+  end
+
+  -- pretend the response is coming from the main buffer
+  ctx.params.textDocument.uri = ctx.params.otter.main_uri
+
+  return vim.lsp.handlers[ms.textDocument_inlayHint](err, response, ctx, config)
+end
+
 M[ms.textDocument_definition] = function(err, response, ctx)
   if not response then
     return
@@ -182,6 +193,64 @@ M[ms.textDocument_references] = function(err, response, ctx, conf)
   -- change the ctx after the otter buffer has responded
   ctx.params.textDocument.uri = fn.otterpath_to_path(ctx.params.textDocument.uri)
   vim.lsp.handlers[ms.textDocument_references](err, response, ctx, conf)
+end
+
+M[ms.textDocument_implementation] = function(err, response, ctx, conf)
+  if not response then
+    return
+  end
+  local function redirect(res)
+    if res.uri ~= nil then
+      if fn.is_otterpath(res.uri) then
+        res.uri = ctx.params.otter.main_uri
+      end
+    end
+    if res.targetUri ~= nil then
+      if fn.is_otterpath(res.targetUri) then
+        res.targetUri = ctx.params.otter.main_uri
+      end
+    end
+    return res
+  end
+  if #response == 0 then
+    response = redirect(response)
+  else
+    local modified_response = {}
+    for _, res in ipairs(response) do
+      table.insert(modified_response, redirect(res))
+    end
+    response = modified_response
+  end
+  vim.lsp.handlers[ms.textDocument_implementation](err, response, ctx, conf)
+end
+
+M[ms.textDocument_declaration] = function(err, response, ctx, conf)
+  if not response then
+    return
+  end
+  local function redirect(res)
+    if res.uri ~= nil then
+      if fn.is_otterpath(res.uri) then
+        res.uri = ctx.params.otter.main_uri
+      end
+    end
+    if res.targetUri ~= nil then
+      if fn.is_otterpath(res.targetUri) then
+        res.targetUri = ctx.params.otter.main_uri
+      end
+    end
+    return res
+  end
+  if #response == 0 then
+    response = redirect(response)
+  else
+    local modified_response = {}
+    for _, res in ipairs(response) do
+      table.insert(modified_response, redirect(res))
+    end
+    response = modified_response
+  end
+  vim.lsp.handlers[ms.textDocument_declaration](err, response, ctx, conf)
 end
 
 M[ms.textDocument_completion] = function(err, response, ctx, conf)

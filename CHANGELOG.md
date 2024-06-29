@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/jmbuhr/otter.nvim/compare/v1.15.1...v2.0.0) (2024-06-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* turn otter into a builtin lsp server-client combo to avoid manual configuration ([#137](https://github.com/jmbuhr/otter.nvim/issues/137))
+
+### Features
+
+* turn otter into a builtin lsp server-client combo to avoid manual configuration ([#137](https://github.com/jmbuhr/otter.nvim/issues/137)) ([4d6c335](https://github.com/jmbuhr/otter.nvim/commit/4d6c3355413d01503295bcec437c4380a9ab6a2e))
+
 ## [1.15.1](https://github.com/jmbuhr/otter.nvim/compare/v1.15.0...v1.15.1) (2024-06-09)
 
 

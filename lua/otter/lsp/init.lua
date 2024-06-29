@@ -91,12 +91,16 @@ otterlsp.start = function(main_nr, completion)
           -- for some methods
           if method == ms.textDocument_documentSymbol then
             params.uri = otter_uri
-          elseif method == ms.textDocument_hover then
-            print("hover request sent")
           elseif method == ms.textDocument_references then
             params.context = {
               includeDeclaration = true,
             }
+          elseif method == ms.textDocument_completion then
+            -- params.position.character = params.position.character
+            --   - keeper.get_leading_offset(params.position.line, main_nr)
+            -- params.textDocument = {
+            --   uri = otter_uri,
+            -- }
           end
           -- take care of potential indents
           keeper.modify_position(params, main_nr, true, true)

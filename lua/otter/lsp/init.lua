@@ -1,4 +1,3 @@
-local cfg = require("otter.config").cfg
 local handlers = require("otter.lsp.handlers")
 local keeper = require("otter.keeper")
 local ms = vim.lsp.protocol.Methods
@@ -117,7 +116,7 @@ otterls.start = function(main_nr, completion)
     end,
     before_init = function(_, _) end,
     on_init = function(client, init_result) end,
-    root_dir = cfg.lsp.root_dir(),
+    root_dir = require("otter.config").cfg.lsp.root_dir(),
   })
 
   return client_id

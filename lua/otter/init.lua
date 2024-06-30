@@ -189,6 +189,11 @@ M.deactivate = function(completion, diagnostics)
     for _, ns in pairs(keeper.rafts[main_nr].nss) do
       vim.diagnostic.reset(ns, main_nr)
     end
+    -- remove diagnostics autocommands
+    local id = keeper.rafts[main_nr].dianostics_group
+    if id ~= nil then
+      vim.api.nvim_del_augroup_by_id(id)
+    end
   end
 
   for _, otter_bufnr in pairs(keeper.rafts[main_nr].buffers) do

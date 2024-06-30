@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/jmbuhr/otter.nvim/compare/v2.0.1...v2.0.2) (2024-06-30)
+
+
+### Bug Fixes
+
+* remove diagnostics autocommand on otter.deactivate ([411fd22](https://github.com/jmbuhr/otter.nvim/commit/411fd2264a8ef35c48187f071b1b00b46d13f9a5))
+
 ## [2.0.1](https://github.com/jmbuhr/otter.nvim/compare/v2.0.0...v2.0.1) (2024-06-30)
 
 

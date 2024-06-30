@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/jmbuhr/otter.nvim/compare/v2.0.0...v2.0.1) (2024-06-30)
+
+
+### Bug Fixes
+
+* users' `lsp.root_dir` config not respected when starting lsp ([#142](https://github.com/jmbuhr/otter.nvim/issues/142)) ([8ff9adc](https://github.com/jmbuhr/otter.nvim/commit/8ff9adcd7062507216e2d2ec69e951a9802a906d))
+
 ## [2.0.0](https://github.com/jmbuhr/otter.nvim/compare/v1.15.1...v2.0.0) (2024-06-29)
 
 

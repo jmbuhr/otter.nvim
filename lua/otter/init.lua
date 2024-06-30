@@ -58,6 +58,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   keeper.rafts[main_nr].parser = ts.get_parser(main_nr, parsername)
   keeper.rafts[main_nr].code_chunks = nil
   keeper.rafts[main_nr].last_changetick = nil
+  keeper.rafts[main_nr].otterls = {}
 
   local all_code_chunks = keeper.extract_code_chunks(main_nr)
   local found_languages = {}
@@ -158,7 +159,17 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   local clients = vim.lsp.get_clients()
   for _, client in pairs(clients) do
     if client.name == "otter-ls" .. "[" .. main_nr .. "]" then
-      return
+      if vim.lsp.buf_is_attached(main_nr, client.id) then
+        -- already running otter-ls and attached to
+        -- this buffer
+        return
+      else
+        -- already running otter-ls but detached
+        -- just re-attach it
+        vim.lsp.buf_attach_client(main_nr, client.id)
+        keeper.rafts[main_nr].otterls.client_id = client.id
+        return
+      end
     end
   end
 
@@ -169,7 +180,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
   end
 
-  keeper.rafts[main_nr].otterls = {}
   keeper.rafts[main_nr].otterls.client_id = client_id
 end
 
@@ -194,6 +204,24 @@ M.deactivate = function(completion, diagnostics)
     if id ~= nil then
       vim.api.nvim_del_augroup_by_id(id)
     end
+  end
+
+  -- stop otter-ls
+  local id = keeper.rafts[main_nr].otterls.client_id
+  if id ~= nil then
+    -- since our server is just a function
+    -- we don't need it do anything special
+    -- on exit
+    -- but how to we actually stop it?
+    vim.lsp.stop_client(id, true)
+    -- it's still running
+    -- local worked = vim.lsp.client_is_stopped(id)
+    -- vim.print(worked)
+
+    -- at least detach it
+    vim.lsp.buf_detach_client(main_nr, id)
+
+    keeper.rafts[main_nr].otterls.client_id = nil
   end
 
   for _, otter_bufnr in pairs(keeper.rafts[main_nr].buffers) do

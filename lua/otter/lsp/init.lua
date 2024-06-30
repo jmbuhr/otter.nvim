@@ -48,7 +48,10 @@ otterls.start = function(main_nr, completion)
                 definitionProvider = true,
                 implementationProvider = true,
                 declarationProvider = true,
-                signatureHelpProvider = true,
+                signatureHelpProvider = {
+                  triggerCharacters = { "(", "," },
+                  retriggerCharacters = {},
+                },
                 typeDefinitionProvider = true,
                 renameProvider = true,
                 referencesProvider = true,

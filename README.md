@@ -103,9 +103,6 @@ response --> handler
 handler --> defaultHandler
 ```
 
-There are some exceptions in which the otter-ls handler has to completely
-handle the response and doesn't pass it on to the default handler.
-
 ## How do I use otter.nvim?
 
 ### Dependencies

@@ -31,6 +31,7 @@ M.setup = function(main_nr)
     group = group,
     callback = sync_diagnostics,
   })
+  keeper.rafts[main_nr].dianostics_group = group
 
   api.nvim_create_autocmd(config.cfg.lsp.diagnostic_update_events, {
     buffer = main_nr,

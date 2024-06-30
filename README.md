@@ -121,7 +121,6 @@ handler --> defaultHandler
 ```lua
 {
     'jmbuhr/otter.nvim',
-    dev = true,
     dependencies = {
       {
         'neovim/nvim-lspconfig',

@@ -4,8 +4,7 @@
       "enabled": true,
       "plugins": [
         "otter.nvim",
-        "nvim-lspconfig",
-        "lsp",
+        "lsp"
       ]
     }
   },
@@ -13,10 +12,7 @@
     "plugins": {
       "sumneko_lua": {
         "enabled": true
-      },
+      }
     }
-  },
-  "lspconfig": {
-    "sumneko_lua": {}
   }
 }

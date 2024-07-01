@@ -139,7 +139,7 @@ otterls.start = function(main_nr, completion)
     end,
     init_options = {},
     before_init = function(params, config) end,
-    on_init = function(client, initialzie_result) end,
+    on_init = function(client, initialize_result) end,
     root_dir = require("otter.config").cfg.lsp.root_dir(),
     on_exit = function(code, signal, client_id) end,
   })

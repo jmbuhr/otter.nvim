@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.3](https://github.com/jmbuhr/otter.nvim/compare/v2.0.2...v2.0.3) (2024-06-30)
+
+
+### Bug Fixes
+
+* correctly specify signatureHelpProvider. fixes [#148](https://github.com/jmbuhr/otter.nvim/issues/148) ([01adf50](https://github.com/jmbuhr/otter.nvim/commit/01adf500832ef9603c6330a223c962aa2f80808c))
+* handle otter-ls detach and re-attach for otter.deactivate ([893934b](https://github.com/jmbuhr/otter.nvim/commit/893934b932ccc62736c0acca32cf6b5910f24d0e))
+
 ## [2.0.2](https://github.com/jmbuhr/otter.nvim/compare/v2.0.1...v2.0.2) (2024-06-30)
 
 

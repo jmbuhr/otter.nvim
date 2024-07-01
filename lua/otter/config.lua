@@ -3,7 +3,13 @@ local M = {}
 local default_config = {
   lsp = {
     diagnostic_update_events = { "BufWritePost" },
-    root_dir = require("lspconfig").util.root_pattern({ ".git", "_quarto.yml", "package.json" }),
+    root_dir = function()
+      return vim.fs.root(0, {
+        ".git",
+        "_quarto.yml",
+        "package.json",
+      }) or vim.fn.getcwd(0)
+    end,
   },
   buffers = {
     -- if set to true, the filetype of the otterbuffers will be set.

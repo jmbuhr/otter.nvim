@@ -114,7 +114,6 @@ handle the response and doesn't pass it on to the default handler.
 
 ```lua
 {
-  'neovim/nvim-lspconfig',
   'nvim-treesitter/nvim-treesitter'
 }
 ```
@@ -126,10 +125,7 @@ handle the response and doesn't pass it on to the default handler.
     'jmbuhr/otter.nvim',
     dev = true,
     dependencies = {
-      {
-        'neovim/nvim-lspconfig',
-        'nvim-treesitter/nvim-treesitter',
-      },
+      'nvim-treesitter/nvim-treesitter',
     },
     opts = {},
 },
@@ -148,7 +144,13 @@ otter.setup{
     -- but more instant diagnostic updates
     diagnostic_update_events = { "BufWritePost" },
     -- function to find the root dir where the otter-ls is started
-    root_dir = require("lspconfig").util.root_pattern({ ".git", "_quarto.yml", "package.json" }),
+    root_dir = function()
+      return vim.fs.root(0, {
+        ".git",
+        "_quarto.yml",
+        "package.json",
+      }) or vim.fn.getcwd(0)
+    end,
   },
   buffers = {
     -- if set to true, the filetype of the otterbuffers will be set.

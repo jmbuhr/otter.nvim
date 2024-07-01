@@ -218,7 +218,6 @@ DEPENDENCIES ~
 >lua
     {
       'hrsh7th/nvim-cmp', -- optional, for completion
-      'neovim/nvim-lspconfig',
       'nvim-treesitter/nvim-treesitter'
     }
 <

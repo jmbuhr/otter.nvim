@@ -18,8 +18,6 @@ Just ask an otter! 🦦
 
 **tldr: Otter.nvim provides lsp features and a code completion source for code embedded in other documents**
 
-![An otter eagerly awaiting your lsp requests.](https://github.com/jmbuhr/otter.nvim/assets/17450586/e4dcce8d-674b-40d3-99c5-db42bda2faeb)
-
 Demo
 
 https://user-images.githubusercontent.com/17450586/209436156-f7f42ea9-471c-478a-868e-77517d71a1c5.mp4

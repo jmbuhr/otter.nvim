@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/jmbuhr/otter.nvim/compare/v2.0.3...v2.1.0) (2024-07-01)
+
+
+### Features
+
+* accept custom lsp params. Allow to explicitly request language ([f583efd](https://github.com/jmbuhr/otter.nvim/commit/f583efd7c9b3c520ae88dd6fb847135a4dd2b20f))
+
 ## [2.0.3](https://github.com/jmbuhr/otter.nvim/compare/v2.0.2...v2.0.3) (2024-06-30)
 
 

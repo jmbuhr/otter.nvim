@@ -3,8 +3,8 @@ local M = {}
 local default_config = {
   lsp = {
     diagnostic_update_events = { "BufWritePost" },
-    root_dir = function()
-      return vim.fs.root(0, {
+    root_dir = function(_, bufnr)
+      return vim.fs.root(bufnr or 0, {
         ".git",
         "_quarto.yml",
         "package.json",

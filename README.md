@@ -144,8 +144,8 @@ otter.setup{
     -- but more instant diagnostic updates
     diagnostic_update_events = { "BufWritePost" },
     -- function to find the root dir where the otter-ls is started
-    root_dir = function()
-      return vim.fs.root(0, {
+    root_dir = function(_, bufnr)
+      return vim.fs.root(bufnr or 0, {
         ".git",
         "_quarto.yml",
         "package.json",

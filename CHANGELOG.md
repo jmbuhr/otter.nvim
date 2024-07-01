@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.0.3](https://github.com/jmbuhr/otter.nvim/compare/v2.0.2...v2.0.3) (2024-06-30)
+
+
+### Bug Fixes
+
+* correctly specify signatureHelpProvider. fixes [#148](https://github.com/jmbuhr/otter.nvim/issues/148) ([01adf50](https://github.com/jmbuhr/otter.nvim/commit/01adf500832ef9603c6330a223c962aa2f80808c))
+* handle otter-ls detach and re-attach for otter.deactivate ([893934b](https://github.com/jmbuhr/otter.nvim/commit/893934b932ccc62736c0acca32cf6b5910f24d0e))
+
+## [2.0.2](https://github.com/jmbuhr/otter.nvim/compare/v2.0.1...v2.0.2) (2024-06-30)
+
+
+### Bug Fixes
+
+* remove diagnostics autocommand on otter.deactivate ([411fd22](https://github.com/jmbuhr/otter.nvim/commit/411fd2264a8ef35c48187f071b1b00b46d13f9a5))
+
+## [2.0.1](https://github.com/jmbuhr/otter.nvim/compare/v2.0.0...v2.0.1) (2024-06-30)
+
+
+### Bug Fixes
+
+* users' `lsp.root_dir` config not respected when starting lsp ([#142](https://github.com/jmbuhr/otter.nvim/issues/142)) ([8ff9adc](https://github.com/jmbuhr/otter.nvim/commit/8ff9adcd7062507216e2d2ec69e951a9802a906d))
+
 ## [2.0.0](https://github.com/jmbuhr/otter.nvim/compare/v1.15.1...v2.0.0) (2024-06-29)
 
 

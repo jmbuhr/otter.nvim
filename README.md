@@ -70,7 +70,7 @@ Each otter-activated buffer can maintain a set of other buffers synchronized to 
 The otter keeper looks after the otters associated with each main buffer
 to keep them in sync:
 
-```{mermaid}
+```mermaid
 stateDiagram-v2
 Main --> otterkeeper
 otterkeeper --> 🦦1
@@ -88,7 +88,7 @@ when handling the request.
 Once the response has been properly modifed it is passed on
 to be handled by Neovim's default handlers `vim.lsp.handlers[<...>]`.
 
-```{mermaid}
+```mermaid
 stateDiagram-v2
 otterls : otter-ls
 params : modified request params
@@ -102,9 +102,6 @@ ls --> response
 response --> handler
 handler --> defaultHandler
 ```
-
-There are some exceptions in which the otter-ls handler has to completely
-handle the response and doesn't pass it on to the default handler.
 
 ## How do I use otter.nvim?
 
@@ -123,7 +120,6 @@ handle the response and doesn't pass it on to the default handler.
 ```lua
 {
     'jmbuhr/otter.nvim',
-    dev = true,
     dependencies = {
       'nvim-treesitter/nvim-treesitter',
     },

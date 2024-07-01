@@ -48,7 +48,10 @@ otterls.start = function(main_nr, completion)
                 definitionProvider = true,
                 implementationProvider = true,
                 declarationProvider = true,
-                signatureHelpProvider = true,
+                signatureHelpProvider = {
+                  triggerCharacters = { "(", "," },
+                  retriggerCharacters = {},
+                },
                 typeDefinitionProvider = true,
                 renameProvider = true,
                 referencesProvider = true,
@@ -62,6 +65,11 @@ otterls.start = function(main_nr, completion)
             }
             -- default handler for initialize
             handler(nil, initializeResult)
+            return
+          elseif method == ms.shutdown then
+            -- TODO: how do we actually stop ourselves?
+            return
+          elseif method == ms.exit then
             return
           end
 
@@ -114,9 +122,11 @@ otterls.start = function(main_nr, completion)
       }
       return members
     end,
-    before_init = function(_, _) end,
-    on_init = function(client, init_result) end,
+    init_options = {},
+    before_init = function(params, config) end,
+    on_init = function(client, initialize_result) end,
     root_dir = require("otter.config").cfg.lsp.root_dir(),
+    on_exit = function(code, signal, client_id) end,
   })
 
   return client_id

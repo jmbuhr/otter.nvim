@@ -231,3 +231,57 @@ otter.export_otter_as()
 - The new implementation is more consistent and reliable, but currently at the expense of being less reliable with completion
   for cases with globally offset code chunks. I'm happy about hints or PR's for those.
 
+## Extend or build on otter.nvim
+
+Additional information can be passed to the `otter-ls` via the `params` of an lsp request.
+Those are grouped under the `params.otter` key.
+Currently available parameters with examples:
+
+### `params.otter.lang`
+
+By default, otter-ls forwards your request to the otter responsible for the language
+determined by the position of your cursor.
+However, you may want to specify the language manually.
+For this we expose `params.otter.lang`.
+For example, this is how you can request the document symbols for a specific language,
+regardless of if your cursor is currently in a code chunk of that language:
+
+```lua
+local ms = vim.lsp.protocol.Methods
+local function get_otter_symbols_lang()
+  local otterkeeper = require'otter.keeper'
+  local main_nr = vim.api.nvim_get_current_buf()
+  local langs = {}
+  for i,l in ipairs(otterkeeper.rafts[main_nr].languages) do
+    langs[i] = i .. ': ' .. l
+  end
+  -- promt to choose one of langs
+  local i = vim.fn.inputlist(langs)
+  local lang = otterkeeper.rafts[main_nr].languages[i]
+  local params = {
+    textDocument = vim.lsp.util.make_text_document_params(),
+    otter = {
+      lang = lang
+    }
+  }
+  -- don't pass a handler, as we want otter to use its own handlers
+  vim.lsp.buf_request(main_nr, ms.textDocument_documentSymbol, params, nil)
+end
+
+vim.keymap.set("n", "<leader>os", get_otter_symbols_lang, {desc = "otter [s]ymbols"})
+```
+
+To explicitly request only from the `otter-ls` and avoid other language servers jumping in,
+replace the last line of the function with:
+
+```lua
+  local clients = vim.lsp.get_clients({
+      -- the client is always named otter-ls[<buffnr>]
+      name = 'otter-ls'.. '[' .. main_nr .. ']'
+  })
+  if #clients == 1 then
+    local otter_client = clients[1]
+    otter_client.request(ms.textDocument_documentSymbol, params, nil)
+  end
+```
+

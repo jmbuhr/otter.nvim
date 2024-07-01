@@ -14,12 +14,14 @@ local M = {}
 ---@return integer? winnr of the floating window
 M[ms.textDocument_hover] = function(err, response, ctx, config)
   if not response then
+    -- no response, nothing to do
     return
   end
 
   -- pretend the response is coming from the main buffer
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
 
+  -- pass modified response on to the default handler
   return vim.lsp.handlers[ms.textDocument_hover](err, response, ctx, config)
 end
 

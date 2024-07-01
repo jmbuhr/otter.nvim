@@ -38,7 +38,7 @@ end
 ---@param name string name of the capture
 ---@param node table node of the current capture
 ---@param metadata table metadata of the current capture
----@param current_language string current language
+---@param current_language string? current language
 ---@return string?
 local function determine_language(main_nr, name, node, metadata, current_language)
   local injection_language = metadata["injection.language"]
@@ -187,19 +187,21 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_sta
   return code_chunks
 end
 
---- Get the language context of the current cursor position.
---- @param main_nr integer|nil bufnr of the parent buffer
+--- Get the language context of a position
+--- @param main_nr integer|nil bufnr of the parent buffer. Default is 0
+--- @param position table|nil position (row, col). Default is the current cursor position
 --- @return string|nil language nil if no language context is found
 --- @return integer|nil start_row
 --- @return integer|nil start_col
 --- @return integer|nil end_row
 --- @return integer|nil end_col
-keeper.get_current_language_context = function(main_nr)
+keeper.get_current_language_context = function(main_nr, position)
   main_nr = main_nr or api.nvim_get_current_buf()
+  position = position or api.nvim_win_get_cursor(0)
   if keeper.rafts[main_nr] == nil then
     return nil
   end
-  local row, col = unpack(api.nvim_win_get_cursor(0))
+  local row, col = unpack(position)
   row = row - 1
   col = col
 

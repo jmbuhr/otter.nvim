@@ -1,3 +1,4 @@
+-- reference: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
 local handlers = require("otter.lsp.handlers")
 local keeper = require("otter.keeper")
 local ms = vim.lsp.protocol.Methods
@@ -67,23 +68,38 @@ otterls.start = function(main_nr, completion)
             handler(nil, initializeResult)
             return
           elseif method == ms.shutdown then
-            -- TODO: how do we actually stop ourselves?
+            -- TODO: how do we actually stop otter-ls?
+            -- it's just a function in memory,
+            -- no external process
             return
           elseif method == ms.exit then
             return
           end
 
-          -- empty params
-          -- might be a stop request
           if params == nil then
+            -- empty params
+            -- nothing to be done
             return
+          end
+
+          -- container to pass additional information to otter and the handlers
+          if params.otter == nil then
+            params.otter = {}
           end
 
           -- all other methods need to know the current language and
           -- otter responsible for that language
-          local lang, start_row, start_col, end_row, end_col = keeper.get_current_language_context(main_nr)
-          if not fn.contains(keeper.rafts[main_nr].languages, lang) then
-            -- if we are not in an otter context. there is nothing to be done
+
+          -- lang can be explicitly passed to otter-ls
+          local lang = params.otter.lang
+          if lang == nil then
+            -- otherwise it is determined by cursor position
+            lang, _, _, _, _ = keeper.get_current_language_context(main_nr)
+          end
+
+          local has_otter = fn.contains(keeper.rafts[main_nr].languages, lang)
+          if not has_otter then
+            -- if we don't have an otter for lang, there is nothing to be done
             return
           end
 
@@ -96,9 +112,8 @@ otterls.start = function(main_nr, completion)
           params.textDocument = {
             uri = otter_uri,
           }
-          -- container to pass additional information to the handlers
-          params.otter = {}
           params.otter.main_uri = main_uri
+          params.otter.otter_uri = otter_uri
 
           -- special modifications to params
           -- for some methods

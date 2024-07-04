@@ -48,6 +48,14 @@ M.concat = function(ls)
   return s .. "\n"
 end
 
+M.unlines = function(ls)
+  local s = ""
+  for _, l in ipairs(ls) do
+    s = s .. "\n" .. l
+  end
+  return s .. "\n"
+end
+
 M.spaces = function(n)
   local s = {}
   for i = 1, n do

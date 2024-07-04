@@ -255,18 +255,18 @@ M[ms.textDocument_declaration] = function(err, response, ctx, conf)
   vim.lsp.handlers[ms.textDocument_declaration](err, response, ctx, conf)
 end
 
-M[ms.textDocument_completion] = function(err, response, ctx, conf)
-  -- this handler doesn't actually get called
-  -- the magic happened before where we modified the request
-  -- I assume nvim-cmp and nvims omnifunc handle the response directly
-  vim.lsp.handlers[ms.textDocument_completion](err, response, ctx, conf)
-end
-
-M[ms.completionItem_resolve] = function(err, response, ctx, conf)
-  -- this handler doesn't actually get called
-  -- the magic happened before where we modified the request
-  -- I assume nvim-cmp and nvims omnifunc handle the response directly
-  vim.lsp.handlers[ms.completionItem_resolve](err, response, ctx, conf)
-end
+-- M[ms.textDocument_completion] = function(err, response, ctx, conf)
+--   -- this handler doesn't actually get called
+--   -- the magic happened before where we modified the request
+--   -- I assume nvim-cmp and nvims omnifunc handle the response directly
+--   vim.lsp.handlers[ms.textDocument_completion](err, response, ctx, conf)
+-- end
+--
+-- M[ms.completionItem_resolve] = function(err, response, ctx, conf)
+--   -- this handler doesn't actually get called
+--   -- the magic happened before where we modified the request
+--   -- I assume nvim-cmp and nvims omnifunc handle the response directly
+--   vim.lsp.handlers[ms.completionItem_resolve](err, response, ctx, conf)
+-- end
 
 return M

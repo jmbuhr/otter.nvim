@@ -4,6 +4,10 @@ local keeper = require("otter.keeper")
 local ms = vim.lsp.protocol.Methods
 local fn = require("otter.tools.functions")
 
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+
+
+
 local otterls = {}
 
 --- @param main_nr integer main buffer
@@ -13,7 +17,7 @@ otterls.start = function(main_nr, completion)
   local main_uri = vim.uri_from_bufnr(main_nr)
   local client_id = vim.lsp.start({
     name = "otter-ls" .. "[" .. main_nr .. "]",
-    capabilities = vim.lsp.protocol.make_client_capabilities(),
+    capabilities = capabilities,
     handlers = handlers,
     cmd = function(dispatchers)
       local members = {
@@ -57,11 +61,12 @@ otterls.start = function(main_nr, completion)
                 renameProvider = true,
                 referencesProvider = true,
                 documentSymbolProvider = true,
-                completionProvider = completion_options,
-                textDocumentSync = {
-                  openClose = true,
-                  change = 1, -- 1 = full; 2 = incremental
-                },
+                -- completionProvider = completion_options,
+                -- textDocumentSync = {
+                --   -- we don't do anything with this, yet
+                --   openClose = true,
+                --   change = 2, -- 0 none; -- 1 = full; 2 = incremental
+                -- },
               },
               serverInfo = {
                 name = "otter-ls",
@@ -107,10 +112,32 @@ otterls.start = function(main_nr, completion)
             return
           end
 
-          -- update the otter buffer of that language
-          keeper.sync_raft(main_nr, lang)
           local otter_nr = keeper.rafts[main_nr].buffers[lang]
           local otter_uri = vim.uri_from_bufnr(otter_nr)
+
+          -- update the otter buffer of that language
+          local success, has_updated = keeper.sync_raft(main_nr, lang)
+          if not success then
+            -- no otter buffer for lang
+            return
+          end
+          -- if has_updated then
+          --   -- send lsp notification with the changes
+          --   -- to the otter buffer
+          --   local ls = keeper.rafts[main_nr].ottercontent[lang]
+          --   local text = fn.unlines(ls)
+          --   vim.lsp.buf_notify(otter_nr, ms.textDocument_didChange, {
+          --     textDocument = {
+          --       uri = otter_uri,
+          --       version = 1,
+          --     },
+          --     contentChanges = {
+          --       {
+          --         text = text,
+          --       },
+          --     },
+          --   })
+          -- end
 
           -- general modifications to params for all methods
           params.textDocument = {
@@ -137,47 +164,15 @@ otterls.start = function(main_nr, completion)
         end,
         notify = function(method, params)
 
-          if params == nil then
-            params = {}
-          end
-          -- container to pass additional information to otter and the handlers
-          if params.otter == nil then
-            params.otter = {}
-          end
+          -- if method == ms.textDocument_didOpen then
+          --   vim.print(params)
+          -- end
 
-          -- all other methods need to know the current language and
-          -- otter responsible for that language
-
-          -- lang can be explicitly passed to otter-ls
-          local lang = params.otter.lang
-          if lang == nil then
-            -- otherwise it is determined by cursor position
-            lang, _, _, _, _ = keeper.get_current_language_context(main_nr)
-          end
-
-          local has_otter = fn.contains(keeper.rafts[main_nr].languages, lang)
-          if not has_otter then
-            -- if we don't have an otter for lang, there is nothing to be done
-            return
-          end
-
-          -- not allowed to change text or window during notify
-          -- update the otter buffer of that language
-          -- keeper.sync_raft(main_nr, lang)
-
-          local otter_nr = keeper.rafts[main_nr].buffers[lang]
-          local otter_uri = vim.uri_from_bufnr(otter_nr)
-
-          -- take care of potential indents
-          keeper.modify_position(params, main_nr, true, true)
-
-          -- general modifications to params for all methods
-          params.textDocument = {
-            uri = otter_uri,
-          }
-          vim.print(method)
-          vim.print(params)
-          vim.lsp.buf_notify(otter_nr, method, params)
+          -- vim.print(method)
+          -- vim.print(params)
+          -- we don't actually notify otter buffers
+          -- we send them their own notifications
+          -- when we change their buffer during a request
 
         end,
         is_closing = function() end,

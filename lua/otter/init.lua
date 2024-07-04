@@ -59,6 +59,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   keeper.rafts[main_nr].code_chunks = nil
   keeper.rafts[main_nr].last_changetick = nil
   keeper.rafts[main_nr].otterls = {}
+  keeper.rafts[main_nr].ottercontent = {}
 
   local all_code_chunks = keeper.extract_code_chunks(main_nr)
   local found_languages = {}
@@ -133,7 +134,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     if config.cfg.buffers.write_to_disk then
       -- and also write out once before lsps can complain
       local otter_path = keeper.rafts[main_nr].paths[lang]
-      vim.print(otter_path)
       api.nvim_buf_call(otter_nr, function()
         vim.cmd("write! " .. otter_path)
       end)
@@ -175,12 +175,38 @@ M.activate = function(languages, completion, diagnostics, tsquery)
 
   -- remove the need to use keybindings for otter ask_ functions
   -- by being our own lsp server-client combo
-  local client_id = otterls.start(main_nr, completion)
-  if client_id == nil then
+  local otterclient_id = otterls.start(main_nr, completion)
+  if otterclient_id == nil then
     vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
   end
 
-  keeper.rafts[main_nr].otterls.client_id = client_id
+  keeper.rafts[main_nr].otterls.client_id = otterclient_id
+
+
+  -- debugging
+  -- listen to lsp requests and notifications
+  vim.api.nvim_create_autocmd('LspNotify', {
+    callback = function(args)
+      local bufnr = args.buf
+      local client_id = args.data.client_id
+      local method = args.data.method
+      local params = args.data.params
+      vim.print(bufnr .. '[' .. client_id .. ']' .. ": " .. method)
+      if method == 'textDocument/didChange' then
+        vim.print(params)
+      end
+    end,
+  })
+
+  vim.api.nvim_create_autocmd('LspRequest', {
+    callback = function(args)
+      local bufnr = args.buf
+      local client_id = args.data.client_id
+      local request_id = args.data.request_id
+      local request = args.data.request
+      vim.print(bufnr .. ": " .. request.method)
+    end,
+  })
 end
 
 ---Deactivate the current buffer by removing otter buffers and clearing diagnostics

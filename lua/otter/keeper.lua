@@ -394,7 +394,8 @@ keeper.sync_raft = function(main_nr, language)
 
         -- replace language lines
         api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
-      else -- no code chunks so we wipe the otter buffer
+      else
+        -- no code chunks so we wipe the otter buffer
         api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
       end
     end

@@ -37,7 +37,7 @@ console.log('hello world')
 </html>
 
 <script>
-consol
+console
 </script>
 
 
@@ -52,4 +52,10 @@ def hello():
 
 ```{python}
 hello()
+```
+
+
+```{python}
+hello()
+import math
 ```

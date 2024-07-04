@@ -20,6 +20,7 @@ local default_config = {
   },
   strip_wrapping_quote_characters = { "'", '"', "`" },
   handle_leading_whitespace = true,
+  debug = false,
 }
 
 M.cfg = default_config

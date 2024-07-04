@@ -4,6 +4,10 @@ local keeper = require("otter.keeper")
 local ms = vim.lsp.protocol.Methods
 local fn = require("otter.tools.functions")
 
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+
+
+
 local otterls = {}
 
 --- @param main_nr integer main buffer
@@ -13,7 +17,7 @@ otterls.start = function(main_nr, completion)
   local main_uri = vim.uri_from_bufnr(main_nr)
   local client_id = vim.lsp.start({
     name = "otter-ls" .. "[" .. main_nr .. "]",
-    capabilities = vim.lsp.protocol.make_client_capabilities(),
+    capabilities = capabilities,
     handlers = handlers,
     cmd = function(dispatchers)
       local members = {
@@ -58,6 +62,11 @@ otterls.start = function(main_nr, completion)
                 referencesProvider = true,
                 documentSymbolProvider = true,
                 completionProvider = completion_options,
+                textDocumentSync = {
+                  -- we don't do anything with this, yet
+                  openClose = true,
+                  change = 2, -- 0 none; -- 1 = full; 2 = incremental
+                },
               },
               serverInfo = {
                 name = "otter-ls",
@@ -103,10 +112,15 @@ otterls.start = function(main_nr, completion)
             return
           end
 
-          -- update the otter buffer of that language
-          keeper.sync_raft(main_nr, lang)
           local otter_nr = keeper.rafts[main_nr].buffers[lang]
           local otter_uri = vim.uri_from_bufnr(otter_nr)
+
+          -- update the otter buffer of that language
+          local success = keeper.sync_raft(main_nr, lang)
+          if not success then
+            -- no otter buffer for lang
+            return
+          end
 
           -- general modifications to params for all methods
           params.textDocument = {
@@ -131,7 +145,13 @@ otterls.start = function(main_nr, completion)
           -- our handler
           vim.lsp.buf_request(otter_nr, method, params, handler)
         end,
-        notify = function(method, params) end,
+        notify = function(method, params)
+          -- we don't actually notify otter buffers
+          -- they get their notifications
+          -- via nvim's clients attached to
+          -- the buffers
+          -- when we change their text
+        end,
         is_closing = function() end,
         terminate = function() end,
       }

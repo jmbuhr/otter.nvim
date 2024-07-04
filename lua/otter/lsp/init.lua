@@ -116,28 +116,11 @@ otterls.start = function(main_nr, completion)
           local otter_uri = vim.uri_from_bufnr(otter_nr)
 
           -- update the otter buffer of that language
-          local success, has_updated = keeper.sync_raft(main_nr, lang)
+          local success = keeper.sync_raft(main_nr, lang)
           if not success then
             -- no otter buffer for lang
             return
           end
-          -- if has_updated then
-          --   -- send lsp notification with the changes
-          --   -- to the otter buffer
-          --   local ls = keeper.rafts[main_nr].ottercontent[lang]
-          --   local text = fn.unlines(ls)
-          --   vim.lsp.buf_notify(otter_nr, ms.textDocument_didChange, {
-          --     textDocument = {
-          --       uri = otter_uri,
-          --       version = 1,
-          --     },
-          --     contentChanges = {
-          --       {
-          --         text = text,
-          --       },
-          --     },
-          --   })
-          -- end
 
           -- general modifications to params for all methods
           params.textDocument = {
@@ -163,17 +146,11 @@ otterls.start = function(main_nr, completion)
           vim.lsp.buf_request(otter_nr, method, params, handler)
         end,
         notify = function(method, params)
-
-          -- if method == ms.textDocument_didOpen then
-          --   vim.print(params)
-          -- end
-
-          -- vim.print(method)
-          -- vim.print(params)
           -- we don't actually notify otter buffers
-          -- we send them their own notifications
-          -- when we change their buffer during a request
-
+          -- they get their notifications
+          -- via nvim's clients attached to
+          -- the buffers
+          -- when we change their text
         end,
         is_closing = function() end,
         terminate = function() end,

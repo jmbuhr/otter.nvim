@@ -23,7 +23,6 @@ local cfg = require("otter.config").cfg
 ---keeper.rafts[main_nr].parser = ts.get_parser(main_nr, parsername)
 ---keeper.rafts[main_nr].code_chunks = nil
 ---keeper.rafts[main_nr].last_changetick = nil
--- keeper.rafts[main_nr].ottercontent = {}
 keeper.rafts = {}
 
 --- table of languages that can be injected
@@ -351,16 +350,15 @@ end
 ---@param main_nr integer bufnr of the parent buffer
 ---@param language string|nil only sync one otter buffer matching a language
 ---@return boolean success true on success, otherwise false
----@return boolean has_updated true if the raft had to be updated
 keeper.sync_raft = function(main_nr, language)
   if not keeper.has_raft(main_nr) then
-    return false, false
+    return false
   end
   local all_code_chunks
   local changetick = api.nvim_buf_get_changedtick(main_nr)
   if keeper.rafts[main_nr].last_changetick == changetick then
     all_code_chunks = keeper.rafts[main_nr].code_chunks
-    return true, false
+    return true
   else
     all_code_chunks = keeper.extract_code_chunks(main_nr)
   end
@@ -396,15 +394,13 @@ keeper.sync_raft = function(main_nr, language)
 
         -- replace language lines
         api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
-        keeper.rafts[main_nr].ottercontent[lang] = ls
       else
         -- no code chunks so we wipe the otter buffer
         api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
-        keeper.rafts[main_nr].ottercontent[lang] = {}
       end
     end
   end
-  return true, true
+  return true
 end
 
 --- Export the raft of otters as files.

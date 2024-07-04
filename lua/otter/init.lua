@@ -7,7 +7,6 @@ local keeper = require("otter.keeper")
 local otterls = require("otter.lsp")
 local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
 local config = require("otter.config")
-local ms = vim.lsp.protocol.Methods
 
 M.setup = function(opts)
   config.cfg = vim.tbl_deep_extend("force", config.cfg, opts or {})
@@ -60,7 +59,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   keeper.rafts[main_nr].code_chunks = nil
   keeper.rafts[main_nr].last_changetick = nil
   keeper.rafts[main_nr].otterls = {}
-  keeper.rafts[main_nr].ottercontent = {}
 
   local all_code_chunks = keeper.extract_code_chunks(main_nr)
   local found_languages = {}
@@ -123,9 +121,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     ::continue::
   end
 
-  keeper.sync_raft(main_nr)
-
-  -- manually attach language server the corresponds to the filetype
+  -- manually attach language server that corresponds to the filetype
   -- without setting the filetype
   -- to prevent other plugins we don't need in the otter buffers
   -- from automatically attaching when ft is set
@@ -150,6 +146,11 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       end
     end
   end
+
+  -- this has to happen after the
+  -- otter buffers got their own
+  -- lsps
+  keeper.sync_raft(main_nr)
 
   if diagnostics then
     require("otter.diagnostics").setup(main_nr)
@@ -184,47 +185,33 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   keeper.rafts[main_nr].otterls.client_id = otterclient_id
 
   -- debugging
-  -- listen to lsp requests and notifications
-  vim.api.nvim_create_autocmd('LspNotify', {
-    callback = function(args)
-      local bufnr = args.buf
-      local client_id = args.data.client_id
-      local method = args.data.method
-      local params = args.data.params
-      vim.print(bufnr .. '[' .. client_id .. ']' .. ": " .. method)
-      if method == 'textDocument/didChange' then
-        -- vim.print(params)
-      end
-    end,
-  })
+  if require("otter.config").cfg.debug == true then
+    -- listen to lsp requests and notifications
+    vim.api.nvim_create_autocmd("LspNotify", {
+      callback = function(args)
+        local bufnr = args.buf
+        local client_id = args.data.client_id
+        local method = args.data.method
+        local params = args.data.params
+        vim.print(bufnr .. "[" .. client_id .. "]" .. ": " .. method)
+        if method == "textDocument/didChange" then
+          -- vim.print(params)
+        end
+      end,
+    })
 
-  vim.api.nvim_create_autocmd('LspRequest', {
-    callback = function(args)
-      local bufnr = args.buf
-      local client_id = args.data.client_id
-      local request_id = args.data.request_id
-      local request = args.data.request
-      vim.print(bufnr .. ": " .. request.method)
-    end,
-  })
-
-end
-
-M.debug = function ()
-  -- get clients attached to otter buffers
-  -- keeper.rafts[main_nr].buffers[lang] = otter_nr
-  local main_nr = api.nvim_get_current_buf()
-  for lang, nr in pairs(keeper.rafts[main_nr].buffers) do
-    vim.print(nr)
-    local otterclients = vim.lsp.get_clients({bufnr = nr})
-    local otterclient = otterclients[1]
-    -- vim.print(otterclient.name)
-    -- vim.print(otterclient.capabilities)
-    -- vim.print(otterclient.server_capabilities)
+    vim.api.nvim_create_autocmd("LspRequest", {
+      callback = function(args)
+        local bufnr = args.buf
+        local client_id = args.data.client_id
+        local request_id = args.data.request_id
+        local request = args.data.request
+        vim.print(bufnr .. ": " .. request.method)
+      end,
+    })
   end
 end
 
-vim.keymap.set("n", "<leader>oe", "<cmd>lua require('otter').debug()<CR>", { noremap = true, silent = true })
 
 ---Deactivate the current buffer by removing otter buffers and clearing diagnostics
 ---@param completion boolean | nil

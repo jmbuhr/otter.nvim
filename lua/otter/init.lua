@@ -121,6 +121,12 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     ::continue::
   end
 
+  -- this has to happen again after the
+  -- otter buffers got their own lsps
+  -- to really make sure the clients are
+  -- attached to their otter buffers
+  keeper.sync_raft(main_nr)
+
   -- manually attach language server that corresponds to the filetype
   -- without setting the filetype
   -- to prevent other plugins we don't need in the otter buffers
@@ -147,9 +153,8 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
   end
 
-  -- this has to happen after the
-  -- otter buffers got their own
-  -- lsps
+  -- see above.
+  -- needs to happen here again
   keeper.sync_raft(main_nr)
 
   if diagnostics then

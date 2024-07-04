@@ -61,12 +61,12 @@ otterls.start = function(main_nr, completion)
                 renameProvider = true,
                 referencesProvider = true,
                 documentSymbolProvider = true,
-                -- completionProvider = completion_options,
-                -- textDocumentSync = {
-                --   -- we don't do anything with this, yet
-                --   openClose = true,
-                --   change = 2, -- 0 none; -- 1 = full; 2 = incremental
-                -- },
+                completionProvider = completion_options,
+                textDocumentSync = {
+                  -- we don't do anything with this, yet
+                  openClose = true,
+                  change = 2, -- 0 none; -- 1 = full; 2 = incremental
+                },
               },
               serverInfo = {
                 name = "otter-ls",

@@ -126,6 +126,7 @@ otterls.start = function(main_nr, completion)
           params.textDocument = {
             uri = otter_uri,
           }
+          params.otter.main_nr = main_nr
           params.otter.main_uri = main_uri
           params.otter.otter_uri = otter_uri
 

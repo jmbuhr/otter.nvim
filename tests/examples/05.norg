@@ -24,6 +24,7 @@ print("non-indented code block")
    print("Hello world!")
    import numpy as np
    x = np.zeros(10)
+   y = x + 1
    @end
 
 ** Other things

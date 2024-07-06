@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/jmbuhr/otter.nvim/compare/v2.1.0...v2.2.0) (2024-07-06)
+
+
+### Features
+
+* add vim extension ([935aeb5](https://github.com/jmbuhr/otter.nvim/commit/935aeb5756de2024697194c83fe0f16951818b1a))
+
+
+### Bug Fixes
+
+* don't add an otter for the language of the main buffer ([66b3a33](https://github.com/jmbuhr/otter.nvim/commit/66b3a33735eda2f28025ac2f55c77faf9d1b4b68))
+
 ## [2.1.0](https://github.com/jmbuhr/otter.nvim/compare/v2.0.3...v2.1.0) (2024-07-04)
 
 

@@ -29,7 +29,8 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   diagnostics = diagnostics ~= false
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
-  local parsername = vim.treesitter.language.get_lang(api.nvim_get_option_value("filetype", { buf = main_nr }))
+  local main_lang = api.nvim_get_option_value("filetype", { buf = main_nr })
+  local parsername = vim.treesitter.language.get_lang(main_lang)
   if not parsername then
     vim.notify_once("[otter] No treesitter parser found for current buffer. Can't activate.", vim.log.levels.WARN, {})
     return
@@ -63,7 +64,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   local all_code_chunks = keeper.extract_code_chunks(main_nr)
   local found_languages = {}
   for _, lang in ipairs(languages) do
-    if all_code_chunks[lang] ~= nil then
+    if all_code_chunks[lang] ~= nil and lang ~= main_lang then
       table.insert(found_languages, lang)
     end
   end

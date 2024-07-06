@@ -36,4 +36,5 @@ return {
   webc = "webc",
   yaml = "yml",
   zig = "zig",
+  vim = "vim",
 }

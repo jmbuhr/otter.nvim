@@ -115,6 +115,8 @@ handler --> defaultHandler
 }
 ```
 
+and the latest [Neovim stable version](https://github.com/neovim/neovim/releases/tag/stable) (>= `v0.10.0`).
+
 ### Minimal lazy.nvim spec:
 
 ```lua

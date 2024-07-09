@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/jmbuhr/otter.nvim/compare/v2.2.0...v2.2.1) (2024-07-09)
+
+
+### Bug Fixes
+
+* only start activate otter-ls if code chunks are found. fixes [#161](https://github.com/jmbuhr/otter.nvim/issues/161) ([dc90ffb](https://github.com/jmbuhr/otter.nvim/commit/dc90ffbc2e51839d88405cf38f75bdf172b798e7))
+
 ## [2.2.0](https://github.com/jmbuhr/otter.nvim/compare/v2.1.0...v2.2.0) (2024-07-06)
 
 

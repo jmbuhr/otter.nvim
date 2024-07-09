@@ -69,6 +69,12 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     end
   end
   languages = found_languages
+  if #languages == 0 then
+    if config.cfg.verbose and config.cfg.verbose.no_code_found then
+      vim.notify_once("[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false", vim.log.levels.INFO, {})
+    end
+    return
+  end
 
   -- create otter buffers
   for _, lang in ipairs(languages) do
@@ -191,7 +197,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   keeper.rafts[main_nr].otterls.client_id = otterclient_id
 
   -- debugging
-  if require("otter.config").cfg.debug == true then
+  if config.cfg.debug == true then
     -- listen to lsp requests and notifications
     vim.api.nvim_create_autocmd("LspNotify", {
       callback = function(args)

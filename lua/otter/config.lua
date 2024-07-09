@@ -21,6 +21,9 @@ local default_config = {
   strip_wrapping_quote_characters = { "'", '"', "`" },
   handle_leading_whitespace = true,
   debug = false,
+  verbose = { -- set to false to disable all verbose messages
+    no_code_found = true -- warn if otter.activate is called, but no injected code was found
+  },
 }
 
 M.cfg = default_config

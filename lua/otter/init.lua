@@ -70,9 +70,11 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   end
   languages = found_languages
   if #languages == 0 then
-    if config.cfg.verbose and config.cfg.verbose.no_code_found then
-      vim.notify_once("[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false", vim.log.levels.INFO, {})
-    end
+    -- just return quietly until
+    -- TODO: config handling is more robust
+    -- if config.cfg.verbose and config.cfg.verbose.no_code_found then
+    --   vim.notify_once("[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false", vim.log.levels.INFO, {})
+    -- end
     return
   end
 

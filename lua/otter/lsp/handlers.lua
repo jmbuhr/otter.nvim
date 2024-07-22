@@ -19,7 +19,7 @@ local function filter_one_or_many(response, filter)
 end
 
 --- see e.g.
---- vim.lsp.handlers.hover(_, result, ctx, config)
+--- vim.lsp.handlers.hover(_, result, ctx, conf)
 ---@param err lsp.ResponseError?
 ---@param response lsp.Hover
 ---@param ctx lsp.HandlerContext
@@ -33,7 +33,6 @@ M[ms.textDocument_hover] = function(err, response, ctx, conf)
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
 
   -- pass modified response on to the default handler
-  -- return vim.lsp.handlers[ms.textDocument_hover](err, response, ctx, config)
   return err, response, ctx, conf
 end
 
@@ -45,7 +44,6 @@ M[ms.textDocument_inlayHint] = function(err, response, ctx, conf)
   -- pretend the response is coming from the main buffer
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
 
-  -- return vim.lsp.handlers[ms.textDocument_inlayHint](err, response, ctx, config)
   return err, response, ctx, conf
 end
 
@@ -68,7 +66,6 @@ M[ms.textDocument_definition] = function(err, response, ctx, conf)
     return res
   end
   response = filter_one_or_many(response, filter)
-  -- vim.lsp.handlers[ms.textDocument_definition](err, response, ctx)
   return err, response, ctx, conf
 end
 
@@ -92,7 +89,6 @@ M[ms.textDocument_documentSymbol] = function(err, response, ctx, conf)
   response = filter_one_or_many(response, filter)
 
   ctx.params.textDocument.uri = fn.otterpath_to_path(ctx.params.textDocument.uri)
-  -- vim.lsp.handlers[ms.textDocument_documentSymbol](err, response, ctx, conf)
   return err, response, ctx, conf
 end
 
@@ -116,7 +112,6 @@ M[ms.textDocument_typeDefinition] = function(err, response, ctx, conf)
   end
   response = filter_one_or_many(response, filter)
 
-  -- vim.lsp.handlers[ms.textDocument_typeDefinition](err, response, ctx, conf)
   return err, response, ctx, conf
 end
 
@@ -153,7 +148,6 @@ M[ms.textDocument_rename] = function(err, response, ctx, conf)
     end
   end
   response = filter_one_or_many(response, filter)
-  -- vim.lsp.handlers[ms.textDocument_rename](err, response, ctx, conf)
   return err, response, ctx, conf
 end
 
@@ -176,7 +170,6 @@ M[ms.textDocument_references] = function(err, response, ctx, conf)
 
   -- change the ctx after the otter buffer has responded
   ctx.params.textDocument.uri = fn.otterpath_to_path(ctx.params.textDocument.uri)
-  -- vim.lsp.handlers[ms.textDocument_references](err, response, ctx, conf)
   return err, response, ctx, conf
 end
 
@@ -200,7 +193,6 @@ M[ms.textDocument_implementation] = function(err, response, ctx, conf)
   end
   response = filter_one_or_many(response, filter)
 
-  -- vim.lsp.handlers[ms.textDocument_implementation](err, response, ctx, conf)
   return err, response, ctx, conf
 end
 
@@ -223,7 +215,6 @@ M[ms.textDocument_declaration] = function(err, response, ctx, conf)
     return res
   end
   response = filter_one_or_many(response, filter)
-  -- vim.lsp.handlers[ms.textDocument_declaration](err, response, ctx, conf)
   return err, response, ctx, conf
 end
 

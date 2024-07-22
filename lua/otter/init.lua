@@ -208,9 +208,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
         local method = args.data.method
         local params = args.data.params
         vim.print(bufnr .. "[" .. client_id .. "]" .. ": " .. method)
-        if method == "textDocument/didChange" then
-          -- vim.print(params)
-        end
+        vim.print(params)
       end,
     })
 
@@ -218,9 +216,10 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       callback = function(args)
         local bufnr = args.buf
         local client_id = args.data.client_id
-        local request_id = args.data.request_id
+        local method = args.data.method
         local request = args.data.request
-        vim.print(bufnr .. ": " .. request.method)
+        vim.print(bufnr .. "[" .. client_id .. "]" .. ": " .. method)
+        vim.print(request)
       end,
     })
   end
@@ -259,8 +258,6 @@ M.deactivate = function(completion, diagnostics)
     -- but how to we actually stop it?
     vim.lsp.stop_client(id, true)
     -- it's still running
-    -- local worked = vim.lsp.client_is_stopped(id)
-    -- vim.print(worked)
 
     -- at least detach it
     vim.lsp.buf_detach_client(main_nr, id)
@@ -300,14 +297,12 @@ M.ask_document_symbols = function()
 end
 
 --- Rename symbol under cursor
----@param fallback function|nil
-M.ask_rename = function(fallback)
+M.ask_rename = function()
   vim.deprecate("otter.ask_rename", "vim.lsp.buf.rename", "2.0.0", "otter.nvim", true)
 end
 
 --- Reformat current otter context
----@param fallback function|nil
-M.ask_format = function(fallback)
+M.ask_format = function()
   vim.deprecate("otter.ask_format", "vim.lsp.buf.format", "2.0.0", "otter.nvim", true)
 end
 

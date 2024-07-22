@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/jmbuhr/otter.nvim/compare/v2.2.2...v2.3.0) (2024-07-22)
+
+
+### Features
+
+* inject otter handlers in between manually passed or default ([a6037d4](https://github.com/jmbuhr/otter.nvim/commit/a6037d4beb20cdeff8103e6bafa622548ad2df5d))
+
 ## [2.2.2](https://github.com/jmbuhr/otter.nvim/compare/v2.2.1...v2.2.2) (2024-07-16)
 
 

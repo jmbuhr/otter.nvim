@@ -18,7 +18,6 @@ otterls.start = function(main_nr, completion)
   local client_id = vim.lsp.start({
     name = "otter-ls" .. "[" .. main_nr .. "]",
     capabilities = capabilities,
-    handlers = handlers,
     cmd = function(dispatchers)
       local members = {
         --- Send a request to the otter buffers and handle the response.
@@ -142,9 +141,14 @@ otterls.start = function(main_nr, completion)
           -- take care of potential indents
           keeper.modify_position(params, main_nr, true, true)
           -- send the request to the otter buffer
-          -- modification of the response is done by
-          -- our handler
-          vim.lsp.buf_request(otter_nr, method, params, handler)
+          -- modification of the response is done by our handler
+          -- and then passed on to the default handler or user-defined handler
+          vim.lsp.buf_request(otter_nr, method, params, function (err, result, context, config)
+            if handlers[method] ~= nil then
+              err, result, context, config = handlers[method](err, result, context, config)
+            end
+            handler(err, result, context, config)
+          end)
         end,
         notify = function(method, params)
           -- we don't actually notify otter buffers

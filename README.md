@@ -86,7 +86,8 @@ uri of the file of which a position is requested.
 If does so both ways, first with the request and then
 when handling the request.
 Once the response has been properly modifed it is passed on
-to be handled by Neovim's default handlers `vim.lsp.handlers[<...>]`.
+to be handled by Neovim's default handlers `vim.lsp.handlers[<...>]`
+or the user-supplied handler in `vim.lsp.buf_request_all`.
 
 ```mermaid
 stateDiagram-v2
@@ -224,16 +225,9 @@ otter.export_otter_as()
   Otter-ls never hears of this, so the variable stays as it is in the qmd file.
 - Diagnostics are handled via an autocommand instead of lsp requests to otter-ls for now,
   because they don't require the cursor to be in an otter context. Could be solved more elegantly in the future.
-- `telescope` has their own builtin pickers for e.g. lsp references. However, they don't function as a lsp response
-  handler, but instead create their own params, send their own request and immidiately handle it.
-  As such, you can't use e.g. `require'telescope.builtin'.lsp_references` instead of `vim.lsp.buf.references` with
-  otter.nvim for now. A pure handler version of telescope's pickers that can receive our already modified
-  responses can change this in the future.
 - Formatting requests are tricky. But formatting is handled very well by [conform.nvim](https://github.com/stevearc/conform.nvim)
   also for injected code via their `injected` formatter
   (example from my config: [link](https://github.com/jmbuhr/quarto-nvim-kickstarter/blob/382b050e13eada7180ad048842386be37e820660/lua/plugins/editing.lua#L29-L81)).
-- The new implementation is more consistent and reliable, but currently at the expense of being less reliable with completion
-  for cases with globally offset code chunks. I'm happy about hints or PR's for those.
 
 ## Extend or build on otter.nvim
 

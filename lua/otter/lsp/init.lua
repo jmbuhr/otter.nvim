@@ -6,15 +6,26 @@ local fn = require("otter.tools.functions")
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
-
-
 local otterls = {}
+
+otterls.clients = {}
+
+otterls.check_capabilities = function(main_nr)
+  local otter_nrs = keeper.rafts[main_nr].buffers
+  local clients = vim.lsp.get_clients()
+  for _, client in ipairs(clients) do
+      otterls.clients[main_nr][client.id] = {}
+      otterls.clients[main_nr][client.id].capabilities = client.server_capabilities
+  end
+  vim.print(otterls.clients)
+end
 
 --- @param main_nr integer main buffer
 --- @param completion boolean should completion be enabled?
 --- @return integer? client_id
 otterls.start = function(main_nr, completion)
   local main_uri = vim.uri_from_bufnr(main_nr)
+  otterls.clients[main_nr] = {}
   local client_id = vim.lsp.start({
     name = "otter-ls" .. "[" .. main_nr .. "]",
     capabilities = capabilities,
@@ -72,6 +83,7 @@ otterls.start = function(main_nr, completion)
                 version = "2.0.0",
               },
             }
+
             -- default handler for initialize
             handler(nil, initializeResult)
             return
@@ -113,6 +125,10 @@ otterls.start = function(main_nr, completion)
 
           local otter_nr = keeper.rafts[main_nr].buffers[lang]
           local otter_uri = vim.uri_from_bufnr(otter_nr)
+
+          -- populate the capabilities of the clients
+          -- attached to the otter buffers
+          otterls.check_capabilities(main_nr)
 
           -- update the otter buffer of that language
           local success = keeper.sync_raft(main_nr, lang)

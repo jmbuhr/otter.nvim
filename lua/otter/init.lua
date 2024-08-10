@@ -60,6 +60,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   keeper.rafts[main_nr].code_chunks = nil
   keeper.rafts[main_nr].last_changetick = nil
   keeper.rafts[main_nr].otterls = {}
+  keeper.rafts[main_nr].otterls.clients_by_otternr = {}
 
   local all_code_chunks = keeper.extract_code_chunks(main_nr)
   local found_languages = {}
@@ -135,6 +136,29 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- to really make sure the clients are
   -- attached to their otter buffers
   keeper.sync_raft(main_nr)
+
+  -- add autocommand for otter to track lsp clients attached
+  -- to the otter buffers before they are attached
+  -- to track server capabilities
+  vim.api.nvim_create_autocmd('LspAttach', {
+    group = vim.api.nvim_create_augroup('OtterLSPAttach', { clear = true }),
+    callback = function(event)
+      local client = vim.lsp.get_client_by_id(event.data.client_id)
+
+      -- check if the event comes from an otter buffer
+      for _, lang in ipairs(keeper.rafts[main_nr].languages) do
+        local otter_nr = keeper.rafts[main_nr].buffers[lang]
+        if keeper.rafts[main_nr].otterls.clients_by_otternr[otter_nr] == nil then
+          keeper.rafts[main_nr].otterls.clients_by_otternr[otter_nr] = {}
+        end
+        if otter_nr == event.buf then
+          table.insert(keeper.rafts[main_nr].otterls.clients_by_otternr[otter_nr], client)
+        end
+      end
+    end,
+  })
+
+
 
   -- manually attach language server that corresponds to the filetype
   -- without setting the filetype

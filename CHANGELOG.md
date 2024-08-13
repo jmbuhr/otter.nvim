@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/jmbuhr/otter.nvim/compare/v2.3.0...v2.4.0) (2024-08-13)
+
+
+### Features
+
+* add pyodide and webr extensions and sort alphabetically ([54914ff](https://github.com/jmbuhr/otter.nvim/commit/54914ff27190a4f5b10faa21a240c0a2314cf174))
+
 ## [2.3.0](https://github.com/jmbuhr/otter.nvim/compare/v2.2.2...v2.3.0) (2024-07-22)
 
 

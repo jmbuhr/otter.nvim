@@ -119,7 +119,7 @@ otterls.start = function(main_nr, completion)
             return
           end
           for _, client in pairs(otterclients) do
-            vim.print(client.server_capabilities)
+            -- vim.print(client.server_capabilities)
           end
 
           -- update the otter buffer of that language

@@ -231,8 +231,6 @@ M.activate = function(languages, completion, diagnostics, tsquery)
         local client_id = args.data.client_id
         local method = args.data.method
         local params = args.data.params
-        vim.print(bufnr .. "[" .. client_id .. "]" .. ": " .. method)
-        vim.print(params)
       end,
     })
 

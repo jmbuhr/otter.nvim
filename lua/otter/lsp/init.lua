@@ -110,16 +110,23 @@ otterls.start = function(main_nr, completion)
             return
           end
 
-
           local otter_nr = keeper.rafts[main_nr].buffers[lang]
           local otter_uri = vim.uri_from_bufnr(otter_nr)
 
-          local otterclients = keeper.rafts[main_nr].otterls.clients_by_otternr[otter_nr]
-          if otterclients == nil then
-            return
-          end
+          -- get clients attached to otter buffer
+          local otterclients = vim.lsp.get_clients({bufnr=otter_nr})
+          -- collect capabilities
+          local supports_method = false
           for _, client in pairs(otterclients) do
-            -- vim.print(client.server_capabilities)
+            if client.supports_method(method) then
+              print("found method")
+              supports_method = true
+            end
+          end
+          if not supports_method then
+            print(method)
+            -- otter buffer doesn't support method
+            return
           end
 
           -- update the otter buffer of that language

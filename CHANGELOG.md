@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/jmbuhr/otter.nvim/compare/v2.4.0...v2.5.0) (2024-08-25)
+
+
+### Features
+
+* Check capabilities before sending request to otter buffer ([#169](https://github.com/jmbuhr/otter.nvim/issues/169)) ([18fcdbb](https://github.com/jmbuhr/otter.nvim/commit/18fcdbbbf9dbc09febf7a1bbdca46b5310b3aa84))
+
 ## [2.4.0](https://github.com/jmbuhr/otter.nvim/compare/v2.3.0...v2.4.0) (2024-08-13)
 
 

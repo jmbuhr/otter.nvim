@@ -119,13 +119,11 @@ otterls.start = function(main_nr, completion)
           local supports_method = false
           for _, client in pairs(otterclients) do
             if client.supports_method(method) then
-              print("found method")
               supports_method = true
             end
           end
           if not supports_method then
-            print(method)
-            -- otter buffer doesn't support method
+            -- no server attached to the otter buffer supports this method
             return
           end
 

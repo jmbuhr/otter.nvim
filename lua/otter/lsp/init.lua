@@ -114,7 +114,7 @@ otterls.start = function(main_nr, completion)
           local otter_uri = vim.uri_from_bufnr(otter_nr)
 
           -- get clients attached to otter buffer
-          local otterclients = vim.lsp.get_clients({bufnr=otter_nr})
+          local otterclients = vim.lsp.get_clients({ bufnr = otter_nr })
           -- collect capabilities
           local supports_method = false
           for _, client in pairs(otterclients) do
@@ -156,7 +156,7 @@ otterls.start = function(main_nr, completion)
           -- send the request to the otter buffer
           -- modification of the response is done by our handler
           -- and then passed on to the default handler or user-defined handler
-          vim.lsp.buf_request(otter_nr, method, params, function (err, result, context, config)
+          vim.lsp.buf_request(otter_nr, method, params, function(err, result, context, config)
             if handlers[method] ~= nil then
               err, result, context, config = handlers[method](err, result, context, config)
             end

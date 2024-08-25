@@ -6,8 +6,6 @@ local fn = require("otter.tools.functions")
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
-
-
 local otterls = {}
 
 --- @param main_nr integer main buffer
@@ -72,6 +70,7 @@ otterls.start = function(main_nr, completion)
                 version = "2.0.0",
               },
             }
+
             -- default handler for initialize
             handler(nil, initializeResult)
             return
@@ -114,6 +113,20 @@ otterls.start = function(main_nr, completion)
           local otter_nr = keeper.rafts[main_nr].buffers[lang]
           local otter_uri = vim.uri_from_bufnr(otter_nr)
 
+          -- get clients attached to otter buffer
+          local otterclients = vim.lsp.get_clients({ bufnr = otter_nr })
+          -- collect capabilities
+          local supports_method = false
+          for _, client in pairs(otterclients) do
+            if client.supports_method(method) then
+              supports_method = true
+            end
+          end
+          if not supports_method then
+            -- no server attached to the otter buffer supports this method
+            return
+          end
+
           -- update the otter buffer of that language
           local success = keeper.sync_raft(main_nr, lang)
           if not success then
@@ -143,7 +156,7 @@ otterls.start = function(main_nr, completion)
           -- send the request to the otter buffer
           -- modification of the response is done by our handler
           -- and then passed on to the default handler or user-defined handler
-          vim.lsp.buf_request(otter_nr, method, params, function (err, result, context, config)
+          vim.lsp.buf_request(otter_nr, method, params, function(err, result, context, config)
             if handlers[method] ~= nil then
               err, result, context, config = handlers[method](err, result, context, config)
             end

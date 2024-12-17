@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/jmbuhr/otter.nvim/compare/v2.5.0...v2.5.1) (2024-12-17)
+
+
+### Bug Fixes
+
+* use schedule_wrap to avoid text_lock ([#190](https://github.com/jmbuhr/otter.nvim/issues/190)) ([964b012](https://github.com/jmbuhr/otter.nvim/commit/964b012f74f5d9c57184e9fcf350775344db6053))
+
 ## [2.5.0](https://github.com/jmbuhr/otter.nvim/compare/v2.4.0...v2.5.0) (2024-08-25)
 
 

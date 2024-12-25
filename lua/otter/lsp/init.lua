@@ -32,7 +32,7 @@ otterls.start = function(main_nr, completion)
         --- depending on the method it is either our custom handler
         --- (e.g. for retargeting got-to-definition results)
         --- or the default vim.lsp.handlers[method] handler
-        request = vim.schedule_wrap(function(method, params, handler, _)
+        request = function(method, params, handler, _)
           -- handle initialization first
           if method == ms.initialize then
             local completion_options
@@ -162,7 +162,7 @@ otterls.start = function(main_nr, completion)
             end
             handler(err, result, context, config)
           end)
-        end),
+        end,
         notify = function(method, params)
           -- we don't actually notify otter buffers
           -- they get their notifications

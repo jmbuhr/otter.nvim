@@ -23,6 +23,16 @@ local cfg = require("otter.config").cfg
 ---keeper.rafts[main_nr].parser = ts.get_parser(main_nr, parsername)
 ---keeper.rafts[main_nr].code_chunks = nil
 ---keeper.rafts[main_nr].last_changetick = nil
+---@class Raft
+---@field languages table
+---@field buffers table
+---@field paths table
+---@fieled otter_nr_to_lang table
+---@field tsquery string
+---@field query string
+
+---@class Rafts
+---@field [number] Raft
 keeper.rafts = {}
 
 --- table of languages that can be injected
@@ -128,9 +138,9 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_sta
         local text
         lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
         if
-          lang_capture
-          and (name == "content" or name == "injection.content")
-          and (lang == nil or lang_capture == lang)
+            lang_capture
+            and (name == "content" or name == "injection.content")
+            and (lang == nil or lang_capture == lang)
         then
           -- the actual code content
           text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
@@ -359,47 +369,57 @@ keeper.sync_raft = function(main_nr, language)
   if keeper.rafts[main_nr].last_changetick == changetick then
     all_code_chunks = keeper.rafts[main_nr].code_chunks
     return true
-  else
+  end
+
+
+  -- NOTE: Assumption: if textlock is currently active,
+  -- we can't sync, but those are also the cases
+  -- in which it is not necessary to sync
+  -- and can be delayed until the textlock is released
+  -- the lsp request should still be valid
+
+  keeper.rafts[main_nr]
+  vim.schedule(function()
     all_code_chunks = keeper.extract_code_chunks(main_nr)
-  end
 
-  keeper.rafts[main_nr].last_changetick = changetick
-  keeper.rafts[main_nr].code_chunks = all_code_chunks
+    keeper.rafts[main_nr].last_changetick = changetick
+    keeper.rafts[main_nr].code_chunks = all_code_chunks
 
-  local langs
-  if language == nil then
-    langs = keeper.rafts[main_nr].languages
-  else
-    langs = { language }
-  end
-  for _, lang in ipairs(langs) do
-    local otter_nr = keeper.rafts[main_nr].buffers[lang]
-    if otter_nr ~= nil then
-      local code_chunks = all_code_chunks[lang]
-      if code_chunks ~= nil then
-        local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
+    local langs
+    if language == nil then
+      langs = keeper.rafts[main_nr].languages
+    else
+      langs = { language }
+    end
+    for _, lang in ipairs(langs) do
+      local otter_nr = keeper.rafts[main_nr].buffers[lang]
+      if otter_nr ~= nil then
+        local code_chunks = all_code_chunks[lang]
+        if code_chunks ~= nil then
+          local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
 
-        -- create list with empty lines the length of the buffer
-        local ls = fn.empty_lines(nmax)
+          -- create list with empty lines the length of the buffer
+          local ls = fn.empty_lines(nmax)
 
-        -- collect language lines
-        for _, t in ipairs(code_chunks) do
-          local start_index = t.range["from"][1]
-          for i, l in ipairs(t.text) do
-            local index = start_index + i
-            table.remove(ls, index)
-            table.insert(ls, index, l)
+          -- collect language lines
+          for _, t in ipairs(code_chunks) do
+            local start_index = t.range["from"][1]
+            for i, l in ipairs(t.text) do
+              local index = start_index + i
+              table.remove(ls, index)
+              table.insert(ls, index, l)
+            end
           end
-        end
 
-        -- replace language lines
-        api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
-      else
-        -- no code chunks so we wipe the otter buffer
-        api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
+          -- replace language lines
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
+        else
+          -- no code chunks so we wipe the otter buffer
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
+        end
       end
     end
-  end
+  end)
   return true
 end
 

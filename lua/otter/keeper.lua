@@ -388,9 +388,10 @@ keeper.sync_raft = function(main_nr, language)
       return "success"
     end
 
-    vim.print(result)
+    vim.notify_once("[otter.nvim] Hi there! You triggered an LSP request that is routed through otter.nvim while textlock is active. We would like to fix this, but need to find the exact form of the error message to match against. Please be so kind and open an issue with how you triggered this and the error object below:", vim.log.levels.WARN)
+    vim.notify_once(vim.inspect(result), vim.log.levels.WARN)
+
     if result == texlock_err_msg then
-      vim.print("Textlock active, scheduled to sync later")
       vim.schedule(callback)
       return "textlock_active"
     else

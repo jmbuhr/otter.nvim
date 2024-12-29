@@ -19,7 +19,7 @@ M.export_otter_as = keeper.export_otter_as
 
 --- Activate the current buffer by adding and synchronizing
 --- otter buffers.
----@param languages table|nil List of languages to activate. If nil, all available languages will be activated.
+---@param languages string[]|nil List of languages to activate. If nil, all available languages will be activated.
 ---@param completion boolean|nil Enable completion for otter buffers. Default: true
 ---@param diagnostics boolean|nil Enable diagnostics for otter buffers. Default: true
 ---@param tsquery string|nil Explicitly provide a treesitter query. If nil, the injections query for the current filetyepe will be used. See :h treesitter-language-injections.
@@ -49,19 +49,30 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     )
     return
   end
-  keeper.rafts[main_nr] = {}
-  keeper.rafts[main_nr].languages = {}
-  keeper.rafts[main_nr].buffers = {}
-  keeper.rafts[main_nr].paths = {}
-  keeper.rafts[main_nr].otter_nr_to_lang = {}
-  keeper.rafts[main_nr].tsquery = tsquery
-  keeper.rafts[main_nr].query = query
-  keeper.rafts[main_nr].parser = ts.get_parser(main_nr, parsername)
-  keeper.rafts[main_nr].code_chunks = nil
-  keeper.rafts[main_nr].last_changetick = nil
-  keeper.rafts[main_nr].otterls = {}
+  local parser = ts.get_parser(main_nr, parsername)
+  if parser == nil then
+    vim.notify_once("[otter] No parser found for current buffer. Can't activate.", vim.log.levels.WARN, {})
+    return
+  end
+  keeper.rafts[main_nr] = {
+    languages = {},
+    buffers = {},
+    paths = {},
+    otter_nr_to_lang = {},
+    tsquery = tsquery,
+    query = query,
+    parser = parser,
+    code_chunks = nil,
+    last_changetick = nil,
+    otterls = {
+      client_id = nil,
+    },
+    diagnostics_namespaces = {},
+    diagnostics_group = nil,
+  }
 
   local all_code_chunks = keeper.extract_code_chunks(main_nr)
+  ---@type string[]
   local found_languages = {}
   for _, lang in ipairs(languages) do
     if all_code_chunks[lang] ~= nil and lang ~= main_lang then
@@ -192,21 +203,19 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- remove the need to use keybindings for otter ask_ functions
   -- by being our own lsp server-client combo
   local otterclient_id = otterls.start(main_nr, completion)
-  if otterclient_id == nil then
+  if otterclient_id ~= nil then
+    keeper.rafts[main_nr].otterls.client_id = otterclient_id
+  else
     vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
   end
 
-  keeper.rafts[main_nr].otterls.client_id = otterclient_id
 
   -- debugging
   if config.cfg.debug == true then
     -- listen to lsp requests and notifications
     vim.api.nvim_create_autocmd("LspNotify", {
-      callback = function(args)
-        local bufnr = args.buf
-        local client_id = args.data.client_id
-        local method = args.data.method
-        local params = args.data.params
+      ---@param _ {buf: number, data: {client_id: number, method: string, params: any}}
+      callback = function(_)
       end,
     })
 
@@ -237,11 +246,11 @@ M.deactivate = function(completion, diagnostics)
   end
 
   if diagnostics then
-    for _, ns in pairs(keeper.rafts[main_nr].nss) do
+    for _, ns in pairs(keeper.rafts[main_nr].diagnostics_namespaces) do
       vim.diagnostic.reset(ns, main_nr)
     end
     -- remove diagnostics autocommands
-    local id = keeper.rafts[main_nr].dianostics_group
+    local id = keeper.rafts[main_nr].diagnostics_group
     if id ~= nil then
       vim.api.nvim_del_augroup_by_id(id)
     end

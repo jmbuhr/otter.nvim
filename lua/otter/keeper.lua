@@ -11,28 +11,27 @@ local api = vim.api
 local ts = vim.treesitter
 local cfg = require("otter.config").cfg
 
----One raft per main buffer
----stored in the rafts table
----contains the following fields:
----keeper.rafts[main_nr].languages = {}
----keeper.rafts[main_nr].buffers = {}
----keeper.rafts[main_nr].paths = {}
----keeper.rafts[main_nr].otter_nr_to_lang = {}
----keeper.rafts[main_nr].tsquery = tsquery
----keeper.rafts[main_nr].query = query
----keeper.rafts[main_nr].parser = ts.get_parser(main_nr, parsername)
----keeper.rafts[main_nr].code_chunks = nil
----keeper.rafts[main_nr].last_changetick = nil
 ---@class Raft
 ---@field languages table
 ---@field buffers table
 ---@field paths table
----@fieled otter_nr_to_lang table
----@field tsquery string
----@field query string
+---@field otter_nr_to_lang table<integer, string>
+---@field tsquery string?
+---@field query vim.treesitter.Query
+---@field parser vim.treesitter.LanguageTree
+---@field otterls OtterLSInfo
+---@field diagnostics_namespaces integer[]
+---@field diagnostics_group integer?
+---@field last_changetick integer?
+---@field code_chunks table<string, CodeChunk[]>
+
+---@class OtterLSInfo
+---@field client_id integer?
 
 ---@class Rafts
 ---@field [number] Raft
+---One raft per main buffer
+---stored in the rafts table
 keeper.rafts = {}
 
 --- table of languages that can be injected
@@ -77,9 +76,9 @@ end
 
 ---trims the leading whitespace from text
 ---@param text string
----@param bufnr number host buffer number
----@param starting_ln number
----@return string, number
+---@param bufnr integer host buffer number
+---@param starting_ln integer
+---@return string, integer
 local function trim_leading_witespace(text, bufnr, starting_ln)
   if not cfg.handle_leading_whitespace then
     return text, 0
@@ -103,36 +102,32 @@ local function trim_leading_witespace(text, bufnr, starting_ln)
 end
 
 ---@class CodeChunk
----@field range table
+---@field range { from: [integer, integer], to: [integer, integer] }
 ---@field lang string
----@field node any
----@field text string
+---@field node TSNode
+---@field text string[]
 ---@field leading_offset number
 
 ---Extract code chunks from the specified buffer.
 ---Updates M.rafts[main_nr].code_chunks
 ---@param main_nr integer The main buffer number
----@param lang string|nil language to extract. All languages if nil.
----@param exclude_eval_false boolean | nil Exclude code chunks with eval: false
----@param row_start integer|nil Row to start from, inclusive, 1-indexed.
----@param row_end integer|nil Row to end at, inclusive, 1-indexed.
----@return CodeChunk[]
-keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_start, row_end)
+---@param lang string? language to extract. All languages if nil.
+---@param exclude_eval_false boolean? Exclude code chunks with eval: false
+---@param range_start_row integer? Row to start from, inclusive, 1-indexed.
+---@param range_end_row integer? Row to end at, inclusive, 1-indexed.
+---@return table<string, CodeChunk[]>
+keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_start_row, range_end_row)
   local query = keeper.rafts[main_nr].query
   local parser = keeper.rafts[main_nr].parser
   local tree = parser:parse()
   local root = tree[1]:root()
 
+  ---@type table<string, CodeChunk[]>
   local code_chunks = {}
   local lang_capture = nil
   for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
       local name = query.captures[id]
-
-      -- TODO: maybe can be removed with nvim v0.10
-      if type(nodes) ~= "table" then
-        nodes = { nodes }
-      end
 
       for _, node in ipairs(nodes) do
         local text
@@ -150,14 +145,17 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_sta
           if exclude_eval_false and string.find(text, "| *eval: *false") then
             text = ""
           end
-          local row1, col1, row2, col2 = node:range()
-          if row_start ~= nil and row_end ~= nil and ((row1 >= row_end and row_end > 0) or row2 < row_start) then
+
+          ---@type integer
+          ---@diagnostic disable-next-line: assign-type-mismatch
+          local start_row, start_col, end_row, end_col = node:range()
+          if range_start_row ~= nil and range_end_row ~= nil and ((start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row) then
             goto continue
           end
           local leading_offset
-          text, leading_offset = trim_leading_witespace(text, main_nr, row1)
+          text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
           local result = {
-            range = { from = { row1, col1 }, to = { row2, col2 } },
+            range = { from = { start_row, start_col }, to = { end_row, end_col } },
             lang = lang_capture,
             node = node,
             text = fn.lines(text),
@@ -174,11 +172,14 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_sta
           if lang == nil or name == lang then
             text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
             text, _ = fn.strip_wrapping_quotes(text)
-            local row1, col1, row2, col2 = node:range()
+
+            ---@type integer
+            ---@diagnostic disable-next-line: assign-type-mismatch
+            local start_row, start_col, end_row, end_col = node:range()
             local leading_offset
-            text, leading_offset = trim_leading_witespace(text, main_nr, row1)
+            text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
             local result = {
-              range = { from = { row1, col1 }, to = { row2, col2 } },
+              range = { from = { start_row, start_col }, to = { end_row, end_col } },
               lang = name,
               node = node,
               text = fn.lines(text),
@@ -198,13 +199,13 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, row_sta
 end
 
 --- Get the language context of a position
---- @param main_nr integer|nil bufnr of the parent buffer. Default is 0
---- @param position table|nil position (row, col). Default is the current cursor position
---- @return string|nil language nil if no language context is found
---- @return integer|nil start_row
---- @return integer|nil start_col
---- @return integer|nil end_row
---- @return integer|nil end_col
+--- @param main_nr integer? bufnr of the parent buffer. Default is 0
+--- @param position table? position (row, col). Default is the current cursor position
+--- @return string? language nil if no language context is found
+--- @return integer? start_row
+--- @return integer? start_col
+--- @return integer? end_row
+--- @return integer? end_col
 keeper.get_current_language_context = function(main_nr, position)
   main_nr = main_nr or api.nvim_get_current_buf()
   position = position or api.nvim_win_get_cursor(0)
@@ -223,11 +224,6 @@ keeper.get_current_language_context = function(main_nr, position)
   for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
       local name = query.captures[id]
-
-      -- TODO: maybe can be removed with nvim v0.10
-      if type(nodes) ~= "table" then
-        nodes = { nodes }
-      end
 
       for _, node in ipairs(nodes) do
         lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
@@ -356,71 +352,98 @@ keeper.has_raft = function(main_nr)
   return keeper.rafts[main_nr] ~= nil
 end
 
+---@alias SyncResult
+---| '"success"' # The sync was successful
+---| '"no_raft"' # The buffer has no raft
+---| '"textlock_active"' # The buffer is currently locked
+
 --- Synchronize the raft of otters attached to a buffer
 ---@param main_nr integer bufnr of the parent buffer
 ---@param language string|nil only sync one otter buffer matching a language
----@return boolean success true on success, otherwise false
+---@return SyncResult result
 keeper.sync_raft = function(main_nr, language)
   if not keeper.has_raft(main_nr) then
-    return false
+    return "no_raft"
   end
   local all_code_chunks
   local changetick = api.nvim_buf_get_changedtick(main_nr)
   if keeper.rafts[main_nr].last_changetick == changetick then
     all_code_chunks = keeper.rafts[main_nr].code_chunks
-    return true
+    return "success"
   end
 
 
-  -- NOTE: Assumption: if textlock is currently active,
-  -- we can't sync, but those are also the cases
-  -- in which it is not necessary to sync
-  -- and can be delayed until the textlock is released
-  -- the lsp request should still be valid
-
-  keeper.rafts[main_nr]
-  vim.schedule(function()
-    all_code_chunks = keeper.extract_code_chunks(main_nr)
-
-    keeper.rafts[main_nr].last_changetick = changetick
-    keeper.rafts[main_nr].code_chunks = all_code_chunks
-
-    local langs
-    if language == nil then
-      langs = keeper.rafts[main_nr].languages
-    else
-      langs = { language }
+  ---@param callback function
+  ---@return SyncResult
+  ---
+  --- Assumption: If textlock is currently active,
+  --- we can't sync, but those are also the cases
+  --- in which it is not necessary to sync
+  --- and can be delayed until the textlock is released.
+  --- The lsp request should still be valid
+  local function do_with_maybe_texlock(callback)
+    local texlock_err_msg = 'Vim(normal):E5556: API call: E565: Not allowed to change text or change window'
+    local success, result = pcall(callback)
+    if success then
+      return "success"
     end
-    for _, lang in ipairs(langs) do
-      local otter_nr = keeper.rafts[main_nr].buffers[lang]
-      if otter_nr ~= nil then
-        local code_chunks = all_code_chunks[lang]
-        if code_chunks ~= nil then
-          local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
 
-          -- create list with empty lines the length of the buffer
-          local ls = fn.empty_lines(nmax)
+    vim.print(result)
+    if result == texlock_err_msg then
+      vim.print("Textlock active, scheduled to sync later")
+      vim.schedule(callback)
+      return "textlock_active"
+    else
+      error(result)
+    end
+  end
 
-          -- collect language lines
-          for _, t in ipairs(code_chunks) do
-            local start_index = t.range["from"][1]
-            for i, l in ipairs(t.text) do
-              local index = start_index + i
-              table.remove(ls, index)
-              table.insert(ls, index, l)
-            end
+  all_code_chunks = keeper.extract_code_chunks(main_nr)
+
+  keeper.rafts[main_nr].last_changetick = changetick
+  keeper.rafts[main_nr].code_chunks = all_code_chunks
+
+  local result
+  local langs
+  if language == nil then
+    langs = keeper.rafts[main_nr].languages
+  else
+    langs = { language }
+  end
+  for _, lang in ipairs(langs) do
+    local otter_nr = keeper.rafts[main_nr].buffers[lang]
+    if otter_nr ~= nil then
+      local code_chunks = all_code_chunks[lang]
+      if code_chunks ~= nil then
+        local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
+
+        -- create list with empty lines the length of the buffer
+        local ls = fn.empty_lines(nmax)
+
+        -- collect language lines
+        for _, t in ipairs(code_chunks) do
+          local start_index = t.range["from"][1]
+          for i, l in ipairs(t.text) do
+            local index = start_index + i
+            table.remove(ls, index)
+            table.insert(ls, index, l)
           end
-
-          -- replace language lines
-          api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
-        else
-          -- no code chunks so we wipe the otter buffer
-          api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
         end
+
+        -- replace language lines
+        do_with_maybe_texlock(function()
+          result = api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
+        end)
+      else
+        -- no code chunks so we wipe the otter buffer
+        do_with_maybe_texlock(function()
+          result = api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
+        end)
       end
     end
-  end)
-  return true
+  end
+
+  return result
 end
 
 --- Export the raft of otters as files.

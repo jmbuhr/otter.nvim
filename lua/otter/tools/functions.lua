@@ -29,6 +29,9 @@ M.strip_wrapping_quotes = function(s)
   return s, false
 end
 
+---split a string by newlines
+---@param str string
+---@return string[]
 M.lines = function(str)
   local result = {}
   for line in str:gmatch("([^\n]*)\n?") do

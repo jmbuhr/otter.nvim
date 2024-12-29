@@ -17,21 +17,14 @@ otterls.start = function(main_nr, completion)
     name = "otter-ls" .. "[" .. main_nr .. "]",
     capabilities = capabilities,
     cmd = function(dispatchers)
+      local _ = dispatchers
       local members = {
         --- Send a request to the otter buffers and handle the response.
         --- The response can optionally be filtered through a function.
-        ---@param method string lsp request method. One of ms
-        ---@param params table params passed from nvim with the request
-        ---@param handler function function(err, response, ctx, conf)
+        ---@param method vim.lsp.protocol.Method
+        ---@param params table params passed from nvim with the request params are created when vim.lsp.buf.<method> is called and modified here to be used with the otter buffers
+        ---@param handler lsp.Handler function(err, response, ctx) handler is a callback function that should be called with the result depending on the method it is either our custom handler (e.g. for retargeting got-to-definition results) or the default vim.lsp.handlers[method] handler
         ---@param _ function notify_reply_callback function. Not currently used
-        ---
-        -- params are created when vim.lsp.buf.<method> is called
-        -- and modified here to be used with the otter buffers
-        ---
-        --- handler is a callback function that should be called with the result
-        --- depending on the method it is either our custom handler
-        --- (e.g. for retargeting got-to-definition results)
-        --- or the default vim.lsp.handlers[method] handler
         request = function(method, params, handler, _)
           -- handle initialization first
           if method == ms.initialize then
@@ -72,7 +65,7 @@ otterls.start = function(main_nr, completion)
             }
 
             -- default handler for initialize
-            handler(nil, initializeResult)
+            handler(nil, initializeResult, params.context)
             return
           elseif method == ms.shutdown then
             -- TODO: how do we actually stop otter-ls?
@@ -156,14 +149,18 @@ otterls.start = function(main_nr, completion)
           -- send the request to the otter buffer
           -- modification of the response is done by our handler
           -- and then passed on to the default handler or user-defined handler
-          vim.lsp.buf_request(otter_nr, method, params, function(err, result, context, config)
+          vim.lsp.buf_request(otter_nr, method, params, function(err, result, context)
             if handlers[method] ~= nil then
-              err, result, context, config = handlers[method](err, result, context, config)
+              err, result, context = handlers[method](err, result, context)
             end
-            handler(err, result, context, config)
+            handler(err, result, context)
           end)
         end,
+        --- Handle notify events
+        --- @param method vim.lsp.protocol.Method
+        --- @param params table
         notify = function(method, params)
+          local _, _ = method, params
           -- we don't actually notify otter buffers
           -- they get their notifications
           -- via nvim's clients attached to
@@ -176,10 +173,26 @@ otterls.start = function(main_nr, completion)
       return members
     end,
     init_options = {},
-    before_init = function(params, config) end,
-    on_init = function(client, initialize_result) end,
+    ---@param params lsp.ConfigurationParams
+    ---@param config table
+    before_init = function(params, config)
+      local _, _ = params, config
+      -- nothing to be done
+    end,
+    ---@param client vim.lsp.Client
+    ---@param initialize_result lsp.InitializeResult
+    on_init = function(client, initialize_result)
+      local _, _ = client, initialize_result
+      -- nothing to be done
+    end,
     root_dir = require("otter.config").cfg.lsp.root_dir(),
-    on_exit = function(code, signal, client_id) end,
+    ---@param code integer
+    ---@param signal integer
+    ---@param client_id integer
+    on_exit = function(code, signal, client_id)
+      local _, _, _ = code, signal, client_id
+      -- nothing to be done
+    end,
   })
 
   return client_id

@@ -12,9 +12,9 @@ local ts = vim.treesitter
 local cfg = require("otter.config").cfg
 
 ---@class Raft
----@field languages table
----@field buffers table
----@field paths table
+---@field languages string[]
+---@field buffers table<string, integer>
+---@field paths table<string, string>
 ---@field otter_nr_to_lang table<integer, string>
 ---@field tsquery string?
 ---@field query vim.treesitter.Query

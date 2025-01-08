@@ -2,14 +2,27 @@ local M = {}
 
 local api = vim.api
 local ts = vim.treesitter
+
+local config = require("otter.config")
 local extensions = require("otter.tools.extensions")
 local keeper = require("otter.keeper")
 local otterls = require("otter.lsp")
+
 local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
-local config = require("otter.config")
 
 M.setup = function(opts)
+  if M.did_setup then
+    return vim.notify("[otter] otter.nvim is already setup", vim.log.levels.ERROR)
+  end
+  M.did_setup = true
+
+  if vim.fn.has("nvim-0.10.0") ~= 1 then
+    return vim.notify("[otter] otter.nvim requires Neovim >= 0.10.0", vim.log.levels.ERROR)
+  end
+
   config.cfg = vim.tbl_deep_extend("force", config.cfg, opts or {})
+
+  extensions = vim.tbl_deep_extend("force", extensions, config.cfg.extensions or {})
 end
 
 -- expose some functions from the otter keeper directly
@@ -19,10 +32,10 @@ M.export_otter_as = keeper.export_otter_as
 
 --- Activate the current buffer by adding and synchronizing
 --- otter buffers.
----@param languages table|nil List of languages to activate. If nil, all available languages will be activated.
----@param completion boolean|nil Enable completion for otter buffers. Default: true
----@param diagnostics boolean|nil Enable diagnostics for otter buffers. Default: true
----@param tsquery string|nil Explicitly provide a treesitter query. If nil, the injections query for the current filetyepe will be used. See :h treesitter-language-injections.
+---@param languages string[]? List of languages to activate. If nil, all available languages will be activated.
+---@param completion boolean? Enable completion for otter buffers. Default: true
+---@param diagnostics boolean? Enable diagnostics for otter buffers. Default: true
+---@param tsquery string? Explicitly provide a treesitter query. If nil, the injections query for the current filetyepe will be used. See :h treesitter-language-injections.
 M.activate = function(languages, completion, diagnostics, tsquery)
   languages = languages or vim.tbl_keys(require("otter.tools.extensions"))
   completion = completion ~= false
@@ -49,19 +62,31 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     )
     return
   end
-  keeper.rafts[main_nr] = {}
-  keeper.rafts[main_nr].languages = {}
-  keeper.rafts[main_nr].buffers = {}
-  keeper.rafts[main_nr].paths = {}
-  keeper.rafts[main_nr].otter_nr_to_lang = {}
-  keeper.rafts[main_nr].tsquery = tsquery
-  keeper.rafts[main_nr].query = query
-  keeper.rafts[main_nr].parser = ts.get_parser(main_nr, parsername)
-  keeper.rafts[main_nr].code_chunks = nil
-  keeper.rafts[main_nr].last_changetick = nil
-  keeper.rafts[main_nr].otterls = {}
+  local parser = ts.get_parser(main_nr, parsername)
+  if parser == nil then
+    vim.notify_once("[otter] No parser found for current buffer. Can't activate.", vim.log.levels.WARN, {})
+    return
+  end
+  keeper.rafts[main_nr] = {
+    languages = {},
+    buffers = {},
+    paths = {},
+    otter_nr_to_lang = {},
+    tsquery = tsquery,
+    query = query,
+    parser = parser,
+    code_chunks = {},
+    last_changetick = nil,
+    otterls = {
+      client_id = nil,
+    },
+    diagnostics_namespaces = {},
+    diagnostics_group = nil,
+  }
 
   local all_code_chunks = keeper.extract_code_chunks(main_nr)
+
+  ---@type string[]
   local found_languages = {}
   for _, lang in ipairs(languages) do
     if all_code_chunks[lang] ~= nil and lang ~= main_lang then
@@ -70,11 +95,9 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   end
   languages = found_languages
   if #languages == 0 then
-    -- just return quietly until
-    -- TODO: config handling is more robust
-    -- if config.cfg.verbose and config.cfg.verbose.no_code_found then
-    --   vim.notify_once("[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false", vim.log.levels.INFO, {})
-    -- end
+    if config.cfg.verbose and config.cfg.verbose.no_code_found then
+      vim.notify_once("[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false", vim.log.levels.INFO, {})
+    end
     return
   end
 
@@ -151,6 +174,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       end)
     end
 
+    -- or if requested set the filetype
     if config.cfg.buffers.set_filetype then
       api.nvim_set_option_value("filetype", lang, { buf = otter_nr })
     else
@@ -192,21 +216,19 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   -- remove the need to use keybindings for otter ask_ functions
   -- by being our own lsp server-client combo
   local otterclient_id = otterls.start(main_nr, completion)
-  if otterclient_id == nil then
+  if otterclient_id ~= nil then
+    keeper.rafts[main_nr].otterls.client_id = otterclient_id
+  else
     vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
   end
 
-  keeper.rafts[main_nr].otterls.client_id = otterclient_id
 
   -- debugging
   if config.cfg.debug == true then
     -- listen to lsp requests and notifications
     vim.api.nvim_create_autocmd("LspNotify", {
-      callback = function(args)
-        local bufnr = args.buf
-        local client_id = args.data.client_id
-        local method = args.data.method
-        local params = args.data.params
+      ---@param _ {buf: number, data: {client_id: number, method: string, params: any}}
+      callback = function(_)
       end,
     })
 
@@ -237,11 +259,11 @@ M.deactivate = function(completion, diagnostics)
   end
 
   if diagnostics then
-    for _, ns in pairs(keeper.rafts[main_nr].nss) do
+    for _, ns in pairs(keeper.rafts[main_nr].diagnostics_namespaces) do
       vim.diagnostic.reset(ns, main_nr)
     end
     -- remove diagnostics autocommands
-    local id = keeper.rafts[main_nr].dianostics_group
+    local id = keeper.rafts[main_nr].diagnostics_group
     if id ~= nil then
       vim.api.nvim_del_augroup_by_id(id)
     end

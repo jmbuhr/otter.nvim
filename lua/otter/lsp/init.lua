@@ -6,6 +6,11 @@ local fn = require("otter.tools.functions")
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
+local has_blink, blink = pcall(require, 'blink.cmp')
+if has_blink then
+  capabilities = blink.get_lsp_capabilities({}, true)
+end
+
 local otterls = {}
 
 --- @param main_nr integer main buffer
@@ -17,21 +22,14 @@ otterls.start = function(main_nr, completion)
     name = "otter-ls" .. "[" .. main_nr .. "]",
     capabilities = capabilities,
     cmd = function(dispatchers)
+      local _ = dispatchers
       local members = {
         --- Send a request to the otter buffers and handle the response.
         --- The response can optionally be filtered through a function.
-        ---@param method string lsp request method. One of ms
-        ---@param params table params passed from nvim with the request
-        ---@param handler function function(err, response, ctx, conf)
+        ---@param method string one of vim.lsp.protocol.Methods
+        ---@param params table params passed from nvim with the request params are created when vim.lsp.buf.<method> is called and modified here to be used with the otter buffers
+        ---@param handler lsp.Handler function(err, response, ctx) handler is a callback function that should be called with the result depending on the method it is either a user-defined handler (e.g. user's using telescope to list references) or the default vim.lsp.handlers[method] handler
         ---@param _ function notify_reply_callback function. Not currently used
-        ---
-        -- params are created when vim.lsp.buf.<method> is called
-        -- and modified here to be used with the otter buffers
-        ---
-        --- handler is a callback function that should be called with the result
-        --- depending on the method it is either our custom handler
-        --- (e.g. for retargeting got-to-definition results)
-        --- or the default vim.lsp.handlers[method] handler
         request = function(method, params, handler, _)
           -- handle initialization first
           if method == ms.initialize then
@@ -40,6 +38,9 @@ otterls.start = function(main_nr, completion)
               completion_options = {
                 triggerCharacters = { "." },
                 resolveProvider = true,
+                completionItem = {
+                  labelDetailsSupport = true,
+                }
               }
             else
               completion_options = false
@@ -52,7 +53,7 @@ otterls.start = function(main_nr, completion)
                 declarationProvider = true,
                 signatureHelpProvider = {
                   triggerCharacters = { "(", "," },
-                  retriggerCharacters = {},
+                  retriggerCharacters = {}
                 },
                 typeDefinitionProvider = true,
                 renameProvider = true,
@@ -72,20 +73,19 @@ otterls.start = function(main_nr, completion)
             }
 
             -- default handler for initialize
-            handler(nil, initializeResult)
+            handler(nil, initializeResult, params.context)
+            return
+          elseif params == nil then
+            -- can params be nil?
             return
           elseif method == ms.shutdown then
             -- TODO: how do we actually stop otter-ls?
             -- it's just a function in memory,
             -- no external process
+            handler(nil, nil, params.context)
             return
           elseif method == ms.exit then
-            return
-          end
-
-          if params == nil then
-            -- empty params
-            -- nothing to be done
+            handler(nil, nil, params.context)
             return
           end
 
@@ -107,6 +107,7 @@ otterls.start = function(main_nr, completion)
           local has_otter = fn.contains(keeper.rafts[main_nr].languages, lang)
           if not has_otter then
             -- if we don't have an otter for lang, there is nothing to be done
+            handler(nil, nil, params.context)
             return
           end
 
@@ -124,6 +125,7 @@ otterls.start = function(main_nr, completion)
           end
           if not supports_method then
             -- no server attached to the otter buffer supports this method
+            handler(nil, nil, params.context)
             return
           end
 
@@ -131,6 +133,7 @@ otterls.start = function(main_nr, completion)
           local success = keeper.sync_raft(main_nr, lang)
           if not success then
             -- no otter buffer for lang
+            handler(nil, nil, params.context)
             return
           end
 
@@ -156,19 +159,22 @@ otterls.start = function(main_nr, completion)
           -- send the request to the otter buffer
           -- modification of the response is done by our handler
           -- and then passed on to the default handler or user-defined handler
-          vim.lsp.buf_request(otter_nr, method, params, function(err, result, context, config)
+          vim.lsp.buf_request(otter_nr, method, params, function(err, result, ctx)
             if handlers[method] ~= nil then
-              err, result, context, config = handlers[method](err, result, context, config)
+              err, result, ctx = handlers[method](err, result, ctx)
             end
-            handler(err, result, context, config)
+            handler(err, result, ctx)
           end)
         end,
+        --- Handle notify events
+        --- @param method string one of vim.lsp.protocol.Methods
+        --- @param params table
         notify = function(method, params)
+          local _, _ = method, params
           -- we don't actually notify otter buffers
-          -- they get their notifications
+          -- they get their change notifications
           -- via nvim's clients attached to
-          -- the buffers
-          -- when we change their text
+          -- the buffers when we sync their text
         end,
         is_closing = function() end,
         terminate = function() end,
@@ -176,10 +182,26 @@ otterls.start = function(main_nr, completion)
       return members
     end,
     init_options = {},
-    before_init = function(params, config) end,
-    on_init = function(client, initialize_result) end,
+    ---@param params lsp.ConfigurationParams
+    ---@param config table
+    before_init = function(params, config)
+      local _, _ = params, config
+      -- nothing to be done
+    end,
+    ---@param client vim.lsp.Client
+    ---@param initialize_result lsp.InitializeResult
+    on_init = function(client, initialize_result)
+      local _, _ = client, initialize_result
+      -- nothing to be done
+    end,
     root_dir = require("otter.config").cfg.lsp.root_dir(),
-    on_exit = function(code, signal, client_id) end,
+    ---@param code integer
+    ---@param signal integer
+    ---@param client_id integer
+    on_exit = function(code, signal, client_id)
+      local _, _, _ = code, signal, client_id
+      -- nothing to be done
+    end,
   })
 
   return client_id

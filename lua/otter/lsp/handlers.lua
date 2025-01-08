@@ -4,6 +4,7 @@ local fn = require("otter.tools.functions")
 local ms = vim.lsp.protocol.Methods
 local modify_position = require("otter.keeper").modify_position
 
+---@type table<string, lsp.Handler>
 local M = {}
 
 local function filter_one_or_many(response, filter)
@@ -19,11 +20,11 @@ local function filter_one_or_many(response, filter)
 end
 
 --- see e.g.
---- vim.lsp.handlers.hover(_, result, ctx, conf)
+--- vim.lsp.handlers.hover(_, result, ctx)
 ---@param err lsp.ResponseError?
 ---@param response lsp.Hover
 ---@param ctx lsp.HandlerContext
-M[ms.textDocument_hover] = function(err, response, ctx, conf)
+M[ms.textDocument_hover] = function(err, response, ctx)
   if not response then
     -- no response, nothing to do
     return
@@ -33,10 +34,10 @@ M[ms.textDocument_hover] = function(err, response, ctx, conf)
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
 
   -- pass modified response on to the default handler
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
-M[ms.textDocument_inlayHint] = function(err, response, ctx, conf)
+M[ms.textDocument_inlayHint] = function(err, response, ctx)
   if not response then
     return
   end
@@ -44,10 +45,10 @@ M[ms.textDocument_inlayHint] = function(err, response, ctx, conf)
   -- pretend the response is coming from the main buffer
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
 
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
-M[ms.textDocument_definition] = function(err, response, ctx, conf)
+M[ms.textDocument_definition] = function(err, response, ctx)
   if not response then
     return
   end
@@ -66,11 +67,10 @@ M[ms.textDocument_definition] = function(err, response, ctx, conf)
     return res
   end
   response = filter_one_or_many(response, filter)
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
-M[ms.textDocument_documentSymbol] = function(err, response, ctx, conf)
-  conf = conf or {}
+M[ms.textDocument_documentSymbol] = function(err, response, ctx)
   if not response then
     return
   end
@@ -89,10 +89,10 @@ M[ms.textDocument_documentSymbol] = function(err, response, ctx, conf)
   response = filter_one_or_many(response, filter)
 
   ctx.params.textDocument.uri = fn.otterpath_to_path(ctx.params.textDocument.uri)
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
-M[ms.textDocument_typeDefinition] = function(err, response, ctx, conf)
+M[ms.textDocument_typeDefinition] = function(err, response, ctx)
   if not response then
     return
   end
@@ -112,10 +112,10 @@ M[ms.textDocument_typeDefinition] = function(err, response, ctx, conf)
   end
   response = filter_one_or_many(response, filter)
 
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
-M[ms.textDocument_rename] = function(err, response, ctx, conf)
+M[ms.textDocument_rename] = function(err, response, ctx)
   if not response then
     return
   end
@@ -148,10 +148,10 @@ M[ms.textDocument_rename] = function(err, response, ctx, conf)
     end
   end
   response = filter_one_or_many(response, filter)
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
-M[ms.textDocument_references] = function(err, response, ctx, conf)
+M[ms.textDocument_references] = function(err, response, ctx)
   if not response then
     return
   end
@@ -170,10 +170,10 @@ M[ms.textDocument_references] = function(err, response, ctx, conf)
 
   -- change the ctx after the otter buffer has responded
   ctx.params.textDocument.uri = fn.otterpath_to_path(ctx.params.textDocument.uri)
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
-M[ms.textDocument_implementation] = function(err, response, ctx, conf)
+M[ms.textDocument_implementation] = function(err, response, ctx)
   if not response then
     return
   end
@@ -193,10 +193,10 @@ M[ms.textDocument_implementation] = function(err, response, ctx, conf)
   end
   response = filter_one_or_many(response, filter)
 
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
-M[ms.textDocument_declaration] = function(err, response, ctx, conf)
+M[ms.textDocument_declaration] = function(err, response, ctx)
   if not response then
     return
   end
@@ -215,21 +215,38 @@ M[ms.textDocument_declaration] = function(err, response, ctx, conf)
     return res
   end
   response = filter_one_or_many(response, filter)
-  return err, response, ctx, conf
+  return err, response, ctx
 end
 
--- M[ms.textDocument_completion] = function(err, response, ctx, conf)
---   -- this handler doesn't actually get called
---   -- the magic happened before where we modified the request
---   -- I assume nvim-cmp and nvims omnifunc handle the response directly
---   vim.lsp.handlers[ms.textDocument_completion](err, response, ctx, conf)
--- end
---
--- M[ms.completionItem_resolve] = function(err, response, ctx, conf)
---   -- this handler doesn't actually get called
---   -- the magic happened before where we modified the request
---   -- I assume nvim-cmp and nvims omnifunc handle the response directly
---   vim.lsp.handlers[ms.completionItem_resolve](err, response, ctx, conf)
--- end
+--- Modifying textDocument_completion and completionItem_resolve
+--- was not strictly required in the completion handlers tested so far,
+--- but why not.
+--- Might come in handy down the line.
+M[ms.textDocument_completion] = function(err, response, ctx)
+  ctx.params.textDocument.uri = ctx.params.otter.main_uri
+  ctx.bufnr = ctx.params.otter.main_nr
+  -- response.data.uri = ctx.params.otter.main_uri
+  -- response.textDocument.uri = ctx.params.otter.main_uri
+  for _, item in ipairs(response.items) do
+    if item.data ~= nil then
+      item.data.uri = ctx.params.otter.main_uri
+    end
+    -- not needed for now:
+    -- item.position = modify_position(item.position, ctx.params.otter.main_nr)
+  end
+
+  return err, response, ctx
+end
+
+M[ms.completionItem_resolve] = function(err, response, ctx)
+  ctx.params.data.uri = ctx.params.otter.main_uri
+  ctx.params.textDocument.uri = ctx.params.otter.main_uri
+  ctx.bufnr = ctx.params.otter.main_nr
+
+  response.data.uri = ctx.params.otter.main_uri
+  response.textDocument.uri = ctx.params.otter.main_uri
+
+  return err, response, ctx
+end
 
 return M

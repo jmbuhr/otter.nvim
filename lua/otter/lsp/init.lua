@@ -6,6 +6,11 @@ local fn = require("otter.tools.functions")
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
+local has_blink, blink = pcall(require, 'blink.cmp')
+if has_blink then
+  capabilities = blink.get_lsp_capabilities({}, true)
+end
+
 local otterls = {}
 
 --- @param main_nr integer main buffer
@@ -21,11 +26,16 @@ otterls.start = function(main_nr, completion)
       local members = {
         --- Send a request to the otter buffers and handle the response.
         --- The response can optionally be filtered through a function.
-        ---@param method vim.lsp.protocol.Method
+        ---@param method string one of vim.lsp.protocol.Methods
         ---@param params table params passed from nvim with the request params are created when vim.lsp.buf.<method> is called and modified here to be used with the otter buffers
         ---@param handler lsp.Handler function(err, response, ctx) handler is a callback function that should be called with the result depending on the method it is either our custom handler (e.g. for retargeting got-to-definition results) or the default vim.lsp.handlers[method] handler
         ---@param _ function notify_reply_callback function. Not currently used
         request = function(method, params, handler, _)
+
+          if method == ms.textDocument_completion then
+            vim.pritical("completion!")
+          end
+
           -- handle initialization first
           if method == ms.initialize then
             local completion_options
@@ -33,6 +43,9 @@ otterls.start = function(main_nr, completion)
               completion_options = {
                 triggerCharacters = { "." },
                 resolveProvider = true,
+                completionItem = {
+                  labelDetailsSupport = true,
+                }
               }
             else
               completion_options = false
@@ -45,7 +58,7 @@ otterls.start = function(main_nr, completion)
                 declarationProvider = true,
                 signatureHelpProvider = {
                   triggerCharacters = { "(", "," },
-                  retriggerCharacters = {},
+                  retriggerCharacters = {"(", ","}
                 },
                 typeDefinitionProvider = true,
                 renameProvider = true,
@@ -157,7 +170,7 @@ otterls.start = function(main_nr, completion)
           end)
         end,
         --- Handle notify events
-        --- @param method vim.lsp.protocol.Method
+        --- @param method string one of vim.lsp.protocol.Methods
         --- @param params table
         notify = function(method, params)
           local _, _ = method, params

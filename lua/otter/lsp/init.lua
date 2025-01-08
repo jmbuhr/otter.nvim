@@ -75,18 +75,17 @@ otterls.start = function(main_nr, completion)
             -- default handler for initialize
             handler(nil, initializeResult, params.context)
             return
+          elseif params == nil then
+            -- can params be nil?
+            return
           elseif method == ms.shutdown then
             -- TODO: how do we actually stop otter-ls?
             -- it's just a function in memory,
             -- no external process
+            handler(nil, nil, params.context)
             return
           elseif method == ms.exit then
-            return
-          end
-
-          if params == nil then
-            -- empty params
-            -- nothing to be done
+            handler(nil, nil, params.context)
             return
           end
 
@@ -108,6 +107,7 @@ otterls.start = function(main_nr, completion)
           local has_otter = fn.contains(keeper.rafts[main_nr].languages, lang)
           if not has_otter then
             -- if we don't have an otter for lang, there is nothing to be done
+            handler(nil, nil, params.context)
             return
           end
 
@@ -125,6 +125,7 @@ otterls.start = function(main_nr, completion)
           end
           if not supports_method then
             -- no server attached to the otter buffer supports this method
+            handler(nil, nil, params.context)
             return
           end
 
@@ -132,6 +133,7 @@ otterls.start = function(main_nr, completion)
           local success = keeper.sync_raft(main_nr, lang)
           if not success then
             -- no otter buffer for lang
+            handler(nil, nil, params.context)
             return
           end
 
@@ -170,10 +172,9 @@ otterls.start = function(main_nr, completion)
         notify = function(method, params)
           local _, _ = method, params
           -- we don't actually notify otter buffers
-          -- they get their notifications
+          -- they get their change notifications
           -- via nvim's clients attached to
-          -- the buffers
-          -- when we change their text
+          -- the buffers when we sync their text
         end,
         is_closing = function() end,
         terminate = function() end,

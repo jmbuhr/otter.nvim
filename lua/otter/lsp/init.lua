@@ -28,7 +28,7 @@ otterls.start = function(main_nr, completion)
         --- The response can optionally be filtered through a function.
         ---@param method string one of vim.lsp.protocol.Methods
         ---@param params table params passed from nvim with the request params are created when vim.lsp.buf.<method> is called and modified here to be used with the otter buffers
-        ---@param handler lsp.Handler function(err, response, ctx) handler is a callback function that should be called with the result depending on the method it is either our custom handler (e.g. for retargeting got-to-definition results) or the default vim.lsp.handlers[method] handler
+        ---@param handler lsp.Handler function(err, response, ctx) handler is a callback function that should be called with the result depending on the method it is either a user-defined handler (e.g. user's using telescope to list references) or the default vim.lsp.handlers[method] handler
         ---@param _ function notify_reply_callback function. Not currently used
         request = function(method, params, handler, _)
           -- handle initialization first
@@ -53,7 +53,7 @@ otterls.start = function(main_nr, completion)
                 declarationProvider = true,
                 signatureHelpProvider = {
                   triggerCharacters = { "(", "," },
-                  retriggerCharacters = {"(", ","}
+                  retriggerCharacters = {}
                 },
                 typeDefinitionProvider = true,
                 renameProvider = true,
@@ -157,11 +157,11 @@ otterls.start = function(main_nr, completion)
           -- send the request to the otter buffer
           -- modification of the response is done by our handler
           -- and then passed on to the default handler or user-defined handler
-          vim.lsp.buf_request(otter_nr, method, params, function(err, result, context)
+          vim.lsp.buf_request(otter_nr, method, params, function(err, result, ctx)
             if handlers[method] ~= nil then
-              err, result, context = handlers[method](err, result, context)
+              err, result, ctx = handlers[method](err, result, ctx)
             end
-            handler(err, result, context)
+            handler(err, result, ctx)
           end)
         end,
         --- Handle notify events

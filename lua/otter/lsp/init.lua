@@ -31,11 +31,6 @@ otterls.start = function(main_nr, completion)
         ---@param handler lsp.Handler function(err, response, ctx) handler is a callback function that should be called with the result depending on the method it is either our custom handler (e.g. for retargeting got-to-definition results) or the default vim.lsp.handlers[method] handler
         ---@param _ function notify_reply_callback function. Not currently used
         request = function(method, params, handler, _)
-
-          if method == ms.textDocument_completion then
-            vim.pritical("completion!")
-          end
-
           -- handle initialization first
           if method == ms.initialize then
             local completion_options

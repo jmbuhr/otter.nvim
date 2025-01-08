@@ -353,9 +353,10 @@ keeper.has_raft = function(main_nr)
 end
 
 ---@alias SyncResult
----| '"success"' # The sync was successful
----| '"no_raft"' # The buffer has no raft
----| '"textlock_active"' # The buffer is currently locked
+---| '"success"' -- The sync was successful
+---| '"no_raft"' -- The buffer has no raft
+---| '"textlock_active"' -- The buffer is currently locked
+---| '"error"' -- Some other error occurred
 
 --- Synchronize the raft of otters attached to a buffer
 ---@param main_nr integer bufnr of the parent buffer
@@ -396,6 +397,7 @@ keeper.sync_raft = function(main_nr, language)
       return "textlock_active"
     else
       error(result)
+      return "error"
     end
   end
 
@@ -432,13 +434,13 @@ keeper.sync_raft = function(main_nr, language)
         end
 
         -- replace language lines
-        do_with_maybe_texlock(function()
-          result = api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
+        result = do_with_maybe_texlock(function()
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
         end)
       else
         -- no code chunks so we wipe the otter buffer
-        do_with_maybe_texlock(function()
-          result = api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
+        result = do_with_maybe_texlock(function()
+          api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
         end)
       end
     end

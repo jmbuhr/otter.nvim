@@ -1,11 +1,13 @@
--- custom handlers for otter-ls where the default handlers are not sufficient
--- docs: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
+--- Intermediate handlers for otter-ls where the response needs to be modified
+--- before being passed on to the default handler
+--- docs: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
+---@type table<string, lsp.Handler>
+local M = {}
+
 local fn = require("otter.tools.functions")
 local ms = vim.lsp.protocol.Methods
 local modify_position = require("otter.keeper").modify_position
 
----@type table<string, lsp.Handler>
-local M = {}
 
 local function filter_one_or_many(response, filter)
   if #response == 0 then
@@ -218,7 +220,7 @@ M[ms.textDocument_declaration] = function(err, response, ctx)
   return err, response, ctx
 end
 
---- Modifying textDocument_completion and completionItem_resolve
+--- Modifying textDocument_completion
 --- was not strictly required in the completion handlers tested so far,
 --- but why not.
 --- Might come in handy down the line.
@@ -238,17 +240,20 @@ M[ms.textDocument_completion] = function(err, response, ctx)
   return err, response, ctx
 end
 
+--- Modifying completionItem_resolve
+--- was not strictly required in the completion handlers tested so far,
+--- even without it e.g. auto imports are done in the main buffer already
 M[ms.completionItem_resolve] = function(err, response, ctx)
---   if ctx.params.data ~= nil then
---     ctx.params.data.uri = ctx.params.otter.main_uri
---   end
---   ctx.params.textDocument.uri = ctx.params.otter.main_uri
---   ctx.bufnr = ctx.params.otter.main_nr
---
---   if response.data ~= nil then
---     response.data.uri = ctx.params.otter.main_uri
---   end
---   response.textDocument.uri = ctx.params.otter.main_uri
+  -- if ctx.params.data ~= nil then
+  --   ctx.params.data.uri = ctx.params.otter.main_uri
+  -- end
+  -- ctx.params.textDocument.uri = ctx.params.otter.main_uri
+  -- ctx.bufnr = ctx.params.otter.main_nr
+  --
+  -- if response.data ~= nil then
+  --   response.data.uri = ctx.params.otter.main_uri
+  -- end
+  -- response.textDocument.uri = ctx.params.otter.main_uri
 
   return err, response, ctx
 end

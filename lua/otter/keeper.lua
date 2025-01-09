@@ -200,7 +200,7 @@ end
 
 --- Get the language context of a position
 --- @param main_nr integer? bufnr of the parent buffer. Default is 0
---- @param position table? position (row, col). Default is the current cursor position
+--- @param position table? position (row, col). Default is the current cursor position (1,0)-based
 --- @return string? language nil if no language context is found
 --- @return integer? start_row
 --- @return integer? start_col

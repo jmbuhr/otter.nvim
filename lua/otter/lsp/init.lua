@@ -11,6 +11,12 @@ if has_blink then
   capabilities = blink.get_lsp_capabilities({}, true)
 end
 
+---@class OtterParams
+---@field lang string?
+---@field main_nr integer?
+---@field main_uri string?
+---@field otter_uri string?
+
 local otterls = {}
 
 --- @param main_nr integer main buffer
@@ -91,6 +97,7 @@ otterls.start = function(main_nr, completion)
 
           -- container to pass additional information to otter and the handlers
           if params.otter == nil then
+            ---@type OtterParams
             params.otter = {}
           end
 
@@ -100,18 +107,25 @@ otterls.start = function(main_nr, completion)
           -- lang can be explicitly passed to otter-ls
           local lang = params.otter.lang
           if lang == nil then
-            -- otherwise it is determined by cursor position
-            lang, _, _, _, _ = keeper.get_current_language_context(main_nr)
+            -- otherwise it is determined by position params
+            -- or cursor position if those are absent
+            local pos = nil
+            if params.position ~= nil then
+               pos = {
+                params.position.line + 1,
+                params.position.character,
+              }
+            end
+            lang, _, _, _, _ = keeper.get_current_language_context(main_nr, pos)
           end
 
-          local has_otter = fn.contains(keeper.rafts[main_nr].languages, lang)
-          if not has_otter then
+          local otter_nr = keeper.rafts[main_nr].buffers[lang]
+          if otter_nr == nil then
             -- if we don't have an otter for lang, there is nothing to be done
             handler(nil, nil, params.context)
             return
           end
 
-          local otter_nr = keeper.rafts[main_nr].buffers[lang]
           local otter_uri = vim.uri_from_bufnr(otter_nr)
 
           -- get clients attached to otter buffer

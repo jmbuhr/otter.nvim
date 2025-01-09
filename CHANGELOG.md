@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.6.0](https://github.com/jmbuhr/otter.nvim/compare/v2.5.1...v2.6.0) (2025-01-09)
+
+
+### Features
+
+* extened blink capabilites ([4f53b89](https://github.com/jmbuhr/otter.nvim/commit/4f53b8944017a937d2cfc9b50794f42674b47cab))
+
+
+### Bug Fixes
+
+* always call the handler for a request response even if the result ([4f53b89](https://github.com/jmbuhr/otter.nvim/commit/4f53b8944017a937d2cfc9b50794f42674b47cab))
+* document config and make sure config is required first in init ([4f53b89](https://github.com/jmbuhr/otter.nvim/commit/4f53b8944017a937d2cfc9b50794f42674b47cab))
+* textlock ([#195](https://github.com/jmbuhr/otter.nvim/issues/195)) ([4f53b89](https://github.com/jmbuhr/otter.nvim/commit/4f53b8944017a937d2cfc9b50794f42674b47cab))
+
 ## [2.5.1](https://github.com/jmbuhr/otter.nvim/compare/v2.5.0...v2.5.1) (2024-12-17)
 
 

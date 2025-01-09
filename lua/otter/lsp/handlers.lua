@@ -223,28 +223,32 @@ end
 --- but why not.
 --- Might come in handy down the line.
 M[ms.textDocument_completion] = function(err, response, ctx)
-  ctx.params.textDocument.uri = ctx.params.otter.main_uri
-  ctx.bufnr = ctx.params.otter.main_nr
-  -- response.data.uri = ctx.params.otter.main_uri
-  -- response.textDocument.uri = ctx.params.otter.main_uri
-  for _, item in ipairs(response.items) do
-    if item.data ~= nil then
-      item.data.uri = ctx.params.otter.main_uri
-    end
-    -- not needed for now:
-    -- item.position = modify_position(item.position, ctx.params.otter.main_nr)
-  end
+  -- ctx.params.textDocument.uri = ctx.params.otter.main_uri
+  -- ctx.bufnr = ctx.params.otter.main_nr
+  -- -- response.data.uri = ctx.params.otter.main_uri
+  -- -- response.textDocument.uri = ctx.params.otter.main_uri
+  -- for _, item in ipairs(response.items) do
+  --   if item.data ~= nil then
+  --     item.data.uri = ctx.params.otter.main_uri
+  --   end
+  --   -- not needed for now:
+  --   -- item.position = modify_position(item.position, ctx.params.otter.main_nr)
+  -- end
 
   return err, response, ctx
 end
 
 M[ms.completionItem_resolve] = function(err, response, ctx)
-  ctx.params.data.uri = ctx.params.otter.main_uri
-  ctx.params.textDocument.uri = ctx.params.otter.main_uri
-  ctx.bufnr = ctx.params.otter.main_nr
-
-  response.data.uri = ctx.params.otter.main_uri
-  response.textDocument.uri = ctx.params.otter.main_uri
+--   if ctx.params.data ~= nil then
+--     ctx.params.data.uri = ctx.params.otter.main_uri
+--   end
+--   ctx.params.textDocument.uri = ctx.params.otter.main_uri
+--   ctx.bufnr = ctx.params.otter.main_nr
+--
+--   if response.data ~= nil then
+--     response.data.uri = ctx.params.otter.main_uri
+--   end
+--   response.textDocument.uri = ctx.params.otter.main_uri
 
   return err, response, ctx
 end

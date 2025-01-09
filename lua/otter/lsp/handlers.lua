@@ -6,8 +6,8 @@ local M = {}
 
 local fn = require("otter.tools.functions")
 local ms = vim.lsp.protocol.Methods
-local modify_position = require("otter.keeper").modify_position
-
+local keeper = require("otter.keeper")
+local modify_position = keeper.modify_position
 
 local function filter_one_or_many(response, filter)
   if #response == 0 then
@@ -225,17 +225,13 @@ end
 --- but why not.
 --- Might come in handy down the line.
 M[ms.textDocument_completion] = function(err, response, ctx)
-  -- ctx.params.textDocument.uri = ctx.params.otter.main_uri
-  -- ctx.bufnr = ctx.params.otter.main_nr
-  -- -- response.data.uri = ctx.params.otter.main_uri
-  -- -- response.textDocument.uri = ctx.params.otter.main_uri
-  -- for _, item in ipairs(response.items) do
-  --   if item.data ~= nil then
-  --     item.data.uri = ctx.params.otter.main_uri
-  --   end
-  --   -- not needed for now:
-  --   -- item.position = modify_position(item.position, ctx.params.otter.main_nr)
-  -- end
+  ctx.params.textDocument.uri = ctx.params.otter.main_uri
+  ctx.bufnr = ctx.params.otter.main_nr
+  for _, item in ipairs(response.items) do
+    if item.data ~= nil then
+      item.data.uri = ctx.params.otter.main_uri
+    end
+  end
 
   return err, response, ctx
 end
@@ -244,16 +240,32 @@ end
 --- was not strictly required in the completion handlers tested so far,
 --- even without it e.g. auto imports are done in the main buffer already
 M[ms.completionItem_resolve] = function(err, response, ctx)
-  -- if ctx.params.data ~= nil then
-  --   ctx.params.data.uri = ctx.params.otter.main_uri
-  -- end
-  -- ctx.params.textDocument.uri = ctx.params.otter.main_uri
-  -- ctx.bufnr = ctx.params.otter.main_nr
-  --
-  -- if response.data ~= nil then
-  --   response.data.uri = ctx.params.otter.main_uri
-  -- end
-  -- response.textDocument.uri = ctx.params.otter.main_uri
+  if ctx.params.data ~= nil then
+    ctx.params.data.uri = ctx.params.otter.main_uri
+  end
+  ctx.params.textDocument.uri = ctx.params.otter.main_uri
+  ctx.bufnr = ctx.params.otter.main_nr
+
+  if response == nil then
+    return err, response, ctx
+  end
+  if response.data ~= nil then
+    response.data.uri = ctx.params.otter.main_uri
+    response.data.offset = response.data.offset + keeper.get_leading_offset(response.data.line, ctx.params.otter.main_nr)
+  end
+
+  if response.textEdit ~= nil then
+    if response.textEdit.range ~= nil then
+      modify_position(response.textEdit, ctx.params.otter.main_nr)
+    end
+    if response.textEdit.insert ~= nil then
+      modify_position(response.textEdit, ctx.params.otter.main_nr)
+    end
+    if response.textEdit.replace ~= nil then
+      modify_position(response.textEdit, ctx.params.otter.main_nr)
+    end
+  end
+  response.textDocument.uri = ctx.params.otter.main_uri
 
   return err, response, ctx
 end

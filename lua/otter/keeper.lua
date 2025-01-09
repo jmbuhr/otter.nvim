@@ -77,9 +77,9 @@ end
 ---trims the leading whitespace from text
 ---@param text string
 ---@param bufnr integer host buffer number
----@param starting_ln integer
+---@param row_start integer 0-based row number
 ---@return string, integer
-local function trim_leading_witespace(text, bufnr, starting_ln)
+local function trim_leading_witespace(text, bufnr, row_start)
   if not cfg.handle_leading_whitespace then
     return text, 0
   end
@@ -90,7 +90,7 @@ local function trim_leading_witespace(text, bufnr, starting_ln)
   if #split == 0 then
     return text, 0
   end
-  local first_line = vim.api.nvim_buf_get_lines(bufnr, starting_ln, starting_ln + 1, false)
+  local first_line = vim.api.nvim_buf_get_lines(bufnr, row_start, row_start + 1, false)
   local leading = first_line[1]:match("^%s+")
   if not leading then
     return text, 0
@@ -102,11 +102,11 @@ local function trim_leading_witespace(text, bufnr, starting_ln)
 end
 
 ---@class CodeChunk
----@field range { from: [integer, integer], to: [integer, integer] }
+---@field range { from: [integer, integer], to: [integer, integer]  } 0-indexed, (row, col)
 ---@field lang string
 ---@field node TSNode
 ---@field text string[]
----@field leading_offset number
+---@field leading_offset integer
 
 ---Extract code chunks from the specified buffer.
 ---Updates M.rafts[main_nr].code_chunks
@@ -154,6 +154,7 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
           end
           local leading_offset
           text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
+          ---@type CodeChunk
           local result = {
             range = { from = { start_row, start_col }, to = { end_row, end_col } },
             lang = lang_capture,
@@ -178,6 +179,7 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
             local start_row, start_col, end_row, end_col = node:range()
             local leading_offset
             text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
+            ---@type CodeChunk
             local result = {
               range = { from = { start_row, start_col }, to = { end_row, end_col } },
               lang = name,
@@ -297,7 +299,7 @@ keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offse
   local offset = known_offset
 
   -- there are apparently a lot of ranges that different language servers can use
-  local ranges = { "range", "targetSelectionRange", "targetRange", "originSelectionRange" }
+  local ranges = { "range", "insert", "replace", "targetSelectionRange", "targetRange", "originSelectionRange" }
   for _, range in ipairs(ranges) do
     if obj[range] then
       local start = obj[range].start

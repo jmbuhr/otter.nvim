@@ -9,7 +9,10 @@ local extensions = require("otter.tools.extensions")
 local fn = require("otter.tools.functions")
 local api = vim.api
 local ts = vim.treesitter
-local cfg = require("otter.config").cfg
+
+local function min(a, b)
+  return a < b and a or b
+end
 
 ---@class Raft
 ---@field languages string[]
@@ -74,36 +77,56 @@ local function determine_language(main_nr, name, node, metadata, current_languag
   end
 end
 
----trims the leading whitespace from text
----@param text string
----@param bufnr integer host buffer number
----@param row_start integer 0-based row number
----@return string, integer
-local function trim_leading_witespace(text, bufnr, row_start)
-  if not cfg.handle_leading_whitespace then
-    return text, 0
+
+---Trims the leading whitespace from the lines of a code chunk
+---and return the the leading offset, modifying the lines the range
+---by after removing empty lines at the start and end
+---and adjusting the start_row and end_row accordingly
+---@param lines string[]
+---@param range CodeRange
+---@return integer
+local function trim_leading_witespace(lines, range)
+  -- if the first line (and/or last line) is empty or only whitespace, remove it
+  -- and adjust the start_row (and/or end_row) accordingly
+  if lines[1]:match("^%s*$") then
+    table.remove(lines, 1)
+    range.from[1] = range.from[1] + 1
+  end
+  if lines[#lines]:match("^%s*$") then
+    table.remove(lines, #lines)
+    range.to[1] = range.to[1] - 1
   end
 
   -- Assume the first line is least indented
   -- the first line in the capture doesn't have its leading indent, so we grab from the buffer
-  local split = vim.split(text, "\n", { trimempty = false })
-  if #split == 0 then
-    return text, 0
-  end
-  local first_line = vim.api.nvim_buf_get_lines(bufnr, row_start, row_start + 1, false)
-  vim.print(first_line)
-  local leading = first_line[1]:match("^%s+")
+  local first_line = lines[1]
+  local leading = first_line:match("^%s+")
   if not leading then
-    return text, 0
+    range.from[2] = 0
+    return 0
   end
-  for i, line in ipairs(split) do
-    split[i] = line:gsub("^" .. leading, "")
+  for i, line in ipairs(lines) do
+    local line_prefix = line:match("^%s+")
+    if line_prefix then
+      local offset =  min(#leading, #line_prefix)
+      lines[i] = line:sub(offset + 1)
+    end
   end
-  return table.concat(split, "\n"), #leading
+  range.from[2] = #leading
+  return #leading
 end
 
 
 ---@alias CodeRange { from: [integer, integer], to: [integer, integer] } 0-indexed (row, col) ranges
+
+
+---Convert a treesitter node to a CodeRange
+---@param node TSNode
+---@return CodeRange
+local range_from_node = function(node)
+  local start_row, start_col, end_row, end_col = node:range()
+  return { from = { start_row, start_col }, to = { end_row, end_col } }
+end
 
 ---@class CodeChunk
 ---@field range CodeRange Range of the code chunk (from (row, col), to (row, col))
@@ -128,6 +151,7 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
 
   ---@type table<string, CodeChunk[]>
   local code_chunks = {}
+  ---@type string?
   local lang_capture = nil
   for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
@@ -149,24 +173,18 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
           if exclude_eval_false and string.find(text, "| *eval: *false") then
             text = ""
           end
-
-          ---@type integer
-          ---@diagnostic disable-next-line: assign-type-mismatch
-          local start_row, start_col, end_row, end_col = node:range()
-          if range_start_row ~= nil and range_end_row ~= nil and ((start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row) then
+          local range = range_from_node(node)
+          if range_start_row ~= nil and range_end_row ~= nil and ((range.from[1] >= range_end_row and range_end_row > 0) or range.to[1] < range_start_row) then
             goto continue
           end
-          local leading_offset
-          local t = fn.lines(text)
-          vim.print(start_row, end_row)
-          vim.print(t)
-          text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
+          local lines = fn.lines(text)
+          local leading_offset = trim_leading_witespace(lines, range)
           ---@type CodeChunk
           local result = {
-            range = { from = { start_row, start_col }, to = { end_row, end_col } },
+            range = range,
             lang = lang_capture,
             node = node,
-            text = fn.lines(text),
+            text = lines,
             leading_offset = leading_offset,
           }
           if code_chunks[lang_capture] == nil then
@@ -180,18 +198,15 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
           if lang == nil or name == lang then
             text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
             text, _ = fn.strip_wrapping_quotes(text)
-
-            ---@type integer
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            local start_row, start_col, end_row, end_col = node:range()
-            local leading_offset
-            text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
+            local range = range_from_node(node)
+            local lines = fn.lines(text)
+            local leading_offset = trim_leading_witespace(lines, range)
             ---@type CodeChunk
             local result = {
-              range = { from = { start_row, start_col }, to = { end_row, end_col } },
+              range = range,
               lang = name,
               node = node,
-              text = fn.lines(text),
+              text = lines,
               leading_offset = leading_offset,
             }
             if code_chunks[name] == nil then
@@ -254,13 +269,11 @@ keeper.get_current_language_context = function(main_nr, position)
         end
 
         if language then
-          if cfg.handle_leading_whitespace then
-            local buf = keeper.rafts[main_nr].buffers[language]
-            if buf then
-              local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
-              if lines[1] then
-                end_col = #lines[1]
-              end
+          local buf = keeper.rafts[main_nr].buffers[language]
+          if buf then
+            local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
+            if lines[1] then
+              end_col = #lines[1]
             end
           end
           return language, start_row, start_col, end_row, end_col
@@ -273,13 +286,12 @@ end
 
 ---find the leading_offset of the given line number, and buffer number. Returns 0 if the line number
 ---isn't in a chunk.
----@param line_nr number
----@param main_nr number
+---@param line_nr integer
+---@param main_nr integer
 keeper.get_leading_offset = function(line_nr, main_nr)
-  if not cfg.handle_leading_whitespace then
+  if line_nr == nil or main_nr == nil then
     return 0
   end
-
   local lang_chunks = keeper.rafts[main_nr].code_chunks
   for _, chunks in pairs(lang_chunks) do
     for _, chunk in ipairs(chunks) do
@@ -292,29 +304,27 @@ keeper.get_leading_offset = function(line_nr, main_nr)
 end
 
 ---adjusts IN PLACE the position to include the start and end
----@param obj table
----@param main_nr number
----@param invert boolean?
+---@param obj table request params or response table
+---@param main_nr integer bufnr of the parent buffer
+---@param isrequest boolean? is this in a request we are modifying? As opposed to a response from the server
 ---@param exclude_end boolean?
----@param known_offset number?
-keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
-  if not cfg.handle_leading_whitespace or known_offset == 0 then
-    return
-  end
-
-  local sign = invert and -1 or 1
+---@param known_offset integer?
+keeper.modify_position = function(obj, main_nr, isrequest, exclude_end, known_offset)
+  -- for a request we need to subtract the offset, so the sign is negative
+  -- for the response we need to add the offset back in, so the sign is positive
+  local sign = isrequest and -1 or 1
+  exclude_end = exclude_end or false
   local offset = known_offset
 
-  -- there are apparently a lot of ranges that different language servers can use
   local ranges = { "range", "insert", "replace", "targetSelectionRange", "targetRange", "originSelectionRange" }
-  for _, range in ipairs(ranges) do
-    if obj[range] then
-      local start = obj[range].start
-      local end_ = obj[range]["end"]
+  for _, key in ipairs(ranges) do
+    if obj[key] then
+      local start = obj[key].start
+      local end_ = obj[key]["end"]
       offset = offset or keeper.get_leading_offset(start.line, main_nr) * sign
-      obj[range].start.character = start.character + offset
+      obj[key].start.character = start.character + offset
       if not exclude_end then
-        obj[range]["end"].character = end_.character + offset
+        obj[key]["end"].character = end_.character + offset
       end
     end
   end
@@ -329,7 +339,7 @@ keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offse
     for _, change in ipairs(obj.documentChanges) do
       if change.edits then
         for _, edit in ipairs(change.edits) do
-          keeper.modify_position(edit, main_nr, invert, exclude_end, offset)
+          keeper.modify_position(edit, main_nr, isrequest, exclude_end, offset)
         end
       end
     end
@@ -338,7 +348,7 @@ keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offse
   if obj.changes then
     for _, change in pairs(obj.changes) do
       for _, edit in ipairs(change) do
-        keeper.modify_position(edit, main_nr, invert, exclude_end, offset)
+        keeper.modify_position(edit, main_nr, isrequest, exclude_end, offset)
       end
     end
   end
@@ -353,6 +363,7 @@ keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offse
     obj.newText = string.gsub(obj.newText, "(\n)([^\n])", "%1" .. str .. "%2")
     obj.newText = string.gsub(obj.newText, "\n$", "\n" .. str) -- match a potential newline at the end
   end
+
 end
 
 ---@param main_nr integer bufnr of the parent buffer
@@ -382,10 +393,8 @@ keeper.sync_raft = function(main_nr, language)
     return "success"
   end
 
-
   ---@param callback function
   ---@return SyncResult
-  ---
   --- Assumption: If textlock is currently active,
   --- we can't sync, but those are also the cases
   --- in which it is not necessary to sync
@@ -398,7 +407,9 @@ keeper.sync_raft = function(main_nr, language)
       return "success"
     end
 
-    vim.notify_once("[otter.nvim] Hi there! You triggered an LSP request that is routed through otter.nvim while textlock is active. We would like to fix this, but need to find the exact form of the error message to match against. Please be so kind and open an issue with how you triggered this and the error object below:", vim.log.levels.WARN)
+    vim.notify_once(
+      "[otter.nvim] Hi there! You triggered an LSP request that is routed through otter.nvim while textlock is active. We would like to fix this, but need to find the exact form of the error message to match against. Please be so kind and open an issue with how you triggered this and the error object below:",
+      vim.log.levels.WARN)
     vim.notify_once(vim.inspect(result), vim.log.levels.WARN)
 
     if result == texlock_err_msg then
@@ -427,18 +438,17 @@ keeper.sync_raft = function(main_nr, language)
     if otter_nr ~= nil then
       local code_chunks = all_code_chunks[lang]
       if code_chunks ~= nil then
-        local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
-
         -- create list with empty lines the length of the buffer
+        local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
         local ls = fn.empty_lines(nmax)
 
         -- collect language lines
-        for _, t in ipairs(code_chunks) do
-          local start_index = t.range["from"][1]
-          for i, l in ipairs(t.text) do
-            local index = start_index + i
-            table.remove(ls, index)
-            table.insert(ls, index, l)
+        for _, code in ipairs(code_chunks) do
+          local start_row = code.range.from[1]
+          for i, l in ipairs(code.text) do
+            -- i starts at 1, start_row from the range starts at 0
+            -- so it balances out to the line number
+            ls[start_row + i] = l
           end
         end
 
@@ -447,7 +457,7 @@ keeper.sync_raft = function(main_nr, language)
           api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
         end)
       else
-        -- no code chunks so we wipe the otter buffer
+        -- no code chunks, so we wipe the otter buffer
         result = do_with_maybe_texlock(function()
           api.nvim_buf_set_lines(otter_nr, 0, -1, false, {})
         end)

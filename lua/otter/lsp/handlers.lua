@@ -240,18 +240,42 @@ end
 --- was not strictly required in the completion handlers tested so far,
 --- even without it e.g. auto imports are done in the main buffer already
 M[ms.completionItem_resolve] = function(err, response, ctx)
+  if response == nil then
+    return err, response, ctx
+  end
+
   if ctx.params.data ~= nil then
     ctx.params.data.uri = ctx.params.otter.main_uri
   end
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
   ctx.bufnr = ctx.params.otter.main_nr
 
-  if response == nil then
-    return err, response, ctx
+  ---blink.cmp modifies the context of the completionItem/resolve handler
+  ---and adds those fields to it.
+  if ctx.params.textEdit ~= nil then
+    if ctx.params.textEdit.range ~= nil then
+      modify_position(ctx.params.textEdit, ctx.params.otter.main_nr)
+    end
+    if ctx.params.textEdit.insert ~= nil then
+      modify_position(ctx.params.textEdit, ctx.params.otter.main_nr)
+    end
+    if ctx.params.textEdit.replace ~= nil then
+      modify_position(ctx.params.textEdit, ctx.params.otter.main_nr)
+    end
   end
+
+  if response.textDocument ~= nil then
+    response.textDocument.uri = ctx.params.otter.main_uri
+  end
+
   if response.data ~= nil then
-    response.data.uri = ctx.params.otter.main_uri
-    response.data.offset = response.data.offset + keeper.get_leading_offset(response.data.line, ctx.params.otter.main_nr)
+    if response.data.file ~= nil then
+      response.data.file = ctx.params.otter.main_uri:gsub("file://", "")
+    end
+    if response.data.offset ~= nil then
+      response.data.offset = response.data.offset +
+      keeper.get_leading_offset(response.data.line, ctx.params.otter.main_nr)
+    end
   end
 
   if response.textEdit ~= nil then

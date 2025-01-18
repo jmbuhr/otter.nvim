@@ -18,6 +18,7 @@ x = 1
 y = "hello"
 print("hello world")
 y.lower()
+print()
 ```
 
 <html>
@@ -47,11 +48,17 @@ console.log('hello world')
 
 ```{python}
 def hello():
-    print("hello world")
+  print("hello world")
+  print('test')
+  import numpy as np
+  x = np.zeros(10)
+  y = x**2
+  y.mean()
+  return x
 ```
 
 ```{python}
-hello()
+x = hello()
 ```
 
 

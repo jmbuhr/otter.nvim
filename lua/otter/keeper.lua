@@ -91,6 +91,7 @@ local function trim_leading_witespace(text, bufnr, row_start)
     return text, 0
   end
   local first_line = vim.api.nvim_buf_get_lines(bufnr, row_start, row_start + 1, false)
+  vim.print(first_line)
   local leading = first_line[1]:match("^%s+")
   if not leading then
     return text, 0
@@ -101,12 +102,15 @@ local function trim_leading_witespace(text, bufnr, row_start)
   return table.concat(split, "\n"), #leading
 end
 
+
+---@alias CodeRange { from: [integer, integer], to: [integer, integer] } 0-indexed (row, col) ranges
+
 ---@class CodeChunk
----@field range { from: [integer, integer], to: [integer, integer]  } 0-indexed, (row, col)
----@field lang string
----@field node TSNode
----@field text string[]
----@field leading_offset integer
+---@field range CodeRange Range of the code chunk (from (row, col), to (row, col))
+---@field lang string Language of the code chunk
+---@field node TSNode Treesitter node
+---@field text string[] Text content
+---@field leading_offset integer Indentation at the start of the code chunk. Should be for the first line of code (not a surrounding capture)
 
 ---Extract code chunks from the specified buffer.
 ---Updates M.rafts[main_nr].code_chunks
@@ -153,6 +157,9 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
             goto continue
           end
           local leading_offset
+          local t = fn.lines(text)
+          vim.print(start_row, end_row)
+          vim.print(t)
           text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
           ---@type CodeChunk
           local result = {

@@ -96,7 +96,9 @@ M.activate = function(languages, completion, diagnostics, tsquery)
   languages = found_languages
   if #languages == 0 then
     if config.cfg.verbose and config.cfg.verbose.no_code_found then
-      vim.notify_once("[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false", vim.log.levels.INFO, {})
+      vim.notify_once(
+      "[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false",
+        vim.log.levels.INFO, {})
     end
     return
   end
@@ -235,11 +237,13 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     vim.api.nvim_create_autocmd("LspRequest", {
       callback = function(args)
         local bufnr = args.buf
+        if args.data == nil then
+          return
+        end
         local client_id = args.data.client_id
         local method = args.data.method
         local request = args.data.request
-        vim.print(bufnr .. "[" .. client_id .. "]" .. ": " .. method)
-        vim.print(request)
+        vim.print(bufnr, client_id, method, request)
       end,
     })
   end

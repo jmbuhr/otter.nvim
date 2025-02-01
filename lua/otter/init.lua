@@ -156,7 +156,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
           callback = function(_, _)
             if api.nvim_buf_is_loaded(otter_nr) then
               api.nvim_buf_call(otter_nr, function()
-                vim.cmd("write! " .. otter_path)
+                vim.cmd("silent write! " .. otter_path)
               end)
             end
           end,
@@ -185,7 +185,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       -- and also write out once before lsps can complain
       local otter_path = keeper.rafts[main_nr].paths[lang]
       api.nvim_buf_call(otter_nr, function()
-        vim.cmd("write! " .. otter_path)
+        vim.cmd("silent write! " .. otter_path)
       end)
     end
 

@@ -227,6 +227,9 @@ end
 M[ms.textDocument_completion] = function(err, response, ctx)
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
   ctx.bufnr = ctx.params.otter.main_nr
+  if response.items == nil then
+    return err, response, ctx
+  end
   for _, item in ipairs(response.items) do
     if item.data ~= nil then
       item.data.uri = ctx.params.otter.main_uri

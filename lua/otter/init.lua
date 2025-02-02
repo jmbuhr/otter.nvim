@@ -123,16 +123,31 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       table.insert(keeper.rafts[main_nr].languages, lang)
 
       if config.cfg.buffers.write_to_disk then
+        -- closure to clean up this otter buffer and file
+        local cleanup = function(ev)
+          if api.nvim_buf_is_loaded(otter_nr) then
+            api.nvim_buf_delete(otter_nr, { force = true })
+            vim.fn.delete(otter_path)
+          end
+        end
         -- remove otter buffer when main buffer is closed
-        api.nvim_create_autocmd({ "QuitPre", "BufDelete" }, {
+        api.nvim_create_autocmd({ "BufDelete" }, {
           buffer = main_nr,
-          group = api.nvim_create_augroup("OtterAutoclose" .. otter_nr, {}),
-          callback = function(_, _)
-            if api.nvim_buf_is_loaded(otter_nr) then
-              api.nvim_buf_delete(otter_nr, { force = true })
-              vim.fn.delete(otter_path)
-            end
-          end,
+          group = api.nvim_create_augroup("OtterAutocloseOnMainDelete" .. otter_nr, {}),
+          callback = cleanup
+        })
+        -- Remove otter buffer before exiting, preventing unsaved otter
+        -- buffers from triggering a 'No write since last change' message.
+        -- Must be a separate autocmd that is not attached to buffer = main_nr
+        -- because the active buffer may be different from the main buffer when
+        -- exiting.
+        -- Must be ExitPre, not QuitPre, because QuitPre also triggers when a
+        -- window with the main buffer is closed, even though the
+        -- buffer may still be loaded in another window.
+        api.nvim_create_autocmd({ "ExitPre" }, {
+          pattern = "*",
+          group = api.nvim_create_augroup("OtterAutocloseOnQuit" .. otter_nr, {}),
+          callback = cleanup
         })
         -- write to disk when main buffer is written
         api.nvim_create_autocmd("BufWritePost", {
@@ -141,7 +156,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
           callback = function(_, _)
             if api.nvim_buf_is_loaded(otter_nr) then
               api.nvim_buf_call(otter_nr, function()
-                vim.cmd("write! " .. otter_path)
+                vim.cmd("silent write! " .. otter_path)
               end)
             end
           end,
@@ -170,7 +185,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       -- and also write out once before lsps can complain
       local otter_path = keeper.rafts[main_nr].paths[lang]
       api.nvim_buf_call(otter_nr, function()
-        vim.cmd("write! " .. otter_path)
+        vim.cmd("silent write! " .. otter_path)
       end)
     end
 

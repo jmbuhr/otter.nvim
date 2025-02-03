@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
             sudo apt install libfuse2
-            sudo wget -q https://github.com/neovim/neovim/releases/download/stable/nvim.appimage -O /usr/bin/nvim
+            sudo wget -q https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.appimage -O /usr/bin/nvim
             sudo chmod 0755 /usr/bin/nvim
       - name: Run Tests
         run: |

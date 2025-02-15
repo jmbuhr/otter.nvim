@@ -14,3 +14,4 @@ if [ -z "$1" ]; then
 fi
 
 nvim ./tests/examples/*$1* -c ":lua require'otter'.activate()"
+# -c ":vsplit" -c ":b2"

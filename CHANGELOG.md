@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.2](https://github.com/jmbuhr/otter.nvim/compare/v2.6.1...v2.6.2) (2025-02-15)
+
+
+### Bug Fixes
+
+* make lspconfig augroup a warning instead of error ([21f042f](https://github.com/jmbuhr/otter.nvim/commit/21f042f4d1a9ff4788634ad76a10033eed13c7f2))
+
 ## [2.6.1](https://github.com/jmbuhr/otter.nvim/compare/v2.6.0...v2.6.1) (2025-02-03)
 
 

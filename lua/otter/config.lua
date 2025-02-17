@@ -25,9 +25,15 @@ local default_config = {
     set_filetype = true,
     -- write <path>.otter.<embedded language extension> files
     -- to disk on save of main buffer.
-    -- usefule for some linters that require actual files
+    -- usefule for some linters that require actual files.
     -- otter files are deleted on quit or main buffer close
     write_to_disk = false,
+    --A table of preambles for each language. The key is the language and the value is a table of strings that will be written to the otter buffer starting on the first line.
+    preambles = {
+      rust = {
+        '#!/usr/bin/env -S cargo +nightly -Zscript',
+      }
+    }
   },
   -- list of characters that should be stripped from the beginning and end of the code chunks
   strip_wrapping_quote_characters = { "'", '"', "`" },

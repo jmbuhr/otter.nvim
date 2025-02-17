@@ -22,7 +22,7 @@ local default_config = {
     -- if set to true, the filetype of the otterbuffers will be set.
     -- otherwise only the autocommand of lspconfig that attaches
     -- the language server will be executed without setting the filetype  
-    set_filetype = false,
+    set_filetype = true,
     -- write <path>.otter.<embedded language extension> files
     -- to disk on save of main buffer.
     -- usefule for some linters that require actual files

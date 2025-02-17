@@ -15,6 +15,7 @@ local cfg = require("otter.config").cfg
 ---@field languages string[]
 ---@field buffers table<string, integer>
 ---@field paths table<string, string>
+---@field preambles table<string, string[]>
 ---@field otter_nr_to_lang table<integer, string>
 ---@field tsquery string?
 ---@field query vim.treesitter.Query
@@ -423,7 +424,15 @@ keeper.sync_raft = function(main_nr, language)
         -- create list with empty lines the length of the buffer
         local ls = fn.empty_lines(nmax)
 
+        -- set preamble lines
+        local preamble = keeper.rafts[main_nr].preambles[lang]
+        for i, l in ipairs(preamble) do
+          table.remove(ls, i)
+          table.insert(ls, i, l)
+        end
+
         -- collect language lines
+        -- are allowed to overwrite the preamble
         for _, t in ipairs(code_chunks) do
           local start_index = t.range["from"][1]
           for i, l in ipairs(t.text) do
@@ -433,7 +442,8 @@ keeper.sync_raft = function(main_nr, language)
           end
         end
 
-        -- replace language lines
+
+        -- set code lines
         result = do_with_maybe_texlock(function()
           api.nvim_buf_set_lines(otter_nr, 0, -1, false, ls)
         end)

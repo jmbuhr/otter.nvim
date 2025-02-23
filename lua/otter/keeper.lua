@@ -62,7 +62,7 @@ local function determine_language(main_nr, name, node, metadata, current_languag
   elseif metadata["injection.combined"] == true then
     -- chunks where the injected language is specified in the text of a comment
     local lang_capture = metadata[2]["text"]
-    if lang_capture ~= nil then
+    if lang_capture ~= nil and extensions[lang_capture] then
       return lang_capture
     end
   elseif name == "_lang" or name == "injection.language" then

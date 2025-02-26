@@ -8,6 +8,7 @@ return {
   css = "css",
   dot = "dot",
   elixir = "ex",
+  fish = "fish",
   fsharp = "fs",
   go = "go",
   haskell = "hs",

@@ -2,7 +2,6 @@
 local handlers = require("otter.lsp.handlers")
 local keeper = require("otter.keeper")
 local ms = vim.lsp.protocol.Methods
-local fn = require("otter.tools.functions")
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 

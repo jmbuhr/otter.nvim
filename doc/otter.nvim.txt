@@ -132,9 +132,6 @@ If you want to use the default config below you don’t need to call `setup`.
         write_to_disk = false,
       },
       strip_wrapping_quote_characters = { "'", '"', "`" },
-      -- Otter may not work the way you expect when entire code blocks are indented (eg. in Org files)
-      -- When true, otter handles these cases fully. This is a (minor) performance hit
-      handle_leading_whitespace = false,
     }
 <
 

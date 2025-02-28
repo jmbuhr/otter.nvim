@@ -36,10 +36,12 @@ M.export_otter_as = keeper.export_otter_as
 ---@param completion boolean? Enable completion for otter buffers. Default: true
 ---@param diagnostics boolean? Enable diagnostics for otter buffers. Default: true
 ---@param tsquery string? Explicitly provide a treesitter query. If nil, the injections query for the current filetyepe will be used. See :h treesitter-language-injections.
-M.activate = function(languages, completion, diagnostics, tsquery)
+---@paramr preambles table? A table of preambles for each language. The key is the language and the value is a table of strings that will be written to the otter buffer starting on the first line.
+M.activate = function(languages, completion, diagnostics, tsquery, preambles)
   languages = languages or vim.tbl_keys(require("otter.tools.extensions"))
   completion = completion ~= false
   diagnostics = diagnostics ~= false
+  preambles = preambles or config.cfg.buffers.preambles
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
   local main_lang = api.nvim_get_option_value("filetype", { buf = main_nr })
@@ -71,6 +73,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     languages = {},
     buffers = {},
     paths = {},
+    preambles = {},
     otter_nr_to_lang = {},
     tsquery = tsquery,
     query = query,
@@ -84,12 +87,12 @@ M.activate = function(languages, completion, diagnostics, tsquery)
     diagnostics_group = nil,
   }
 
-  local all_code_chunks = keeper.extract_code_chunks(main_nr)
+  local code_chunks = keeper.extract_code_chunks(main_nr)
 
   ---@type string[]
   local found_languages = {}
   for _, lang in ipairs(languages) do
-    if all_code_chunks[lang] ~= nil and lang ~= main_lang then
+    if code_chunks[lang] ~= nil and lang ~= main_lang then
       table.insert(found_languages, lang)
     end
   end
@@ -121,6 +124,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
       api.nvim_set_option_value("swapfile", false, { buf = otter_nr })
       keeper.rafts[main_nr].buffers[lang] = otter_nr
       keeper.rafts[main_nr].paths[lang] = otter_path
+      keeper.rafts[main_nr].preambles[lang] = preambles[lang] or {}
       keeper.rafts[main_nr].otter_nr_to_lang[otter_nr] = lang
       table.insert(keeper.rafts[main_nr].languages, lang)
 
@@ -157,6 +161,7 @@ M.activate = function(languages, completion, diagnostics, tsquery)
           group = api.nvim_create_augroup("OtterAutowrite" .. otter_nr, {}),
           callback = function(_, _)
             if api.nvim_buf_is_loaded(otter_nr) then
+              keeper.sync_raft(main_nr)
               api.nvim_buf_call(otter_nr, function()
                 vim.cmd("silent write! " .. otter_path)
               end)

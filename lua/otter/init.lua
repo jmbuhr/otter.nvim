@@ -161,6 +161,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles)
           group = api.nvim_create_augroup("OtterAutowrite" .. otter_nr, {}),
           callback = function(_, _)
             if api.nvim_buf_is_loaded(otter_nr) then
+              keeper.sync_raft(main_nr)
               api.nvim_buf_call(otter_nr, function()
                 vim.cmd("silent write! " .. otter_path)
               end)

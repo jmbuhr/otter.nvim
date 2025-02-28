@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.7.0](https://github.com/jmbuhr/otter.nvim/compare/v2.6.1...v2.7.0) (2025-02-28)
+
+
+### Features
+
+* add fish to extensions ([#214](https://github.com/jmbuhr/otter.nvim/issues/214)) ([213d1f7](https://github.com/jmbuhr/otter.nvim/commit/213d1f7a47be788f430099a110456a06167ab0f4))
+* preamble ([#212](https://github.com/jmbuhr/otter.nvim/issues/212)) ([b2e2d6a](https://github.com/jmbuhr/otter.nvim/commit/b2e2d6aa3829db4540b0cf372243bb448edc344a))
+
+
+### Bug Fixes
+
+* filter special characters from language string captures. fixes [#211](https://github.com/jmbuhr/otter.nvim/issues/211) ([085b2b0](https://github.com/jmbuhr/otter.nvim/commit/085b2b0c815103047f8db18a0f71a561462606b5))
+* make lspconfig augroup a warning instead of error ([21f042f](https://github.com/jmbuhr/otter.nvim/commit/21f042f4d1a9ff4788634ad76a10033eed13c7f2))
+
 ## [2.6.1](https://github.com/jmbuhr/otter.nvim/compare/v2.6.0...v2.6.1) (2025-02-03)
 
 

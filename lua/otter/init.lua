@@ -87,12 +87,12 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles)
     diagnostics_group = nil,
   }
 
-  local all_code_chunks = keeper.extract_code_chunks(main_nr)
+  local code_chunks = keeper.extract_code_chunks(main_nr)
 
   ---@type string[]
   local found_languages = {}
   for _, lang in ipairs(languages) do
-    if all_code_chunks[lang] ~= nil and lang ~= main_lang then
+    if code_chunks[lang] ~= nil and lang ~= main_lang then
       table.insert(found_languages, lang)
     end
   end

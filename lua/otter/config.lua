@@ -30,9 +30,6 @@ local default_config = {
     write_to_disk = false,
     --A table of preambles for each language. The key is the language and the value is a table of strings that will be written to the otter buffer starting on the first line.
     preambles = {
-      rust = {
-        '#!/usr/bin/env -S cargo +nightly -Zscript',
-      }
     }
   },
   -- list of characters that should be stripped from the beginning and end of the code chunks

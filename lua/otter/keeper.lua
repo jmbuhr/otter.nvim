@@ -43,6 +43,10 @@ for key, _ in pairs(extensions) do
   table.insert(injectable_languages, key)
 end
 
+local function filter_lang(s)
+  return s:gsub("^[%s%p]+", "")
+end
+
 ---determine the language of the current node
 ---@param main_nr integer bufnr of the main buffer
 ---@param name string name of the capture
@@ -58,13 +62,15 @@ local function determine_language(main_nr, name, node, metadata, current_languag
     if injection_language ~= "comment" then
       -- don't use comment as language,
       -- comments with language inside are handled in injection.combined
-      return injection_language
+      return filter_lang(injection_language)
     end
   elseif metadata["injection.combined"] == true then
     -- chunks where the injected language is specified in the text of a comment
     local lang_capture = metadata[2]["text"]
     if lang_capture ~= nil then
-      return lang_capture
+      -- NOTE: this could be more elegant
+      -- remove leading whitespace and comment characters erroneously captured as part of the langauge
+      return filter_lang(lang_capture)
     end
   elseif name == "_lang" or name == "injection.language" then
     -- chunks where the name of the injected language is dynamic
@@ -121,6 +127,7 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
   local query = keeper.rafts[main_nr].query
   local parser = keeper.rafts[main_nr].parser
   local tree = parser:parse()
+  assert(tree, "[otter] Treesitter failed to parse buffer " .. main_nr)
   local root = tree[1]:root()
 
   ---@type table<string, CodeChunk[]>

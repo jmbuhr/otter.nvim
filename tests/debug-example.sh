@@ -13,4 +13,5 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-nvim ./tests/examples/*$1* -c ":lua require'otter'.activate()"
+# open split and navigate back to the first window
+nvim ./tests/examples/*$1* -c ":lua require'otter'.activate()" -c ':vsplit' -c ':b2' -c ':wincmd w'

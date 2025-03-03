@@ -16,6 +16,7 @@ local cfg = require("otter.config").cfg
 ---@field buffers table<string, integer>
 ---@field paths table<string, string>
 ---@field preambles table<string, string[]>
+---@field ignore_pattern table<string, string>
 ---@field otter_nr_to_lang table<integer, string>
 ---@field tsquery string?
 ---@field query vim.treesitter.Query
@@ -440,12 +441,18 @@ keeper.sync_raft = function(main_nr, language)
 
         -- collect language lines
         -- are allowed to overwrite the preamble
+        -- apply ignore_pattern filtering on read
+        local pattern = keeper.rafts[main_nr].ignore_pattern[lang]
         for _, t in ipairs(code_chunks) do
           local start_index = t.range["from"][1]
           for i, l in ipairs(t.text) do
             local index = start_index + i
-            table.remove(ls, index)
-            table.insert(ls, index, l)
+            if not string.match(l, pattern) then
+              table.remove(ls, index)
+              table.insert(ls, index, l)
+            else
+              table.remove(ls, index)
+            end
           end
         end
 

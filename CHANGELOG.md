@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0](https://github.com/jmbuhr/otter.nvim/compare/v2.7.0...v2.8.0) (2025-03-03)
+
+
+### Features
+
+* add ignore_pattern option to filter language lines ([#217](https://github.com/jmbuhr/otter.nvim/issues/217)) ([4ac831e](https://github.com/jmbuhr/otter.nvim/commit/4ac831e579952acebf53fb746309c9131a56233c))
+
 ## [2.7.0](https://github.com/jmbuhr/otter.nvim/compare/v2.6.1...v2.7.0) (2025-02-28)
 
 

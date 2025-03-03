@@ -128,7 +128,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, ig
       keeper.rafts[main_nr].buffers[lang] = otter_nr
       keeper.rafts[main_nr].paths[lang] = otter_path
       keeper.rafts[main_nr].preambles[lang] = preambles[lang] or {}
-      keeper.rafts[main_nr].ignore_pattern[lang] = ignore_pattern[lang] or {}
+      keeper.rafts[main_nr].ignore_pattern[lang] = ignore_pattern[lang] or nil
       keeper.rafts[main_nr].otter_nr_to_lang[otter_nr] = lang
       table.insert(keeper.rafts[main_nr].languages, lang)
 

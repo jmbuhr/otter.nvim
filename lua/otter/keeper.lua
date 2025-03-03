@@ -447,7 +447,7 @@ keeper.sync_raft = function(main_nr, language)
           local start_index = t.range["from"][1]
           for i, l in ipairs(t.text) do
             local index = start_index + i
-            if not string.match(l, pattern) then
+            if pattern == nil or not string.match(l, pattern) then
               ls[index] = l
             end
           end

@@ -37,11 +37,13 @@ M.export_otter_as = keeper.export_otter_as
 ---@param diagnostics boolean? Enable diagnostics for otter buffers. Default: true
 ---@param tsquery string? Explicitly provide a treesitter query. If nil, the injections query for the current filetyepe will be used. See :h treesitter-language-injections.
 ---@paramr preambles table? A table of preambles for each language. The key is the language and the value is a table of strings that will be written to the otter buffer starting on the first line.
-M.activate = function(languages, completion, diagnostics, tsquery, preambles)
+---@paramr ignore_pattern table? A table of patterns to ignore for each language. The key is the languang and the value is a regular expression string to match patterns to ignore.
+M.activate = function(languages, completion, diagnostics, tsquery, preambles, ignore_pattern)
   languages = languages or vim.tbl_keys(require("otter.tools.extensions"))
   completion = completion ~= false
   diagnostics = diagnostics ~= false
   preambles = preambles or config.cfg.buffers.preambles
+  ignore_pattern = ignore_pattern or config.cfg.buffers.ignore_pattern
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
   local main_lang = api.nvim_get_option_value("filetype", { buf = main_nr })
@@ -74,6 +76,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles)
     buffers = {},
     paths = {},
     preambles = {},
+    ignore_pattern = {},
     otter_nr_to_lang = {},
     tsquery = tsquery,
     query = query,
@@ -125,6 +128,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles)
       keeper.rafts[main_nr].buffers[lang] = otter_nr
       keeper.rafts[main_nr].paths[lang] = otter_path
       keeper.rafts[main_nr].preambles[lang] = preambles[lang] or {}
+      keeper.rafts[main_nr].ignore_pattern[lang] = ignore_pattern[lang] or nil
       keeper.rafts[main_nr].otter_nr_to_lang[otter_nr] = lang
       table.insert(keeper.rafts[main_nr].languages, lang)
 

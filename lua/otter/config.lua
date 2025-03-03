@@ -29,8 +29,13 @@ local default_config = {
     -- otter files are deleted on quit or main buffer close
     write_to_disk = false,
     --A table of preambles for each language. The key is the language and the value is a table of strings that will be written to the otter buffer starting on the first line.
-    preambles = {
-    }
+    preambles = {},
+    -- A table of patterns to ignore for each language. The key is the language and the value is a lua match pattern to ignore.
+    -- lua patterns: https://www.lua.org/pil/20.2.html
+    ignore_pattern = {
+      -- ipython cell magic (lines starting with %) and shell commands (lines starting with !)
+      python = "^(%s*[%%!].*)",
+    },
   },
   -- list of characters that should be stripped from the beginning and end of the code chunks
   strip_wrapping_quote_characters = { "'", '"', "`" },

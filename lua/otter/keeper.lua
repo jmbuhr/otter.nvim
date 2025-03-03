@@ -448,14 +448,10 @@ keeper.sync_raft = function(main_nr, language)
           for i, l in ipairs(t.text) do
             local index = start_index + i
             if not string.match(l, pattern) then
-              table.remove(ls, index)
-              table.insert(ls, index, l)
-            else
-              table.remove(ls, index)
+              ls[index] = l
             end
           end
         end
-
 
         -- set code lines
         result = do_with_maybe_texlock(function()

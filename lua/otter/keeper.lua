@@ -391,6 +391,7 @@ keeper.sync_raft = function(main_nr, language)
   --- in which it is not necessary to sync
   --- and can be delayed until the textlock is released.
   --- The lsp request should still be valid
+  --- NOTE: We may be able to get rid of this entirely in nvim v0.11
   local function do_with_maybe_texlock(callback)
     local texlock_err_msg = 'E565: Not allowed to change text or change window'
     local success, result = pcall(callback)
@@ -398,12 +399,11 @@ keeper.sync_raft = function(main_nr, language)
       return "success"
     end
 
-    if result == texlock_err_msg then
+    result = tostring(result)
+    if result:match(texlock_err_msg) then
       vim.schedule(callback)
       return "textlock_active"
     else
-      vim.notify_once("[otter.nvim] Hi there! You triggered an LSP request that is routed through otter.nvim while textlock is active. We would like to fix this, but need to find the exact form of the error message to match against. Please be so kind and open an issue with how you triggered this and the error object below:", vim.log.levels.WARN)
-      vim.notify_once(vim.inspect(result), vim.log.levels.WARN)
       return "error"
     end
   end

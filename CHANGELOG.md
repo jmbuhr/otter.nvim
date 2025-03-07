@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/jmbuhr/otter.nvim/compare/v2.8.0...v2.8.1) (2025-03-07)
+
+
+### Bug Fixes
+
+* match error message for textlock and catch. fixes [#178](https://github.com/jmbuhr/otter.nvim/issues/178) ([#219](https://github.com/jmbuhr/otter.nvim/issues/219)) ([e37053d](https://github.com/jmbuhr/otter.nvim/commit/e37053d2c6a17463e705483122eee04d41e3d4af))
+
 ## [2.8.0](https://github.com/jmbuhr/otter.nvim/compare/v2.7.0...v2.8.0) (2025-03-03)
 
 

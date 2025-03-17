@@ -10,6 +10,7 @@ return {
   elixir = "ex",
   fish = "fish",
   fsharp = "fs",
+  gleam = "gleam",
   go = "go",
   haskell = "hs",
   htmldjango = "htmldjango",

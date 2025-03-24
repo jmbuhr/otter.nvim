@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0](https://github.com/jmbuhr/otter.nvim/compare/v2.9.0...v2.10.0) (2025-03-24)
+
+
+### Features
+
+* provide usercommands for common actions ([6227b9a](https://github.com/jmbuhr/otter.nvim/commit/6227b9a27de47708350231129140c6e4d26e025f))
+
 ## [2.9.0](https://github.com/jmbuhr/otter.nvim/compare/v2.8.0...v2.9.0) (2025-03-17)
 
 

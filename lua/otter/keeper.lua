@@ -16,6 +16,7 @@ local cfg = require("otter.config").cfg
 ---@field buffers table<string, integer>
 ---@field paths table<string, string>
 ---@field preambles table<string, string[]>
+---@field postambles table<string, string[]>
 ---@field ignore_pattern table<string, string>
 ---@field otter_nr_to_lang table<integer, string>
 ---@field tsquery string?
@@ -449,6 +450,12 @@ keeper.sync_raft = function(main_nr, language)
               ls[index] = l
             end
           end
+        end
+
+        -- set postamble lines
+        local postamble = keeper.rafts[main_nr].postambles[lang]
+        for _, l in ipairs(postamble) do
+          table.insert(ls, l)
         end
 
         -- set code lines

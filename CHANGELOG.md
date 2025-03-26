@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.0](https://github.com/jmbuhr/otter.nvim/compare/v2.10.0...v2.11.0) (2025-03-26)
+
+
+### Features
+
+* add postamble support ([61868fc](https://github.com/jmbuhr/otter.nvim/commit/61868fce68c489c073a822763ed6fe62560e2060))
+
 ## [2.10.0](https://github.com/jmbuhr/otter.nvim/compare/v2.9.0...v2.10.0) (2025-03-24)
 
 

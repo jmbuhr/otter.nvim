@@ -21,15 +21,17 @@ local default_config = {
   buffers = {
     -- if set to true, the filetype of the otterbuffers will be set.
     -- otherwise only the autocommand of lspconfig that attaches
-    -- the language server will be executed without setting the filetype  
+    -- the language server will be executed without setting the filetype
     set_filetype = true,
     -- write <path>.otter.<embedded language extension> files
     -- to disk on save of main buffer.
     -- usefule for some linters that require actual files.
     -- otter files are deleted on quit or main buffer close
     write_to_disk = false,
-    --A table of preambles for each language. The key is the language and the value is a table of strings that will be written to the otter buffer starting on the first line.
+    -- a table of preambles for each language. The key is the language and the value is a table of strings that will be written to the otter buffer starting on the first line.
     preambles = {},
+    -- a table of postambles for each language. The key is the language and the value is a table of strings that will be written to the end of the otter buffer.
+    postambles = {},
     -- A table of patterns to ignore for each language. The key is the language and the value is a lua match pattern to ignore.
     -- lua patterns: https://www.lua.org/pil/20.2.html
     ignore_pattern = {

@@ -28,8 +28,7 @@ end
 ---@param ctx lsp.HandlerContext
 M[ms.textDocument_hover] = function(err, response, ctx)
   if not response then
-    -- no response, nothing to do
-    return
+    return err, response, ctx
   end
 
   -- pretend the response is coming from the main buffer
@@ -74,8 +73,9 @@ end
 
 M[ms.textDocument_documentSymbol] = function(err, response, ctx)
   if not response then
-    return
+    return err, response, ctx
   end
+
 
   local function filter(res)
     if not res.location or not res.location.uri then
@@ -96,8 +96,9 @@ end
 
 M[ms.textDocument_typeDefinition] = function(err, response, ctx)
   if not response then
-    return
+    return err, response, ctx
   end
+
   local function filter(res)
     if res.uri ~= nil then
       if fn.is_otterpath(res.uri) then
@@ -119,8 +120,9 @@ end
 
 M[ms.textDocument_rename] = function(err, response, ctx)
   if not response then
-    return
+    return err, response, ctx
   end
+
   local function filter(res)
     local changes = res.changes
     if changes ~= nil then
@@ -155,8 +157,9 @@ end
 
 M[ms.textDocument_references] = function(err, response, ctx)
   if not response then
-    return
+    return err, response, ctx
   end
+
   local function filter(res)
     local uri = res.uri
     if not res.uri then
@@ -177,7 +180,7 @@ end
 
 M[ms.textDocument_implementation] = function(err, response, ctx)
   if not response then
-    return
+    return err, response, ctx
   end
   local function filter(res)
     if res.uri ~= nil then
@@ -200,7 +203,7 @@ end
 
 M[ms.textDocument_declaration] = function(err, response, ctx)
   if not response then
-    return
+    return err, response, ctx
   end
   local function filter(res)
     if res.uri ~= nil then
@@ -220,40 +223,39 @@ M[ms.textDocument_declaration] = function(err, response, ctx)
   return err, response, ctx
 end
 
---- Modifying textDocument_completion
---- was not strictly required in the completion handlers tested so far,
---- but why not.
---- Might come in handy down the line.
-M[ms.textDocument_completion] = function(err, response, ctx)
-  -- ctx.params.textDocument.uri = ctx.params.otter.main_uri
-  -- ctx.bufnr = ctx.params.otter.main_nr
-  -- -- response.data.uri = ctx.params.otter.main_uri
-  -- -- response.textDocument.uri = ctx.params.otter.main_uri
-  -- for _, item in ipairs(response.items) do
-  --   if item.data ~= nil then
-  --     item.data.uri = ctx.params.otter.main_uri
-  --   end
-  --   -- not needed for now:
-  --   -- item.position = modify_position(item.position, ctx.params.otter.main_nr)
-  -- end
 
+M[ms.textDocument_completion] = function(err, response, ctx)
+  if not response then
+    return err, response, ctx
+  end
+  ctx.params.textDocument.uri = ctx.params.otter.main_uri
+  ctx.bufnr = ctx.params.otter.main_nr
+  -- response.data.uri = ctx.params.otter.main_uri
+  -- response.textDocument.uri = ctx.params.otter.main_uri
+  for _, item in ipairs(response.items) do
+    if item.data ~= nil then
+      item.data.uri = ctx.params.otter.main_uri
+    end
+    -- not needed for now:
+    -- item.position = modify_position(item.position, ctx.params.otter.main_nr)
+  end
   return err, response, ctx
 end
 
---- Modifying completionItem_resolve
---- was not strictly required in the completion handlers tested so far,
---- even without it e.g. auto imports are done in the main buffer already
 M[ms.completionItem_resolve] = function(err, response, ctx)
-  -- if ctx.params.data ~= nil then
-  --   ctx.params.data.uri = ctx.params.otter.main_uri
-  -- end
-  -- ctx.params.textDocument.uri = ctx.params.otter.main_uri
-  -- ctx.bufnr = ctx.params.otter.main_nr
-  --
-  -- if response.data ~= nil then
-  --   response.data.uri = ctx.params.otter.main_uri
-  -- end
-  -- response.textDocument.uri = ctx.params.otter.main_uri
+  if not response then
+    return err, response, ctx
+  end
+  if ctx.params.data ~= nil then
+    ctx.params.data.uri = ctx.params.otter.main_uri
+  end
+  ctx.params.textDocument.uri = ctx.params.otter.main_uri
+  ctx.bufnr = ctx.params.otter.main_nr
+
+  if response.data ~= nil then
+    response.data.uri = ctx.params.otter.main_uri
+  end
+  response.textDocument.uri = ctx.params.otter.main_uri
 
   return err, response, ctx
 end

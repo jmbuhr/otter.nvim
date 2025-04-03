@@ -255,7 +255,7 @@ M[ms.completionItem_resolve] = function(err, response, ctx)
   if response.data ~= nil then
     response.data.uri = ctx.params.otter.main_uri
   end
-  response.textDocument.uri = ctx.params.otter.main_uri
+  -- response.textDocument.uri = ctx.params.otter.main_uri
 
   return err, response, ctx
 end

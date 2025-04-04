@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.1](https://github.com/jmbuhr/otter.nvim/compare/v2.11.0...v2.11.1) (2025-04-04)
+
+
+### Bug Fixes
+
+* fix [#227](https://github.com/jmbuhr/otter.nvim/issues/227) and format with stylua. Also closes [#230](https://github.com/jmbuhr/otter.nvim/issues/230) ([b830d6c](https://github.com/jmbuhr/otter.nvim/commit/b830d6c76cf21b97159770f913d3ff28027c46a1))
+
 ## [2.11.0](https://github.com/jmbuhr/otter.nvim/compare/v2.10.0...v2.11.0) (2025-03-26)
 
 

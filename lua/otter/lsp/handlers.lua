@@ -8,7 +8,6 @@ local fn = require("otter.tools.functions")
 local ms = vim.lsp.protocol.Methods
 local modify_position = require("otter.keeper").modify_position
 
-
 local function filter_one_or_many(response, filter)
   if #response == 0 then
     return filter(response)
@@ -75,7 +74,6 @@ M[ms.textDocument_documentSymbol] = function(err, response, ctx)
   if not response then
     return err, response, ctx
   end
-
 
   local function filter(res)
     if not res.location or not res.location.uri then
@@ -223,17 +221,17 @@ M[ms.textDocument_declaration] = function(err, response, ctx)
   return err, response, ctx
 end
 
-
 M[ms.textDocument_completion] = function(err, response, ctx)
   if not response then
     return err, response, ctx
   end
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
   ctx.bufnr = ctx.params.otter.main_nr
-  -- response.data.uri = ctx.params.otter.main_uri
-  -- response.textDocument.uri = ctx.params.otter.main_uri
+  if response.data ~= nil and response.data.uri ~= nil then
+    response.data.uri = ctx.params.otter.main_uri
+  end
   for _, item in ipairs(response.items) do
-    if item.data ~= nil then
+    if item.data ~= nil and item.data.uri ~= nil then
       item.data.uri = ctx.params.otter.main_uri
     end
     -- not needed for now:
@@ -252,10 +250,9 @@ M[ms.completionItem_resolve] = function(err, response, ctx)
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
   ctx.bufnr = ctx.params.otter.main_nr
 
-  if response.data ~= nil then
+  if response.data ~= nil and response.data.uri ~= nil then
     response.data.uri = ctx.params.otter.main_uri
   end
-  response.textDocument.uri = ctx.params.otter.main_uri
 
   return err, response, ctx
 end

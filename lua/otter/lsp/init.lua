@@ -6,7 +6,7 @@ local fn = require("otter.tools.functions")
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
-local has_blink, blink = pcall(require, 'blink.cmp')
+local has_blink, blink = pcall(require, "blink.cmp")
 if has_blink then
   capabilities = blink.get_lsp_capabilities({}, true)
 end
@@ -46,7 +46,7 @@ otterls.start = function(main_nr, completion)
                 resolveProvider = true,
                 completionItem = {
                   labelDetailsSupport = true,
-                }
+                },
               }
             else
               completion_options = false
@@ -59,7 +59,7 @@ otterls.start = function(main_nr, completion)
                 declarationProvider = true,
                 signatureHelpProvider = {
                   triggerCharacters = { "(", "," },
-                  retriggerCharacters = {}
+                  retriggerCharacters = {},
                 },
                 typeDefinitionProvider = true,
                 renameProvider = true,
@@ -111,7 +111,7 @@ otterls.start = function(main_nr, completion)
             -- or cursor position if those are absent
             local pos = nil
             if params.position ~= nil then
-               pos = {
+              pos = {
                 params.position.line + 1,
                 params.position.character,
               }

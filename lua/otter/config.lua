@@ -1,6 +1,5 @@
 local M = {}
 
-
 ---@class OtterConfig
 local default_config = {
   lsp = {
@@ -46,12 +45,11 @@ local default_config = {
   handle_leading_whitespace = true,
   -- mapping of filetypes to extensions for those not already included in otter.tools.extensions
   -- e.g. ["bash"] = "sh"
-  extensions = {
-  },
+  extensions = {},
   -- add event listeners for LSP events for debugging
   debug = false,
   verbose = { -- set to false to disable all verbose messages
-    no_code_found = false -- warn if otter.activate is called, but no injected code was found
+    no_code_found = false, -- warn if otter.activate is called, but no injected code was found
   },
 }
 

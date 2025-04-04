@@ -143,9 +143,9 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
         local text
         lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
         if
-            lang_capture
-            and (name == "content" or name == "injection.content")
-            and (lang == nil or lang_capture == lang)
+          lang_capture
+          and (name == "content" or name == "injection.content")
+          and (lang == nil or lang_capture == lang)
         then
           -- the actual code content
           text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
@@ -159,7 +159,11 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
           ---@type integer
           ---@diagnostic disable-next-line: assign-type-mismatch
           local start_row, start_col, end_row, end_col = node:range()
-          if range_start_row ~= nil and range_end_row ~= nil and ((start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row) then
+          if
+            range_start_row ~= nil
+            and range_end_row ~= nil
+            and ((start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row)
+          then
             goto continue
           end
           local leading_offset
@@ -383,7 +387,6 @@ keeper.sync_raft = function(main_nr, language)
     return "success"
   end
 
-
   ---@param callback function
   ---@return SyncResult
   ---
@@ -394,7 +397,7 @@ keeper.sync_raft = function(main_nr, language)
   --- The lsp request should still be valid
   --- NOTE: We may be able to get rid of this entirely in nvim v0.11
   local function do_with_maybe_texlock(callback)
-    local texlock_err_msg = 'E565: Not allowed to change text or change window'
+    local texlock_err_msg = "E565: Not allowed to change text or change window"
     local success, result = pcall(callback)
     if success then
       return "success"

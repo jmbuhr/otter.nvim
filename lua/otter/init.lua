@@ -107,7 +107,9 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     if config.cfg.verbose and config.cfg.verbose.no_code_found then
       vim.notify_once(
         "[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false",
-        vim.log.levels.INFO, {})
+        vim.log.levels.INFO,
+        {}
+      )
     end
     return
   end
@@ -148,7 +150,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
         api.nvim_create_autocmd({ "BufDelete" }, {
           buffer = main_nr,
           group = api.nvim_create_augroup("OtterAutocloseOnMainDelete" .. otter_nr, {}),
-          callback = cleanup
+          callback = cleanup,
         })
         -- Remove otter buffer before exiting, preventing unsaved otter
         -- buffers from triggering a 'No write since last change' message.
@@ -161,7 +163,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
         api.nvim_create_autocmd({ "ExitPre" }, {
           pattern = "*",
           group = api.nvim_create_augroup("OtterAutocloseOnQuit" .. otter_nr, {}),
-          callback = cleanup
+          callback = cleanup,
         })
         -- write to disk when main buffer is written
         api.nvim_create_autocmd("BufWritePost", {
@@ -219,11 +221,12 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
         end
       else
         vim.notify(
-          "[otter] didn't find the lspconfig autocommand group to start servers in the otter buffer. " ..
-          "This is likely because you don't use nvim-lspconfig to set up your LSPs. " ..
-          "You can set otters config.buffers.set_filetype = true to let your filetype autocommands take it from there " ..
-          "instead of just running the specific lspconfig setup.",
-          vim.log.levels.WARN)
+          "[otter] didn't find the lspconfig autocommand group to start servers in the otter buffer. "
+            .. "This is likely because you don't use nvim-lspconfig to set up your LSPs. "
+            .. "You can set otters config.buffers.set_filetype = true to let your filetype autocommands take it from there "
+            .. "instead of just running the specific lspconfig setup.",
+          vim.log.levels.WARN
+        )
       end
     end
   end
@@ -264,14 +267,12 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     vim.notify_once("[otter] activation of otter-ls failed", vim.log.levels.WARN, {})
   end
 
-
   -- debugging
   if config.cfg.debug == true then
     -- listen to lsp requests and notifications
     vim.api.nvim_create_autocmd("LspNotify", {
       ---@param _ {buf: number, data: {client_id: number, method: string, params: any}}
-      callback = function(_)
-      end,
+      callback = function(_) end,
     })
 
     vim.api.nvim_create_autocmd("LspRequest", {
@@ -286,7 +287,6 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     })
   end
 end
-
 
 ---Deactivate the current buffer by removing otter buffers and clearing diagnostics
 ---@param completion boolean | nil

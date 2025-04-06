@@ -179,7 +179,8 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
           end,
         })
       else
-        api.nvim_set_option_value("buftype", "nowrite", { buf = otter_nr })
+        -- FIXME: Do we actually need nowrite?
+        -- api.nvim_set_option_value("buftype", "nowrite", { buf = otter_nr })
       end
     end
     ::continue::

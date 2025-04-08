@@ -138,33 +138,34 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
       keeper.rafts[main_nr].otter_nr_to_lang[otter_nr] = lang
       table.insert(keeper.rafts[main_nr].languages, lang)
 
-      if config.cfg.buffers.write_to_disk then
-        -- closure to clean up this otter buffer and file
-        local cleanup = function(ev)
-          if api.nvim_buf_is_loaded(otter_nr) then
-            api.nvim_buf_delete(otter_nr, { force = true })
-            vim.fn.delete(otter_path)
-          end
+      -- closure to clean up this otter buffer and file
+      local cleanup = function(ev)
+        if api.nvim_buf_is_loaded(otter_nr) then
+          api.nvim_buf_delete(otter_nr, { force = true })
+          vim.fn.delete(otter_path)
         end
-        -- remove otter buffer when main buffer is closed
-        api.nvim_create_autocmd({ "BufDelete" }, {
-          buffer = main_nr,
-          group = api.nvim_create_augroup("OtterAutocloseOnMainDelete" .. otter_nr, {}),
-          callback = cleanup,
-        })
-        -- Remove otter buffer before exiting, preventing unsaved otter
-        -- buffers from triggering a 'No write since last change' message.
-        -- Must be a separate autocmd that is not attached to buffer = main_nr
-        -- because the active buffer may be different from the main buffer when
-        -- exiting.
-        -- Must be ExitPre, not QuitPre, because QuitPre also triggers when a
-        -- window with the main buffer is closed, even though the
-        -- buffer may still be loaded in another window.
-        api.nvim_create_autocmd({ "ExitPre" }, {
-          pattern = "*",
-          group = api.nvim_create_augroup("OtterAutocloseOnQuit" .. otter_nr, {}),
-          callback = cleanup,
-        })
+      end
+      -- remove otter buffer when main buffer is closed
+      api.nvim_create_autocmd({ "BufDelete" }, {
+        buffer = main_nr,
+        group = api.nvim_create_augroup("OtterAutocloseOnMainDelete" .. otter_nr, {}),
+        callback = cleanup,
+      })
+      -- Remove otter buffer before exiting, preventing unsaved otter
+      -- buffers from triggering a 'No write since last change' message.
+      -- Must be a separate autocmd that is not attached to buffer = main_nr
+      -- because the active buffer may be different from the main buffer when
+      -- exiting.
+      -- Must be ExitPre, not QuitPre, because QuitPre also triggers when a
+      -- window with the main buffer is closed, even though the
+      -- buffer may still be loaded in another window.
+      api.nvim_create_autocmd({ "ExitPre" }, {
+        pattern = "*",
+        group = api.nvim_create_augroup("OtterAutocloseOnQuit" .. otter_nr, {}),
+        callback = cleanup,
+      })
+
+      if config.cfg.buffers.write_to_disk then
         -- write to disk when main buffer is written
         api.nvim_create_autocmd("BufWritePost", {
           buffer = main_nr,
@@ -178,8 +179,6 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
             end
           end,
         })
-      else
-        api.nvim_set_option_value("buftype", "nowrite", { buf = otter_nr })
       end
     end
     ::continue::
@@ -206,27 +205,39 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
       end)
     end
 
+    if config.cfg.buffers.set_filetype == false then
+      vim.deprecate(
+        "otter.config.buffers.set_filetype = false",
+        "Use the default otter.nvim behavior instead. Otter now always sets the filetype to accomodate different ways of initializing language servers without conflicts.",
+        "3.1.0",
+        "otter.nvim",
+        false
+      )
+    end
+
     -- or if requested set the filetype
     if config.cfg.buffers.set_filetype then
       api.nvim_set_option_value("filetype", lang, { buf = otter_nr })
     else
-      local function get_aucmds()
-        return api.nvim_get_autocmds({ group = "lspconfig", pattern = lang })
+      local function get_aucmds(group)
+        return api.nvim_get_autocmds({ group = group, pattern = lang })
       end
-      local ok, autocommands = pcall(get_aucmds)
-      if ok then
-        for _, command in ipairs(autocommands) do
-          local opt = { buf = otter_nr }
-          command.callback(opt)
+
+      local autocommands = {}
+      local groups = { "lspconfig", "nvim.lsp.enable" }
+
+      for _, group in ipairs(groups) do
+        local ok, cmds = pcall(get_aucmds, group)
+        if ok then
+          for _, cmd in ipairs(cmds) do
+            table.insert(autocommands, cmd)
+          end
         end
-      else
-        vim.notify(
-          "[otter] didn't find the lspconfig autocommand group to start servers in the otter buffer. "
-            .. "This is likely because you don't use nvim-lspconfig to set up your LSPs. "
-            .. "You can set otters config.buffers.set_filetype = true to let your filetype autocommands take it from there "
-            .. "instead of just running the specific lspconfig setup.",
-          vim.log.levels.WARN
-        )
+      end
+
+      for _, command in ipairs(autocommands) do
+        local opt = { buf = otter_nr }
+        command.callback(opt)
       end
     end
   end

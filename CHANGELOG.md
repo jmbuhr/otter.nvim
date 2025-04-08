@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.2](https://github.com/jmbuhr/otter.nvim/compare/v2.11.1...v2.11.2) (2025-04-08)
+
+
+### Bug Fixes
+
+* make otter buffers writable and always close on ExitPre. fixes [#228](https://github.com/jmbuhr/otter.nvim/issues/228) ([6332f4c](https://github.com/jmbuhr/otter.nvim/commit/6332f4c6fe05a98ddcadb772d5065f0498b4f3a0))
+* overwrite BufWriteCmd for otterbuffers, preventing them from being written to disk unless config.buffers.write_to_disk is set to true ([d63eeb8](https://github.com/jmbuhr/otter.nvim/commit/d63eeb8bcc7267ff5b32e2160f52edefb36a79e4))
+
 ## [2.11.1](https://github.com/jmbuhr/otter.nvim/compare/v2.11.0...v2.11.1) (2025-04-04)
 
 

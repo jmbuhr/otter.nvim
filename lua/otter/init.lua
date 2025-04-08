@@ -179,6 +179,16 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
             end
           end,
         })
+      else
+        -- prevent the otter buffer from being written to disk when
+        -- e.g. write all :wa is called
+        api.nvim_create_autocmd("BufWriteCmd", {
+          buffer = otter_nr,
+          group = api.nvim_create_augroup("OtterNoWrite" .. otter_nr, {}),
+          callback = function()
+            -- does nothing
+          end,
+        })
       end
     end
     ::continue::

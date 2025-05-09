@@ -1,6 +1,7 @@
 return {
   asm = "asm",
   bash = "sh",
+  bib = "bib",
   c = "c",
   clojure = "clj",
   cpp = "cpp",
@@ -34,6 +35,7 @@ return {
   sh = "sh",
   sql = "sql",
   svelte = "svelte",
+  tex = "tex",
   typescript = "ts",
   typst = "typ",
   vim = "vim",

@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.12.0](https://github.com/jmbuhr/otter.nvim/compare/v2.11.2...v2.12.0) (2025-05-14)
+
+
+### Features
+
+* add tex and bib filetype extensions. fixes [#236](https://github.com/jmbuhr/otter.nvim/issues/236) ([84639ce](https://github.com/jmbuhr/otter.nvim/commit/84639ced48b202c65b6938ae6a875a64c0c6eca0))
+
+
+### Bug Fixes
+
+* **completion:** handle CompletionItem[] result ([#239](https://github.com/jmbuhr/otter.nvim/issues/239)) fixes [#238](https://github.com/jmbuhr/otter.nvim/issues/238) ([bdc62af](https://github.com/jmbuhr/otter.nvim/commit/bdc62aff8e6f2ef0b115fa87f1f546f6b2bb5785))
+
 ## [2.11.2](https://github.com/jmbuhr/otter.nvim/compare/v2.11.1...v2.11.2) (2025-04-08)
 
 

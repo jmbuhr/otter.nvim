@@ -221,16 +221,25 @@ M[ms.textDocument_declaration] = function(err, response, ctx)
   return err, response, ctx
 end
 
+---@param err lsp.ResponseError
+---@param response vim.lsp.CompletionResult
+---@param ctx lsp.HandlerContext
+---@return lsp.ResponseError
+---@return vim.lsp.CompletionResult?
+---@return lsp.HandlerContext
 M[ms.textDocument_completion] = function(err, response, ctx)
   if not response then
     return err, response, ctx
   end
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
   ctx.bufnr = ctx.params.otter.main_nr
-  if response.data ~= nil and response.data.uri ~= nil then
-    response.data.uri = ctx.params.otter.main_uri
-  end
-  for _, item in ipairs(response.items) do
+
+  -- treat response as lsp.CompletionItem[] instead of lsp.CompletionList if isIncomplete is missing
+  -- see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionParams response
+  local is_completion_list = response.isIncomplete ~= nil
+  ---@type lsp.CompletionItem[]
+  local items = is_completion_list and response.items or response
+  for _, item in ipairs(items) do
     if item.data ~= nil and item.data.uri ~= nil then
       item.data.uri = ctx.params.otter.main_uri
     end

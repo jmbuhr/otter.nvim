@@ -14,16 +14,18 @@ M.setup = function(main_nr)
 
   local sync_diagnostics = function(args)
     if vim.tbl_contains(vim.tbl_values(keeper.rafts[main_nr].buffers), args.buf) then
-      local diags = args.data.diagnostics
       vim.diagnostic.reset(nss[args.buf], main_nr)
-      if config.cfg.handle_leading_whitespace then
-        for _, diag in ipairs(diags) do
-          local offset = keeper.get_leading_offset(diag.lnum, main_nr)
-          diag.col = diag.col + offset
-          diag.end_col = diag.end_col + offset
+      local diags = args.data.diagnostics
+      if diags then
+        if config.cfg.handle_leading_whitespace then
+          for _, diag in ipairs(diags) do
+            local offset = keeper.get_leading_offset(diag.lnum, main_nr)
+            diag.col = diag.col + offset
+            diag.end_col = diag.end_col + offset
+          end
         end
+        vim.diagnostic.set(nss[args.buf], main_nr, diags, {})
       end
-      vim.diagnostic.set(nss[args.buf], main_nr, diags, {})
     end
   end
 

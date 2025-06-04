@@ -156,9 +156,14 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
             text = ""
           end
 
-          ---@type integer
-          ---@diagnostic disable-next-line: assign-type-mismatch
-          local start_row, start_col, end_row, end_col = node:range()
+          -- Use the range from the `offset!` directive if available
+          local start_row, start_col, end_row, end_col
+          if metadata[id] and metadata[id].range then
+              start_row, start_col, end_row, end_col = unpack(metadata[id].range)
+          else
+              start_row, start_col, end_row, end_col = node:range()
+          end
+
           if
             range_start_row ~= nil
             and range_end_row ~= nil

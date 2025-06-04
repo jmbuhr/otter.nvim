@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.1](https://github.com/jmbuhr/otter.nvim/compare/v2.12.0...v2.12.1) (2025-06-04)
+
+
+### Bug Fixes
+
+* **diagnostics:** check for empty diagnostic table ([#242](https://github.com/jmbuhr/otter.nvim/issues/242)) ([8acd0cc](https://github.com/jmbuhr/otter.nvim/commit/8acd0cce535e0cc9d69cec5417907352f05c1d28))
+
 ## [2.12.0](https://github.com/jmbuhr/otter.nvim/compare/v2.11.2...v2.12.0) (2025-05-14)
 
 

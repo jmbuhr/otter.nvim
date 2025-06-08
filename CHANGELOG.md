@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.2](https://github.com/jmbuhr/otter.nvim/compare/v2.12.1...v2.12.2) (2025-06-08)
+
+
+### Bug Fixes
+
+* **keeper:** get code node range after offset directive from metadata ([#244](https://github.com/jmbuhr/otter.nvim/issues/244)) ([5c204d1](https://github.com/jmbuhr/otter.nvim/commit/5c204d14b828f0a756f4b2300c35f07b8449ae99))
+
 ## [2.12.1](https://github.com/jmbuhr/otter.nvim/compare/v2.12.0...v2.12.1) (2025-06-04)
 
 

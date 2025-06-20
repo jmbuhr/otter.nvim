@@ -194,6 +194,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     ::continue::
   end
 
+
   -- this has to happen again after the
   -- otter buffers got their own lsps
   -- to really make sure the clients are

@@ -2,7 +2,6 @@
 local handlers = require("otter.lsp.handlers")
 local keeper = require("otter.keeper")
 local ms = vim.lsp.protocol.Methods
-local fn = require("otter.tools.functions")
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
@@ -120,6 +119,7 @@ otterls.start = function(main_nr, completion)
           end
 
           local otter_nr = keeper.rafts[main_nr].buffers[lang]
+
           if otter_nr == nil then
             -- if we don't have an otter for lang, there is nothing to be done
             handler(nil, nil, params.context)
@@ -130,6 +130,7 @@ otterls.start = function(main_nr, completion)
 
           -- get clients attached to otter buffer
           local otterclients = vim.lsp.get_clients({ bufnr = otter_nr })
+
           -- collect capabilities
           local supports_method = false
           for _, client in pairs(otterclients) do

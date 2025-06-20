@@ -157,7 +157,7 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
 
     for _, regions in ipairs(regionlists) do
       for _, region in ipairs(regions) do
-        local start_row, start_col, start_bytes, end_row, end_col, end_bytes = unpack(region)
+        local start_row, start_col, _, end_row, end_col, _ = unpack(region)
 
         -- if the range ends at the start of the next line,
         -- we need to adjust the end_col to the last character of the line
@@ -295,51 +295,55 @@ keeper.get_current_language_context = function(main_nr, position)
   local row, col = unpack(position)
   row = row - 1
   col = col
+  local range = { row, col, row, col}
 
-  local query = keeper.rafts[main_nr].query
-  local parser = keeper.rafts[main_nr].parser
-  local tree = parser:parse()
-  local root = tree[1]:root()
-  local lang_capture = nil
-  for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
-    for id, nodes in pairs(match) do
-      local name = query.captures[id]
+  local lang = keeper.rafts[main_nr].parser:language_for_range(range):lang()
+  return lang
 
-      for _, node in ipairs(nodes) do
-        lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
-        local start_row, start_col, end_row, end_col = node:range()
-        end_row = end_row - 1
-
-        local language = nil
-        if lang_capture and (name == "content" or name == "injection.content") then
-          -- chunks where the name of the injected language is dynamic
-          -- e.g. markdown code chunks
-          if ts.is_in_node_range(node, row, col) then
-            language = lang_capture
-          end
-          -- chunks where the name of the language is the name of the capture
-        elseif fn.contains(injectable_languages, name) then
-          if ts.is_in_node_range(node, row, col) then
-            language = name
-          end
-        end
-
-        if language then
-          if cfg.handle_leading_whitespace then
-            local buf = keeper.rafts[main_nr].buffers[language]
-            if buf then
-              local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
-              if lines[1] then
-                end_col = #lines[1]
-              end
-            end
-          end
-          return language, start_row, start_col, end_row, end_col
-        end
-      end
-    end
-  end
-  return nil
+  -- local query = keeper.rafts[main_nr].query
+  -- local parser = keeper.rafts[main_nr].parser
+  -- local tree = parser:parse()
+  -- local root = tree[1]:root()
+  -- local lang_capture = nil
+  -- for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
+  --   for id, nodes in pairs(match) do
+  --     local name = query.captures[id]
+  --
+  --     for _, node in ipairs(nodes) do
+  --       lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
+  --       local start_row, start_col, end_row, end_col = node:range()
+  --       end_row = end_row - 1
+  --
+  --       local language = nil
+  --       if lang_capture and (name == "content" or name == "injection.content") then
+  --         -- chunks where the name of the injected language is dynamic
+  --         -- e.g. markdown code chunks
+  --         if ts.is_in_node_range(node, row, col) then
+  --           language = lang_capture
+  --         end
+  --         -- chunks where the name of the language is the name of the capture
+  --       elseif fn.contains(injectable_languages, name) then
+  --         if ts.is_in_node_range(node, row, col) then
+  --           language = name
+  --         end
+  --       end
+  --
+  --       if language then
+  --         if cfg.handle_leading_whitespace then
+  --           local buf = keeper.rafts[main_nr].buffers[language]
+  --           if buf then
+  --             local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
+  --             if lines[1] then
+  --               end_col = #lines[1]
+  --             end
+  --           end
+  --         end
+  --         return language, start_row, start_col, end_row, end_col
+  --       end
+  --     end
+  --   end
+  -- end
+  -- return nil
 end
 
 ---find the leading_offset of the given line number, and buffer number. Returns 0 if the line number

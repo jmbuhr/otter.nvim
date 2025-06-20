@@ -201,6 +201,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
   -- attached to their otter buffers
   keeper.sync_raft(main_nr)
 
+
   -- manually attach language server that corresponds to the filetype
   -- without setting the filetype
   -- to prevent other plugins we don't need in the otter buffers

@@ -99,6 +99,9 @@ local function trim_leading_witespace(lines, bufnr, starting_ln)
     return lines, 0
   end
   local first_line = vim.api.nvim_buf_get_lines(bufnr, starting_ln, starting_ln + 1, false)
+  vim.print('lines:')
+  vim.print(lines)
+  vim.print('first line', first_line)
   local leading = first_line[1]:match("^%s+")
   if not leading then
     return lines, 0
@@ -134,6 +137,7 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
   local trees = {}
   local lang_to_tree = parser:children()
   for l, t in pairs(lang_to_tree) do
+    vim.print(l)
     if l ~= "markdown_inline" and (lang == nil or l == lang) then
       trees[l] = t
     end
@@ -282,10 +286,6 @@ end
 --- @param main_nr integer? bufnr of the parent buffer. Default is 0
 --- @param position table? position (row, col). Default is the current cursor position (1,0)-based
 --- @return string? language nil if no language context is found
---- @return integer? start_row
---- @return integer? start_col
---- @return integer? end_row
---- @return integer? end_col
 keeper.get_current_language_context = function(main_nr, position)
   main_nr = main_nr or api.nvim_get_current_buf()
   position = position or api.nvim_win_get_cursor(0)
@@ -298,52 +298,10 @@ keeper.get_current_language_context = function(main_nr, position)
   local range = { row, col, row, col}
 
   local lang = keeper.rafts[main_nr].parser:language_for_range(range):lang()
+  if lang == "" then
+    return nil
+  end
   return lang
-
-  -- local query = keeper.rafts[main_nr].query
-  -- local parser = keeper.rafts[main_nr].parser
-  -- local tree = parser:parse()
-  -- local root = tree[1]:root()
-  -- local lang_capture = nil
-  -- for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
-  --   for id, nodes in pairs(match) do
-  --     local name = query.captures[id]
-  --
-  --     for _, node in ipairs(nodes) do
-  --       lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
-  --       local start_row, start_col, end_row, end_col = node:range()
-  --       end_row = end_row - 1
-  --
-  --       local language = nil
-  --       if lang_capture and (name == "content" or name == "injection.content") then
-  --         -- chunks where the name of the injected language is dynamic
-  --         -- e.g. markdown code chunks
-  --         if ts.is_in_node_range(node, row, col) then
-  --           language = lang_capture
-  --         end
-  --         -- chunks where the name of the language is the name of the capture
-  --       elseif fn.contains(injectable_languages, name) then
-  --         if ts.is_in_node_range(node, row, col) then
-  --           language = name
-  --         end
-  --       end
-  --
-  --       if language then
-  --         if cfg.handle_leading_whitespace then
-  --           local buf = keeper.rafts[main_nr].buffers[language]
-  --           if buf then
-  --             local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
-  --             if lines[1] then
-  --               end_col = #lines[1]
-  --             end
-  --           end
-  --         end
-  --         return language, start_row, start_col, end_row, end_col
-  --       end
-  --     end
-  --   end
-  -- end
-  -- return nil
 end
 
 ---find the leading_offset of the given line number, and buffer number. Returns 0 if the line number
@@ -603,7 +561,7 @@ keeper.get_language_lines = function(exclude_eval_false, row_start, row_end)
     return
   end
 
-  local chunks = keeper.extract_code_chunks(main_nr, lang, exclude_eval_false, row_start, row_end)[lang]
+  local chunks = keeper.rafts[main_nr].code_chunks[lang]
   if not chunks or next(chunks) == nil then
     return
   end
@@ -621,33 +579,15 @@ keeper.get_language_lines_around_cursor = function()
   local row, col = unpack(api.nvim_win_get_cursor(0))
   row = row - 1
   col = col
-
-  local query = keeper.rafts[main_nr].query
-  local parser = keeper.rafts[main_nr].parser
-  local tree = parser:parse()
-  local root = tree[1]:root()
-
-  for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
-    for id, nodes in pairs(match) do
-      local name = query.captures[id]
-
-      -- TODO: maybe can be removed with nvim v0.10
-      if type(nodes) ~= "table" then
-        nodes = { nodes }
-      end
-
-      for _, node in ipairs(nodes) do
-        if name == "content" then
-          if ts.is_in_node_range(node, row, col) then
-            return ts.get_node_text(node, main_nr, metadata)
-          end
-          -- chunks where the name of the language is the name of the capture
-        elseif fn.contains(injectable_languages, name) then
-          if ts.is_in_node_range(node, row, col) then
-            return ts.get_node_text(node, main_nr, metadata)
-          end
-        end
-      end
+  keeper.sync_raft(main_nr)
+  local lang = keeper.get_current_language_context(main_nr, { row + 1, col })
+  local chunks = keeper.rafts[main_nr].code_chunks[lang]
+  if not chunks or next(chunks) == nil then
+    return
+  end
+  for _, c in ipairs(chunks) do
+    if row >= c.range.from[1] and row <= c.range.to[1] then
+      return fn.concat(c.text)
     end
   end
 end

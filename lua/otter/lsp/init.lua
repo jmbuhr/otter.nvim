@@ -115,7 +115,7 @@ otterls.start = function(main_nr, completion)
                 params.position.character,
               }
             end
-            lang, _, _, _, _ = keeper.get_current_language_context(main_nr, pos)
+            lang = keeper.get_current_language_context(main_nr, pos)
           end
 
           local otter_nr = keeper.rafts[main_nr].buffers[lang]
@@ -134,7 +134,7 @@ otterls.start = function(main_nr, completion)
           -- collect capabilities
           local supports_method = false
           for _, client in pairs(otterclients) do
-            if client.supports_method(method) then
+            if client:supports_method(method) then
               supports_method = true
             end
           end

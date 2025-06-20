@@ -1,16 +1,4 @@
----
-title: Hello World
-format: html
-engine: markdown
----
-
 # Hello
-
-```{r}
-print('hello world')
-
-plot(1:10)
-```
 
 
 ```{python}
@@ -20,42 +8,9 @@ print("hello world")
 y.lower()
 ```
 
-<html>
-<body>
-<p>Hello</p>
-</body>
-<div>hello</div>
-<div class="hello">world</div>
-<style>
-.hello {
-  color: orange;
-}
-</style>
-<script>
-console.log('hello world')
-</script>
-</html>
-
-<script>
-console
-</script>
-
-
-```{javascript}
-console.log('hello world')
-```
 
 ```{python}
 def hello():
     print("hello world")
 ```
 
-```{python}
-hello()
-```
-
-
-```{python}
-hello()
-import math
-```

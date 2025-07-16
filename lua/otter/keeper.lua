@@ -5,11 +5,9 @@
 --- and code chunks
 local keeper = {}
 
-local extensions = require("otter.tools.extensions")
 local fn = require("otter.tools.functions")
 local api = vim.api
 local ts = vim.treesitter
-local cfg = require("otter.config").cfg
 
 ---@class Raft
 ---@field languages string[]
@@ -41,7 +39,7 @@ keeper.rafts = {}
 --- generated from the lanaguages
 --- for which we have extensions
 local injectable_languages = {}
-for key, _ in pairs(extensions) do
+for key, _ in pairs(OtterConfig.extensions) do
   table.insert(injectable_languages, key)
 end
 
@@ -89,7 +87,7 @@ end
 ---@param starting_ln integer
 ---@return string, integer
 local function trim_leading_witespace(text, bufnr, starting_ln)
-  if not cfg.handle_leading_whitespace then
+  if not OtterConfig.handle_leading_whitespace then
     return text, 0
   end
 
@@ -237,8 +235,10 @@ keeper.get_current_language_context = function(main_nr, position)
 
   local query = keeper.rafts[main_nr].query
   local parser = keeper.rafts[main_nr].parser
-  local tree = parser:parse()
-  local root = tree[1]:root()
+  local trees = parser:parse()
+  assert(trees, "[otter] Treesitter failed to parse buffer " .. main_nr)
+  local tree = trees[1]
+  local root = tree:root()
   local lang_capture = nil
   for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do
@@ -264,7 +264,7 @@ keeper.get_current_language_context = function(main_nr, position)
         end
 
         if language then
-          if cfg.handle_leading_whitespace then
+          if OtterConfig.handle_leading_whitespace then
             local buf = keeper.rafts[main_nr].buffers[language]
             if buf then
               local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
@@ -286,7 +286,7 @@ end
 ---@param line_nr number
 ---@param main_nr number
 keeper.get_leading_offset = function(line_nr, main_nr)
-  if not cfg.handle_leading_whitespace then
+  if not OtterConfig.handle_leading_whitespace then
     return 0
   end
 
@@ -308,7 +308,7 @@ end
 ---@param exclude_end boolean?
 ---@param known_offset number?
 keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
-  if not cfg.handle_leading_whitespace or known_offset == 0 then
+  if not OtterConfig.handle_leading_whitespace or known_offset == 0 then
     return
   end
 
@@ -491,7 +491,7 @@ keeper.export_raft = function(force)
   for _, otter_nr in pairs(keeper.rafts[main_nr].buffers) do
     local path = api.nvim_buf_get_name(otter_nr)
     local lang = keeper.rafts[main_nr].otter_nr_to_lang[otter_nr]
-    local extension = extensions[lang] or lang
+    local extension = OtterConfig.extensions[lang] or lang
     path = fn.otterpath_to_plain_path(path) .. "." .. extension
     vim.notify("Exporting otter: " .. lang)
     local new_path = vim.fn.input({ prompt = "New path: ", default = path, completion = "file" })
@@ -559,8 +559,10 @@ keeper.get_language_lines_around_cursor = function()
 
   local query = keeper.rafts[main_nr].query
   local parser = keeper.rafts[main_nr].parser
-  local tree = parser:parse()
-  local root = tree[1]:root()
+  local trees = parser:parse()
+  assert(trees, "[otter] Treesitter failed to parse buffer " .. main_nr)
+  local tree = trees[1]
+  local root = tree:root()
 
   for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
     for id, nodes in pairs(match) do

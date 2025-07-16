@@ -2,7 +2,6 @@
 local handlers = require("otter.lsp.handlers")
 local keeper = require("otter.keeper")
 local ms = vim.lsp.protocol.Methods
-local fn = require("otter.tools.functions")
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
@@ -133,7 +132,7 @@ otterls.start = function(main_nr, completion)
           -- collect capabilities
           local supports_method = false
           for _, client in pairs(otterclients) do
-            if client.supports_method(method) then
+            if client:supports_method(method) then
               supports_method = true
             end
           end
@@ -208,7 +207,7 @@ otterls.start = function(main_nr, completion)
       local _, _ = client, initialize_result
       -- nothing to be done
     end,
-    root_dir = require("otter.config").cfg.lsp.root_dir(),
+    root_dir = OtterConfig.lsp.root_dir(),
     ---@param code integer
     ---@param signal integer
     ---@param client_id integer

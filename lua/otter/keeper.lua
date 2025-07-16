@@ -157,9 +157,9 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
           -- Use the range from the `offset!` directive if available
           local start_row, start_col, end_row, end_col
           if metadata[id] and metadata[id].range then
-              start_row, start_col, end_row, end_col = unpack(metadata[id].range)
+            start_row, start_col, end_row, end_col = unpack(metadata[id].range)
           else
-              start_row, start_col, end_row, end_col = node:range()
+            start_row, start_col, end_row, end_col = node:range()
           end
 
           if

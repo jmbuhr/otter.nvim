@@ -40,7 +40,7 @@ M.export_otter_as = keeper.export_otter_as
 ---@paramr postambles table? A table of postambles for each language. The key is the language and the value is a table of strings that will be written to the end of the otter buffer.
 ---@paramr ignore_pattern table? A table of patterns to ignore for each language. The key is the languang and the value is a regular expression string to match patterns to ignore.
 M.activate = function(languages, completion, diagnostics, tsquery, preambles, postambles, ignore_pattern)
-  languages = languages or vim.tbl_keys(require("otter.tools.extensions"))
+  languages = languages or vim.tbl_keys(extensions)
   completion = completion ~= false
   diagnostics = diagnostics ~= false
   preambles = preambles or config.cfg.buffers.preambles

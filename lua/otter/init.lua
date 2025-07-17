@@ -1,10 +1,10 @@
 local M = {}
 
+-- make OtterConfig globally available
+require("otter.config")
+
 local api = vim.api
 local ts = vim.treesitter
-
-local config = require("otter.config")
-local extensions = require("otter.tools.extensions")
 local keeper = require("otter.keeper")
 local otterls = require("otter.lsp")
 
@@ -20,9 +20,7 @@ M.setup = function(opts)
     return vim.notify("[otter] otter.nvim requires Neovim >= 0.10.0", vim.log.levels.ERROR)
   end
 
-  config.cfg = vim.tbl_deep_extend("force", config.cfg, opts or {})
-
-  extensions = vim.tbl_deep_extend("force", extensions, config.cfg.extensions or {})
+  OtterConfig = vim.tbl_deep_extend("force", OtterConfig, opts or {})
 end
 
 -- expose some functions from the otter keeper directly
@@ -40,12 +38,12 @@ M.export_otter_as = keeper.export_otter_as
 ---@paramr postambles table? A table of postambles for each language. The key is the language and the value is a table of strings that will be written to the end of the otter buffer.
 ---@paramr ignore_pattern table? A table of patterns to ignore for each language. The key is the languang and the value is a regular expression string to match patterns to ignore.
 M.activate = function(languages, completion, diagnostics, tsquery, preambles, postambles, ignore_pattern)
-  languages = languages or vim.tbl_keys(require("otter.tools.extensions"))
+  languages = languages or vim.tbl_keys(OtterConfig.extensions)
   completion = completion ~= false
   diagnostics = diagnostics ~= false
-  preambles = preambles or config.cfg.buffers.preambles
-  postambles = postambles or config.cfg.buffers.postambles
-  ignore_pattern = ignore_pattern or config.cfg.buffers.ignore_pattern
+  preambles = preambles or OtterConfig.buffers.preambles
+  postambles = postambles or OtterConfig.buffers.postambles
+  ignore_pattern = ignore_pattern or OtterConfig.buffers.ignore_pattern
   local main_nr = api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
   local main_lang = api.nvim_get_option_value("filetype", { buf = main_nr })
@@ -104,7 +102,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
   end
   languages = found_languages
   if #languages == 0 then
-    if config.cfg.verbose and config.cfg.verbose.no_code_found then
+    if OtterConfig.verbose and OtterConfig.verbose.no_code_found then
       vim.notify_once(
         "[otter] No code chunks found. Not activating. You can activate after having added code chunks with require'otter'.activate(). You can turn of this message by setting the option verbose.no_code_found to false",
         vim.log.levels.INFO,
@@ -116,14 +114,14 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
 
   -- create otter buffers
   for _, lang in ipairs(languages) do
-    if not extensions[lang] then
+    if not OtterConfig.extensions[lang] then
       vim.notify(
         ("[otter] %s is an unknown language. Please open an issue/PR to get it added"):format(lang),
         vim.log.levels.ERROR
       )
       goto continue
     end
-    local extension = "." .. extensions[lang]
+    local extension = "." .. OtterConfig.extensions[lang]
     if extension ~= nil then
       local otter_path = path_to_otterpath(main_path, extension)
       local otter_uri = "file://" .. otter_path
@@ -165,12 +163,12 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
         callback = cleanup,
       })
 
-      if config.cfg.buffers.write_to_disk then
+      if OtterConfig.buffers.write_to_disk then
         -- write to disk when main buffer is written
         api.nvim_create_autocmd("BufWritePost", {
           buffer = main_nr,
           group = api.nvim_create_augroup("OtterAutowrite" .. otter_nr, {}),
-          callback = function(_, _)
+          callback = function(_)
             if api.nvim_buf_is_loaded(otter_nr) then
               keeper.sync_raft(main_nr)
               api.nvim_buf_call(otter_nr, function()
@@ -207,7 +205,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
   for _, lang in ipairs(keeper.rafts[main_nr].languages) do
     local otter_nr = keeper.rafts[main_nr].buffers[lang]
 
-    if config.cfg.buffers.write_to_disk then
+    if OtterConfig.buffers.write_to_disk then
       -- and also write out once before lsps can complain
       local otter_path = keeper.rafts[main_nr].paths[lang]
       api.nvim_buf_call(otter_nr, function()
@@ -215,7 +213,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
       end)
     end
 
-    if config.cfg.buffers.set_filetype == false then
+    if OtterConfig.buffers.set_filetype == false then
       vim.deprecate(
         "otter.config.buffers.set_filetype = false",
         "Use the default otter.nvim behavior instead. Otter now always sets the filetype to accomodate different ways of initializing language servers without conflicts.",
@@ -226,7 +224,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     end
 
     -- or if requested set the filetype
-    if config.cfg.buffers.set_filetype then
+    if OtterConfig.buffers.set_filetype then
       api.nvim_set_option_value("filetype", lang, { buf = otter_nr })
     else
       local function get_aucmds(group)
@@ -289,7 +287,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
   end
 
   -- debugging
-  if config.cfg.debug == true then
+  if OtterConfig.debug == true then
     -- listen to lsp requests and notifications
     vim.api.nvim_create_autocmd("LspNotify", {
       ---@param _ {buf: number, data: {client_id: number, method: string, params: any}}

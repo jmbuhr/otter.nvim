@@ -1,7 +1,5 @@
-local M = {}
-
 ---@class OtterConfig
-local default_config = {
+OtterConfig = {
   lsp = {
     -- `:h events` that cause the diagnostics to update. Set to:
     -- { "BufWritePost", "InsertLeave", "TextChanged" } for less performant
@@ -46,14 +44,55 @@ local default_config = {
   handle_leading_whitespace = true,
   -- mapping of filetypes to extensions for those not already included in otter.tools.extensions
   -- e.g. ["bash"] = "sh"
-  extensions = {},
+  extensions = {
+    asm = "asm",
+    bash = "sh",
+    bib = "bib",
+    c = "c",
+    clojure = "clj",
+    cpp = "cpp",
+    csharp = "cs",
+    css = "css",
+    dot = "dot",
+    elixir = "ex",
+    fish = "fish",
+    fsharp = "fs",
+    gleam = "gleam",
+    go = "go",
+    haskell = "hs",
+    htmldjango = "htmldjango",
+    html = "html",
+    javascript = "js",
+    json = "json",
+    julia = "jl",
+    lua = "lua",
+    markdown = "md",
+    nim = "nim",
+    nix = "nix",
+    ocaml = "ml",
+    ojs = "js",
+    php = "php",
+    pyodide = "py",
+    python = "py",
+    roc = "roc",
+    r = "R",
+    ruby = "rb",
+    rust = "rs",
+    sh = "sh",
+    sql = "sql",
+    svelte = "svelte",
+    tex = "tex",
+    typescript = "ts",
+    typst = "typ",
+    vim = "vim",
+    webc = "webc",
+    webr = "R",
+    yaml = "yml",
+    zig = "zig",
+  },
   -- add event listeners for LSP events for debugging
   debug = false,
   verbose = { -- set to false to disable all verbose messages
     no_code_found = false, -- warn if otter.activate is called, but no injected code was found
   },
 }
-
-M.cfg = default_config
-
-return M

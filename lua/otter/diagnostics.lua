@@ -1,5 +1,4 @@
 local api = vim.api
-local config = require("otter.config")
 local keeper = require("otter.keeper")
 
 M = {}
@@ -17,7 +16,7 @@ M.setup = function(main_nr)
       vim.diagnostic.reset(nss[args.buf], main_nr)
       local diags = args.data.diagnostics
       if diags then
-        if config.cfg.handle_leading_whitespace then
+        if OtterConfig.handle_leading_whitespace then
           for _, diag in ipairs(diags) do
             local offset = keeper.get_leading_offset(diag.lnum, main_nr)
             diag.col = diag.col + offset
@@ -36,7 +35,7 @@ M.setup = function(main_nr)
   })
   keeper.rafts[main_nr].diagnostics_group = group
 
-  api.nvim_create_autocmd(config.cfg.lsp.diagnostic_update_events, {
+  api.nvim_create_autocmd(OtterConfig.lsp.diagnostic_update_events, {
     buffer = main_nr,
     group = group,
     callback = function(_)

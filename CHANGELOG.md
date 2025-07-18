@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.0](https://github.com/jmbuhr/otter.nvim/compare/v2.12.2...v2.13.0) (2025-07-17)
+
+
+### Features
+
+* global config ([#253](https://github.com/jmbuhr/otter.nvim/issues/253)) ([1877d5b](https://github.com/jmbuhr/otter.nvim/commit/1877d5b87784b6cfa996a8c41a854f4f20debe06))
+
 ## [2.12.2](https://github.com/jmbuhr/otter.nvim/compare/v2.12.1...v2.12.2) (2025-06-08)
 
 

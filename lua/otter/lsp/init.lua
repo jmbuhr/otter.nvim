@@ -209,7 +209,7 @@ otterls.start = function(main_nr, completion)
       local _, _ = client, initialize_result
       -- nothing to be done
     end,
-    root_dir = require("otter.config").cfg.lsp.root_dir(),
+    root_dir = OtterConfig.lsp.root_dir(),
     ---@param code integer
     ---@param signal integer
     ---@param client_id integer

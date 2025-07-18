@@ -1,7 +1,5 @@
 local M = {}
 
-local config = require("otter.config")
-
 M.contains = function(list, x)
   for _, v in pairs(list) do
     if v == x then
@@ -21,7 +19,7 @@ end
 ---@param s string
 ---@return string s, boolean stripped The stripped string and a boolean indicating whether the string was stripped
 M.strip_wrapping_quotes = function(s)
-  for _, c in ipairs(config.cfg.strip_wrapping_quote_characters) do
+  for _, c in ipairs(OtterConfig.strip_wrapping_quote_characters) do
     if s:sub(1, 1) == c and s:sub(#s, #s) == c then
       return s:sub(2, #s - 1), true
     end

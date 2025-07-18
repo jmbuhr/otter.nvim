@@ -41,7 +41,8 @@ OtterConfig = {
   strip_wrapping_quote_characters = { "'", '"', "`" },
   -- remove whitespace from the beginning of the code chunks when writing to the ottter buffers
   -- and calculate it back in when handling lsp requests
-  handle_leading_whitespace = true,
+  -- this is now down automatically by default
+  handle_leading_whitespace = nil,
   -- mapping of filetypes to extensions for those not already included in otter.tools.extensions
   -- e.g. ["bash"] = "sh"
   extensions = {

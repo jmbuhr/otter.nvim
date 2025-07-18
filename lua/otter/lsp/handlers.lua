@@ -223,10 +223,10 @@ end
 
 ---@param err lsp.ResponseError
 ---@param response vim.lsp.CompletionResult
----@param ctx lsp.HandlerContext
+---@param ctx lsp.CompletionContext
 ---@return lsp.ResponseError
 ---@return vim.lsp.CompletionResult?
----@return lsp.HandlerContext
+---@return lsp.CompletionContext
 M[ms.textDocument_completion] = function(err, response, ctx)
   if not response then
     return err, response, ctx
@@ -244,8 +244,14 @@ M[ms.textDocument_completion] = function(err, response, ctx)
       item.data.uri = ctx.params.otter.main_uri
     end
     -- not needed for now:
-    -- item.position = modify_position(item.position, ctx.params.otter.main_nr)
+    -- modify_position(item, ctx.params.otter.main_nr)
   end
+
+  if ctx.params.position ~= nil then
+    modify_position(ctx.params, ctx.params.otter.main_nr)
+    vim.print('context:', ctx)
+  end
+
   return err, response, ctx
 end
 
@@ -263,7 +269,11 @@ M[ms.completionItem_resolve] = function(err, response, ctx)
     response.data.uri = ctx.params.otter.main_uri
   end
 
+  -- vim.print('context:', ctx)
+  -- vim.print('response:', response)
+
   return err, response, ctx
 end
+
 
 return M

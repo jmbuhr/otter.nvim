@@ -43,78 +43,12 @@ for key, _ in pairs(OtterConfig.extensions) do
   table.insert(injectable_languages, key)
 end
 
-local function filter_lang(s)
-  return s:gsub("^[%s%p]+", "")
-end
-
----determine the language of the current node
----@param main_nr integer bufnr of the main buffer
----@param name string name of the capture
----@param node table node of the current capture
----@param metadata table metadata of the current capture
----@param current_language string? current language
----@return string?
-local function determine_language(main_nr, name, node, metadata, current_language)
-  local injection_language = metadata["injection.language"]
-  if injection_language ~= nil then
-    -- chunks using the metadata to specify the injected language
-    -- e.g. html script tags
-    if injection_language ~= "comment" then
-      -- don't use comment as language,
-      -- comments with language inside are handled in injection.combined
-      return filter_lang(injection_language)
-    end
-  elseif metadata["injection.combined"] == true then
-    -- chunks where the injected language is specified in the text of a comment
-    local lang_capture = metadata[2]["text"]
-    if lang_capture ~= nil then
-      -- NOTE: this could be more elegant
-      -- remove leading whitespace and comment characters erroneously captured as part of the langauge
-      return filter_lang(lang_capture)
-    end
-  elseif name == "_lang" or name == "injection.language" then
-    -- chunks where the name of the injected language is dynamic
-    -- e.g. markdown code chunks
-    return ts.get_node_text(node, main_nr, metadata)
-  else
-    return current_language
-  end
-end
-
----trims the leading whitespace from text
----@param lines string[]
----@param bufnr integer host buffer number
----@param starting_ln integer
----@return string, integer
-local function trim_leading_witespace(text, bufnr, starting_ln)
-  if not OtterConfig.handle_leading_whitespace then
-    return text, 0
-  end
-
-  -- Assume the first line is least indented
-  -- the first line in the capture doesn't have its leading indent, so we grab from the buffer
-  if #lines == 0 then
-    return lines, 0
-  end
-  local first_line = vim.api.nvim_buf_get_lines(bufnr, starting_ln, starting_ln + 1, false)
-  vim.print('lines:')
-  vim.print(lines)
-  vim.print('first line', first_line)
-  local leading = first_line[1]:match("^%s+")
-  if not leading then
-    return lines, 0
-  end
-  for i, line in ipairs(lines) do
-    lines[i] = line:gsub("^" .. leading, "")
-  end
-  return lines, #leading
-end
 
 ---@class CodeChunk
----@field range { from: [integer, integer], to: [integer, integer] }
+---@field range Range4
 ---@field lang string
 ---@field node TSNode
----@field text string[]
+---@field lines string[]
 ---@field leading_offset number
 
 ---Extract code chunks from the specified buffer.
@@ -128,16 +62,21 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
   local parser = keeper.rafts[main_nr].parser
 
   -- parse everythion to include injections
-  local tree = parser:parse(true)[1]
+  ---@type Range2|boolean
+  local parse_range = range_start_row == nil or range_end_row == nil or { range_start_row, range_end_row }
+
+  local tree = parser:parse(parse_range)[1]
   assert(tree, "[otter] Treesitter failed to parse buffer " .. main_nr)
 
   ---@type table<string, vim.treesitter.LanguageTree>
   local trees = {}
   local lang_to_tree = parser:children()
   for l, t in pairs(lang_to_tree) do
-    vim.print(l)
     if l ~= "markdown_inline" and (lang == nil or l == lang) then
+      -- we don't need the markdown_inline chunks
+      -- that's more like a helper language to markdown
       trees[l] = t
+      -- TODO: check if that also has children
     end
   end
 
@@ -152,139 +91,52 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
   -- since injections are already parsed
   for l, langtree in pairs(trees) do
     code_chunks[l] = {}
-    local regionlists = langtree:included_regions()
 
-    -- make sure it is parsed
-    langtree:parse(true)
-
-    for _, regions in ipairs(regionlists) do
-      for _, region in ipairs(regions) do
-        local start_row, start_col, _, end_row, end_col, _ = unpack(region)
-          -- Use the range from the `offset!` directive if available
-          local start_row, start_col, end_row, end_col
-          if metadata[id] and metadata[id].range then
-            start_row, start_col, end_row, end_col = unpack(metadata[id].range)
-          else
-            start_row, start_col, end_row, end_col = node:range()
-          end
-
-        -- if the range ends at the start of the next line,
-        -- we need to adjust the end_col to the last character of the line
-        -- and and end_row to the last row
-        if end_col == 0 then
-          local lines = vim.api.nvim_buf_get_lines(main_nr, end_row - 1, end_row, false)
-          end_col = #lines[1]
-          end_row = end_row - 1
-        end
-
-        -- Indexing is zero-based. Row indices are end-inclusive, and column indices
-       -- are end-exclusive.
-        local lines = vim.api.nvim_buf_get_text(
-          main_nr,
-          start_row,
-          start_col,
-          end_row,
-          end_col + 1,
-          {}
-        )
-        local text, leading_offset = trim_leading_witespace(lines, main_nr, start_row)
-
-        local result = {
-          range = { from = { start_row, start_col }, to = { end_row, end_col } },
-          lang = l,
-          text = text,
-          leading_offset = leading_offset,
-        }
-        table.insert(code_chunks[l], result)
+    local subtrees = langtree:trees()
+    for _, subtree in ipairs(subtrees) do
+      local root = subtree:root()
+      local text = ts.get_node_text(root, main_nr)
+      if exclude_eval_false and string.find(text, "#%| *eval: *false") then
+        goto continue
       end
+      local start_row, start_col, end_row, end_col = root:range()
+      local range = { start_row, start_col, end_row, end_col }
+      local lines = fn.lines(text)
+      local first_line = lines[1]
+      if first_line == nil then
+        goto continue
+      end
+
+      local offset = start_col
+      local leading_whitespace = first_line:match("^%s*")
+
+      if #leading_whitespace > 0 then
+        offset = #leading_whitespace
+        lines[1] = lines[1]:sub(offset + 1)
+      end
+
+      if offset > 0 then
+        local new_lines = {}
+        table.insert(new_lines, lines[1])
+        for i = 2, #lines do
+          lines[i] = lines[i]:sub(offset + 1)
+        end
+      end
+
+      ---@type CodeChunk
+      local chunk = {
+        range = range,
+        lang = l,
+        node = root,
+        lines = lines,
+        leading_offset = offset,
+      }
+      table.insert(code_chunks[l], chunk)
+      ::continue::
     end
   end
 
   return code_chunks
-
-  -- local query = keeper.rafts[main_nr].query
-  -- local root = tree:root()
-  -- local lang_capture = nil
-  -- for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
-  --   for id, nodes in pairs(match) do
-  --     local name = query.captures[id]
-  --
-  --     for _, node in ipairs(nodes) do
-  --       local text
-  --       lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
-  --       if
-  --         lang_capture
-  --         and (name == "content" or name == "injection.content")
-  --         and (lang == nil or lang_capture == lang)
-  --       then
-  --         -- the actual code content
-          -- text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-  --         -- remove surrounding quotes
-  --         -- (workaround for treesitter offsets not properly processed)
-  --         text, _ = fn.strip_wrapping_quotes(text)
-  --         if exclude_eval_false and string.find(text, "| *eval: *false") then
-  --           text = ""
-  --         end
-  --
-  --         -- Use the range from the `offset!` directive if available
-  --         local start_row, start_col, end_row, end_col
-  --         if metadata[id] and metadata[id].range then
-  --             start_row, start_col, end_row, end_col = unpack(metadata[id].range)
-  --         else
-  --             start_row, start_col, end_row, end_col = node:range()
-  --         end
-  --
-  --         if
-  --           range_start_row ~= nil
-  --           and range_end_row ~= nil
-  --           and ((start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row)
-  --         then
-  --           goto continue
-  --         end
-  --         local leading_offset
-  --         text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
-  --         local result = {
-  --           range = { from = { start_row, start_col }, to = { end_row, end_col } },
-  --           lang = lang_capture,
-  --           node = node,
-  --           text = fn.lines(text),
-  --           leading_offset = leading_offset,
-  --         }
-  --         if code_chunks[lang_capture] == nil then
-  --           code_chunks[lang_capture] = {}
-  --         end
-  --         table.insert(code_chunks[lang_capture], result)
-  --         -- reset current language
-  --         lang_capture = nil
-  --       elseif fn.contains(injectable_languages, name) then
-  --         -- chunks where the name of the language is the name of the capture
-  --         if lang == nil or name == lang then
-  --           text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-  --           text, _ = fn.strip_wrapping_quotes(text)
-  --
-  --           ---@type integer
-  --           ---@diagnostic disable-next-line: assign-type-mismatch
-  --           local start_row, start_col, end_row, end_col = node:range()
-  --           local leading_offset
-  --           text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
-  --           local result = {
-  --             range = { from = { start_row, start_col }, to = { end_row, end_col } },
-  --             lang = name,
-  --             node = node,
-  --             text = fn.lines(text),
-  --             leading_offset = leading_offset,
-  --           }
-  --           if code_chunks[name] == nil then
-  --             code_chunks[name] = {}
-  --           end
-  --           table.insert(code_chunks[name], result)
-  --         end
-  --       end
-  --       ::continue::
-  --     end
-  --   end
-  -- end
-  -- return code_chunks
 end
 
 --- Get the language context of a position
@@ -300,55 +152,11 @@ keeper.get_current_language_context = function(main_nr, position)
   local row, col = unpack(position)
   row = row - 1
   col = col
-  local range = { row, col, row, col}
+  local range = { row, col, row, col }
 
   local lang = keeper.rafts[main_nr].parser:language_for_range(range):lang()
   if lang == "" then
     return nil
-  local query = keeper.rafts[main_nr].query
-  local parser = keeper.rafts[main_nr].parser
-  local trees = parser:parse()
-  assert(trees, "[otter] Treesitter failed to parse buffer " .. main_nr)
-  local tree = trees[1]
-  local root = tree:root()
-  local lang_capture = nil
-  for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
-    for id, nodes in pairs(match) do
-      local name = query.captures[id]
-
-      for _, node in ipairs(nodes) do
-        lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
-        local start_row, start_col, end_row, end_col = node:range()
-        end_row = end_row - 1
-
-        local language = nil
-        if lang_capture and (name == "content" or name == "injection.content") then
-          -- chunks where the name of the injected language is dynamic
-          -- e.g. markdown code chunks
-          if ts.is_in_node_range(node, row, col) then
-            language = lang_capture
-          end
-          -- chunks where the name of the language is the name of the capture
-        elseif fn.contains(injectable_languages, name) then
-          if ts.is_in_node_range(node, row, col) then
-            language = name
-          end
-        end
-
-        if language then
-          if OtterConfig.handle_leading_whitespace then
-            local buf = keeper.rafts[main_nr].buffers[language]
-            if buf then
-              local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
-              if lines[1] then
-                end_col = #lines[1]
-              end
-            end
-          end
-          return language, start_row, start_col, end_row, end_col
-        end
-      end
-    end
   end
   return lang
 end
@@ -358,14 +166,10 @@ end
 ---@param line_nr number
 ---@param main_nr number
 keeper.get_leading_offset = function(line_nr, main_nr)
-  if not OtterConfig.handle_leading_whitespace then
-    return 0
-  end
-
   local lang_chunks = keeper.rafts[main_nr].code_chunks
   for _, chunks in pairs(lang_chunks) do
     for _, chunk in ipairs(chunks) do
-      if line_nr >= chunk.range.from[1] and line_nr <= chunk.range.to[1] then
+      if line_nr >= chunk.range[1] and line_nr <= chunk.range[3] then
         return chunk.leading_offset
       end
     end
@@ -380,7 +184,7 @@ end
 ---@param exclude_end boolean?
 ---@param known_offset number?
 keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
-  if not OtterConfig.handle_leading_whitespace or known_offset == 0 then
+  if known_offset == 0 then
     return
   end
 
@@ -506,7 +310,7 @@ keeper.sync_raft = function(main_nr, language)
     if otter_nr ~= nil then
       local code_chunks = all_code_chunks[lang]
       if code_chunks ~= nil then
-        local nmax = code_chunks[#code_chunks].range["to"][1] -- last code line
+        local nmax = code_chunks[#code_chunks].range[3] -- last code line
 
         -- create list with empty lines the length of the buffer
         local ls = fn.empty_lines(nmax)
@@ -523,8 +327,8 @@ keeper.sync_raft = function(main_nr, language)
         -- apply ignore_pattern filtering on read
         local pattern = keeper.rafts[main_nr].ignore_pattern[lang]
         for _, t in ipairs(code_chunks) do
-          local start_index = t.range["from"][1]
-          for i, l in ipairs(t.text) do
+          local start_index = t.range[1]
+          for i, l in ipairs(t.lines) do
             local index = start_index + i
             if pattern == nil or not string.match(l, pattern) then
               ls[index] = l
@@ -616,7 +420,7 @@ keeper.get_language_lines = function(exclude_eval_false, row_start, row_end)
   end
   local code = {}
   for _, c in ipairs(chunks) do
-    table.insert(code, fn.concat(c.text))
+    table.insert(code, fn.concat(c.lines))
   end
   return code
 end

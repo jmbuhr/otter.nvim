@@ -50,9 +50,9 @@ M.concat = function(ls)
 end
 
 M.unlines = function(ls)
-  local s = ""
-  for _, l in ipairs(ls) do
-    s = s .. "\n" .. l
+  local s = ls[1] or ""
+  for i = 2, #ls do
+    s = s .. "\n" .. ls[i]
   end
   return s .. "\n"
 end

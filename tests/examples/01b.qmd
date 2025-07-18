@@ -3,11 +3,7 @@
 
 ```{python}
 import sys
-
-
-
-
-
+import numpy as np
 ```
 
 ```{python}
@@ -17,3 +13,8 @@ print("hello world")
 y.lower()
 ```
 
+
+```{python}
+from plotnine import *
+ys = np.zeros(10)
+```

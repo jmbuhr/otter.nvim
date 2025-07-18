@@ -144,6 +144,12 @@ otterls.start = function(main_nr, completion)
             return
           end
 
+          -- FIXME: this
+          if method == ms.textDocument_documentSymbol or method == ms.textDocument_signatureHelp then
+            return handler(nil, nil, params.context)
+          end
+          vim.print(method)
+
           -- update the otter buffer of that language
           local success = keeper.sync_raft(main_nr, lang)
           if not success then

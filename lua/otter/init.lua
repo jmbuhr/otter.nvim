@@ -300,6 +300,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
         local client_id = args.data.client_id
         local method = args.data.method
         local request = args.data.request
+        method = method or "unknown"
         vim.print(bufnr .. "[" .. client_id .. "]" .. ": " .. method)
         vim.print(request)
       end,

@@ -1,3 +1,7 @@
+
+-- make OtterConfig globally available
+require("otter.config")
+
 vim.api.nvim_create_user_command("OtterActivate", require("otter").activate, {})
 vim.api.nvim_create_user_command("OtterDeactivate", require("otter").deactivate, {})
 vim.api.nvim_create_user_command("OtterExport", function(opts)

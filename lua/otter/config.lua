@@ -81,6 +81,7 @@ OtterConfig = {
     sh = "sh",
     sql = "sql",
     svelte = "svelte",
+    swift = "swift",
     tex = "tex",
     typescript = "ts",
     typst = "typ",

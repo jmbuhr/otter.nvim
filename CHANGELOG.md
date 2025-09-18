@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.1](https://github.com/jmbuhr/otter.nvim/compare/v2.13.0...v2.13.1) (2025-08-04)
+
+
+### Bug Fixes
+
+* fix https://github.com/quarto-dev/quarto-nvim/issues/187 ([298b546](https://github.com/jmbuhr/otter.nvim/commit/298b54691e7e3c8cc0b12ac9ae2a91027a1992fc))
+
 ## [2.13.0](https://github.com/jmbuhr/otter.nvim/compare/v2.12.2...v2.13.0) (2025-07-17)
 
 

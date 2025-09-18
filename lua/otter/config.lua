@@ -39,7 +39,7 @@ OtterConfig = {
   },
   -- list of characters that should be stripped from the beginning and end of the code chunks
   strip_wrapping_quote_characters = { "'", '"', "`" },
-  -- remove whitespace from the beginning of the code chunks when writing to the ottter buffers
+  -- remove whitespace from the beginning of the code chunks when writing to the otter buffers
   -- and calculate it back in when handling lsp requests
   -- this is now down automatically by default
   handle_leading_whitespace = nil,
@@ -82,6 +82,7 @@ OtterConfig = {
     sh = "sh",
     sql = "sql",
     svelte = "svelte",
+    swift = "swift",
     tex = "tex",
     typescript = "ts",
     typst = "typ",

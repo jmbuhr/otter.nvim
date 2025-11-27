@@ -35,6 +35,14 @@ M.setup = function(main_nr)
   })
   keeper.rafts[main_nr].diagnostics_group = group
 
+  api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+    buffer = main_nr,
+    group = group,
+    callback = function()
+      api.nvim_del_augroup_by_id(group)
+    end,
+  })
+
   api.nvim_create_autocmd(OtterConfig.lsp.diagnostic_update_events, {
     buffer = main_nr,
     group = group,

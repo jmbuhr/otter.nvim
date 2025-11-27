@@ -192,6 +192,14 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     ::continue::
   end
 
+  api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+    buffer = main_nr,
+    group = api.nvim_create_augroup("OtterRaftCleanup" .. main_nr, {}),
+    callback = function()
+      keeper.rafts[main_nr] = nil
+    end,
+  })
+
   -- this has to happen again after the
   -- otter buffers got their own lsps
   -- to really make sure the clients are

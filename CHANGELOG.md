@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.3](https://github.com/jmbuhr/otter.nvim/compare/v2.13.2...v2.13.3) (2025-12-11)
+
+
+### Bug Fixes
+
+* use current tree-sitter node metadata for offset calculation ([#265](https://github.com/jmbuhr/otter.nvim/issues/265)) ([1e57106](https://github.com/jmbuhr/otter.nvim/commit/1e571067dff78f7f1d12c0dd90a4e7525870ad30))
+
 ## [2.13.2](https://github.com/jmbuhr/otter.nvim/compare/v2.13.1...v2.13.2) (2025-10-07)
 
 

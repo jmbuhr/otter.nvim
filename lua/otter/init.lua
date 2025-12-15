@@ -144,7 +144,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
         end
       end
       -- remove otter buffer when main buffer is closed
-      api.nvim_create_autocmd({ "BufDelete" }, {
+      api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
         buffer = main_nr,
         group = api.nvim_create_augroup("OtterAutocloseOnMainDelete" .. otter_nr, {}),
         callback = cleanup,
@@ -191,6 +191,14 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     end
     ::continue::
   end
+
+  api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+    buffer = main_nr,
+    group = api.nvim_create_augroup("OtterRaftCleanup" .. main_nr, {}),
+    callback = function()
+      keeper.rafts[main_nr] = nil
+    end,
+  })
 
   -- this has to happen again after the
   -- otter buffers got their own lsps

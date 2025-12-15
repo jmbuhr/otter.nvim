@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.4](https://github.com/jmbuhr/otter.nvim/compare/v2.13.3...v2.13.4) (2025-12-15)
+
+
+### Bug Fixes
+
+* Better cleanup of autocommands and otter buffers ([#267](https://github.com/jmbuhr/otter.nvim/issues/267)) ([965330b](https://github.com/jmbuhr/otter.nvim/commit/965330b5ce479568877d7a8cf5d084498d088204))
+
 ## [2.13.3](https://github.com/jmbuhr/otter.nvim/compare/v2.13.2...v2.13.3) (2025-12-11)
 
 

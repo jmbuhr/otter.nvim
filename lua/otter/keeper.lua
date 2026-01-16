@@ -7,7 +7,6 @@ local keeper = {}
 
 local fn = require("otter.tools.functions")
 local api = vim.api
-local ts = vim.treesitter
 
 ---@class Raft
 ---@field languages string[]
@@ -43,50 +42,12 @@ for key, _ in pairs(OtterConfig.extensions) do
   table.insert(injectable_languages, key)
 end
 
-local function filter_lang(s)
-  return s:gsub("^[%s%p]+", "")
-end
-
----determine the language of the current node
----@param main_nr integer bufnr of the main buffer
----@param name string name of the capture
----@param node table node of the current capture
----@param metadata table metadata of the current capture
----@param current_language string? current language
----@return string?
-local function determine_language(main_nr, name, node, metadata, current_language)
-  local injection_language = metadata["injection.language"]
-  if injection_language ~= nil then
-    -- chunks using the metadata to specify the injected language
-    -- e.g. html script tags
-    if injection_language ~= "comment" then
-      -- don't use comment as language,
-      -- comments with language inside are handled in injection.combined
-      return filter_lang(injection_language)
-    end
-  elseif metadata["injection.combined"] == true then
-    -- chunks where the injected language is specified in the text of a comment
-    local lang_capture = metadata[2]["text"]
-    if lang_capture ~= nil then
-      -- NOTE: this could be more elegant
-      -- remove leading whitespace and comment characters erroneously captured as part of the langauge
-      return filter_lang(lang_capture)
-    end
-  elseif name == "_lang" or name == "injection.language" then
-    -- chunks where the name of the injected language is dynamic
-    -- e.g. markdown code chunks
-    return ts.get_node_text(node, main_nr, metadata)
-  else
-    return current_language
-  end
-end
-
 ---trims the leading whitespace from text
 ---@param text string
 ---@param bufnr integer host buffer number
 ---@param starting_ln integer
 ---@return string, integer
-local function trim_leading_witespace(text, bufnr, starting_ln)
+local function trim_leading_whitespace(text, bufnr, starting_ln)
   if not OtterConfig.handle_leading_whitespace then
     return text, 0
   end
@@ -108,117 +69,144 @@ local function trim_leading_witespace(text, bufnr, starting_ln)
   return table.concat(split, "\n"), #leading
 end
 
+---Recursively collect all injected language trees
+---@param lang_tree vim.treesitter.LanguageTree
+---@param result table<string, vim.treesitter.LanguageTree>
+local function collect_injected_trees(lang_tree, result)
+  for lang, child_tree in pairs(lang_tree:children()) do
+    result[lang] = child_tree
+    -- Recurse to find nested injections (e.g., JS inside HTML inside markdown)
+    collect_injected_trees(child_tree, result)
+  end
+end
+
 ---@class CodeChunk
 ---@field range { from: [integer, integer], to: [integer, integer] }
 ---@field lang string
----@field node TSNode
+---@field node TSNode?
 ---@field text string[]
 ---@field leading_offset number
 
----Extract code chunks from the specified buffer.
----Updates M.rafts[main_nr].code_chunks
+---Extract code chunks from the specified buffer using treesitter language injection metadata.
+---This uses the LanguageTree's built-in injection handling which automatically parses
+---all injected languages after a full parse, including nested injections.
 ---@param main_nr integer The main buffer number
 ---@param lang string? language to extract. All languages if nil.
 ---@param exclude_eval_false boolean? Exclude code chunks with eval: false
----@param range_start_row integer? Row to start from, inclusive, 1-indexed.
----@param range_end_row integer? Row to end at, inclusive, 1-indexed.
+---@param range_start_row integer? Row to start from, inclusive, 0-indexed.
+---@param range_end_row integer? Row to end at, inclusive, 0-indexed.
 ---@return table<string, CodeChunk[]>
 keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_start_row, range_end_row)
-  local query = keeper.rafts[main_nr].query
   local parser = keeper.rafts[main_nr].parser
-  local tree = parser:parse()
-  assert(tree, "[otter] Treesitter failed to parse buffer " .. main_nr)
-  local root = tree[1]:root()
+  -- Full parse to ensure all injections are processed
+  parser:parse(true)
 
   ---@type table<string, CodeChunk[]>
   local code_chunks = {}
-  local lang_capture = nil
-  for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
-    for id, nodes in pairs(match) do
-      local name = query.captures[id]
 
-      for _, node in ipairs(nodes) do
-        local text
-        lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
-        if
-          lang_capture
-          and (name == "content" or name == "injection.content")
-          and (lang == nil or lang_capture == lang)
-        then
-          -- the actual code content
-          text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-          -- remove surrounding quotes
-          -- (workaround for treesitter offsets not properly processed)
-          text, _ = fn.strip_wrapping_quotes(text)
-          if exclude_eval_false and string.find(text, "| *eval: *false") then
-            text = ""
-          end
+  -- Collect all injected language trees (including nested ones)
+  ---@type table<string, vim.treesitter.LanguageTree>
+  local injected_trees = {}
+  collect_injected_trees(parser, injected_trees)
 
-          local start_row, start_col, end_row, end_col = node:range()
+  -- Process each injected language
+  for injected_lang, lang_tree in pairs(injected_trees) do
+    -- Skip if we're filtering for a specific language and this isn't it
+    if lang ~= nil and injected_lang ~= lang then
+      goto continue_lang
+    end
 
-          -- Use the range from the `offset!` directive if available
-          local offset = metadata[id] and metadata[id].offset;
-          if offset then
-            start_row = start_row + offset[1];
-            start_col = start_col + offset[2];
-            end_row = end_row + offset[3];
-            end_col = end_col + offset[4];
-          end;
+    -- Skip if this language isn't in our injectable languages list
+    if not fn.contains(injectable_languages, injected_lang) then
+      goto continue_lang
+    end
 
-          if
-            range_start_row ~= nil
-            and range_end_row ~= nil
-            and ((start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row)
-          then
-            goto continue
-          end
-          local leading_offset
-          text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
-          local result = {
-            range = { from = { start_row, start_col }, to = { end_row, end_col } },
-            lang = lang_capture,
-            node = node,
-            text = fn.lines(text),
-            leading_offset = leading_offset,
-          }
-          if code_chunks[lang_capture] == nil then
-            code_chunks[lang_capture] = {}
-          end
-          table.insert(code_chunks[lang_capture], result)
-          -- reset current language
-          lang_capture = nil
-        elseif fn.contains(injectable_languages, name) then
-          -- chunks where the name of the language is the name of the capture
-          if lang == nil or name == lang then
-            text = ts.get_node_text(node, main_nr, { metadata = metadata[id] })
-            text, _ = fn.strip_wrapping_quotes(text)
+    -- Get the regions where this language is injected
+    -- included_regions returns a table mapping tree index to list of Range6
+    -- Each Range6 is: { start_row, start_col, start_bytes, end_row, end_col, end_bytes }
+    local regions = lang_tree:included_regions()
 
-            ---@type integer
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            local start_row, start_col, end_row, end_col = node:range()
-            local leading_offset
-            text, leading_offset = trim_leading_witespace(text, main_nr, start_row)
-            local result = {
-              range = { from = { start_row, start_col }, to = { end_row, end_col } },
-              lang = name,
-              node = node,
-              text = fn.lines(text),
-              leading_offset = leading_offset,
-            }
-            if code_chunks[name] == nil then
-              code_chunks[name] = {}
-            end
-            table.insert(code_chunks[name], result)
+    -- Get buffer line count for bounds checking
+    local line_count = api.nvim_buf_line_count(main_nr)
+
+    for _, region_list in pairs(regions) do
+      for _, region in ipairs(region_list) do
+        local start_row, start_col, _, end_row, end_col, _ = unpack(region)
+
+        -- Bounds checking: skip regions that are out of bounds
+        -- This can happen when the parser has stale data during incomplete edits
+        if start_row < 0 or end_row < 0 or start_row >= line_count or end_row >= line_count then
+          goto continue_region
+        end
+
+        -- Clamp columns to valid ranges for the respective lines
+        local start_line = api.nvim_buf_get_lines(main_nr, start_row, start_row + 1, false)[1] or ""
+        local end_line = api.nvim_buf_get_lines(main_nr, end_row, end_row + 1, false)[1] or ""
+        start_col = math.max(0, math.min(start_col, #start_line))
+        end_col = math.max(0, math.min(end_col, #end_line))
+
+        -- Apply range filtering if specified
+        if range_start_row ~= nil and range_end_row ~= nil then
+          if (start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row then
+            goto continue_region
           end
         end
-        ::continue::
+
+        -- Get the text for this region from the main buffer
+        local ok, lines = pcall(api.nvim_buf_get_text, main_nr, start_row, start_col, end_row, end_col, {})
+        if not ok then
+          -- Skip this region if we still can't get the text
+          goto continue_region
+        end
+        local text = table.concat(lines, "\n")
+
+        -- Remove surrounding quotes (workaround for some injection patterns)
+        text, _ = fn.strip_wrapping_quotes(text)
+
+        -- Handle eval: false exclusion
+        if exclude_eval_false and string.find(text, "| *eval: *false") then
+          text = ""
+        end
+
+        -- Trim leading whitespace
+        local leading_offset
+        text, leading_offset = trim_leading_whitespace(text, main_nr, start_row)
+
+        local result = {
+          range = { from = { start_row, start_col }, to = { end_row, end_col } },
+          lang = injected_lang,
+          node = nil, -- We don't have a single node anymore, but the range is what matters
+          text = fn.lines(text),
+          leading_offset = leading_offset,
+        }
+
+        if code_chunks[injected_lang] == nil then
+          code_chunks[injected_lang] = {}
+        end
+        table.insert(code_chunks[injected_lang], result)
+
+        ::continue_region::
       end
     end
+
+    ::continue_lang::
   end
+
+  -- Sort chunks by start position for each language
+  for _, chunks in pairs(code_chunks) do
+    table.sort(chunks, function(a, b)
+      if a.range.from[1] == b.range.from[1] then
+        return a.range.from[2] < b.range.from[2]
+      end
+      return a.range.from[1] < b.range.from[1]
+    end)
+  end
+
   return code_chunks
 end
 
---- Get the language context of a position
+--- Get the language context of a position using LanguageTree's built-in
+--- language_for_range functionality which handles nested injections.
 --- @param main_nr integer? bufnr of the parent buffer. Default is 0
 --- @param position table? position (row, col). Default is the current cursor position (1,0)-based
 --- @return string? language nil if no language context is found
@@ -233,42 +221,51 @@ keeper.get_current_language_context = function(main_nr, position)
     return nil
   end
   local row, col = unpack(position)
-  row = row - 1
-  col = col
+  row = row - 1 -- Convert to 0-indexed
 
-  local query = keeper.rafts[main_nr].query
   local parser = keeper.rafts[main_nr].parser
-  local trees = parser:parse()
-  assert(trees, "[otter] Treesitter failed to parse buffer " .. main_nr)
-  local tree = trees[1]
-  local root = tree:root()
-  local lang_capture = nil
-  for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
-    for id, nodes in pairs(match) do
-      local name = query.captures[id]
+  -- Ensure the tree is fully parsed including injections
+  parser:parse(true)
 
-      for _, node in ipairs(nodes) do
-        lang_capture = determine_language(main_nr, name, node, metadata, lang_capture)
-        local start_row, start_col, end_row, end_col = node:range()
-        end_row = end_row - 1
+  -- Use language_for_range to find the language at the cursor position
+  -- This handles nested injections automatically
+  local lang_tree = parser:language_for_range({ row, col, row, col })
+  local lang = lang_tree:lang()
 
-        local language = nil
-        if lang_capture and (name == "content" or name == "injection.content") then
-          -- chunks where the name of the injected language is dynamic
-          -- e.g. markdown code chunks
-          if ts.is_in_node_range(node, row, col) then
-            language = lang_capture
-          end
-          -- chunks where the name of the language is the name of the capture
-        elseif fn.contains(injectable_languages, name) then
-          if ts.is_in_node_range(node, row, col) then
-            language = name
-          end
+  -- Get the main buffer's language to check if we're in an injected region
+  local main_lang = parser:lang()
+  if lang == main_lang then
+    -- We're in the main document, not in an injected region
+    return nil
+  end
+
+  -- Check if this language is in our injectable languages list
+  if not fn.contains(injectable_languages, lang) then
+    return nil
+  end
+
+  -- Find the specific region containing this position
+  local regions = lang_tree:included_regions()
+  for _, region_list in pairs(regions) do
+    for _, region in ipairs(region_list) do
+      local start_row, start_col, _, end_row, end_col, _ = unpack(region)
+      -- Check if position is within this region
+      if row >= start_row and row <= end_row then
+        local in_region = false
+        if row == start_row and row == end_row then
+          in_region = col >= start_col and col <= end_col
+        elseif row == start_row then
+          in_region = col >= start_col
+        elseif row == end_row then
+          in_region = col <= end_col
+        else
+          in_region = true
         end
 
-        if language then
+        if in_region then
+          -- Adjust end_col for leading whitespace handling if needed
           if OtterConfig.handle_leading_whitespace then
-            local buf = keeper.rafts[main_nr].buffers[language]
+            local buf = keeper.rafts[main_nr].buffers[lang]
             if buf then
               local lines = vim.api.nvim_buf_get_lines(buf, end_row - 1, end_row, false)
               if lines[1] then
@@ -276,11 +273,12 @@ keeper.get_current_language_context = function(main_nr, position)
               end
             end
           end
-          return language, start_row, start_col, end_row, end_col
+          return lang, start_row, start_col, end_row - 1, end_col
         end
       end
     end
   end
+
   return nil
 end
 
@@ -557,39 +555,58 @@ end
 keeper.get_language_lines_around_cursor = function()
   local main_nr = vim.api.nvim_get_current_buf()
   local row, col = unpack(api.nvim_win_get_cursor(0))
-  row = row - 1
-  col = col
+  row = row - 1 -- Convert to 0-indexed
 
-  local query = keeper.rafts[main_nr].query
+  if keeper.rafts[main_nr] == nil then
+    return nil
+  end
+
   local parser = keeper.rafts[main_nr].parser
-  local trees = parser:parse()
-  assert(trees, "[otter] Treesitter failed to parse buffer " .. main_nr)
-  local tree = trees[1]
-  local root = tree:root()
+  -- Ensure the tree is fully parsed including injections
+  parser:parse(true)
 
-  for _, match, metadata in query:iter_matches(root, main_nr, 0, -1, { all = true }) do
-    for id, nodes in pairs(match) do
-      local name = query.captures[id]
+  -- Use language_for_range to find the language at the cursor position
+  local lang_tree = parser:language_for_range({ row, col, row, col })
+  local lang = lang_tree:lang()
 
-      -- TODO: maybe can be removed with nvim v0.10
-      if type(nodes) ~= "table" then
-        nodes = { nodes }
-      end
+  -- Get the main buffer's language to check if we're in an injected region
+  local main_lang = parser:lang()
+  if lang == main_lang then
+    return nil
+  end
 
-      for _, node in ipairs(nodes) do
-        if name == "content" then
-          if ts.is_in_node_range(node, row, col) then
-            return ts.get_node_text(node, main_nr, metadata)
-          end
-          -- chunks where the name of the language is the name of the capture
-        elseif fn.contains(injectable_languages, name) then
-          if ts.is_in_node_range(node, row, col) then
-            return ts.get_node_text(node, main_nr, metadata)
-          end
+  -- Check if this language is in our injectable languages list
+  if not fn.contains(injectable_languages, lang) then
+    return nil
+  end
+
+  -- Find the specific region containing this position and return its text
+  local regions = lang_tree:included_regions()
+  for _, region_list in pairs(regions) do
+    for _, region in ipairs(region_list) do
+      local start_row, start_col, _, end_row, end_col, _ = unpack(region)
+      -- Check if position is within this region
+      if row >= start_row and row <= end_row then
+        local in_region = false
+        if row == start_row and row == end_row then
+          in_region = col >= start_col and col <= end_col
+        elseif row == start_row then
+          in_region = col >= start_col
+        elseif row == end_row then
+          in_region = col <= end_col
+        else
+          in_region = true
+        end
+
+        if in_region then
+          local lines = api.nvim_buf_get_text(main_nr, start_row, start_col, end_row, end_col, {})
+          return table.concat(lines, "\n")
         end
       end
     end
   end
+
+  return nil
 end
 
 ---Get lines of code chunks managed by otter in the current buffer up to the cursor.

@@ -203,6 +203,88 @@ describe("code extraction", function()
     end)
   end)
 
+  describe("indentation preservation", function()
+    it("preserves indentation in otter buffers", function()
+      local bufnr = load_and_activate("03.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      keeper.sync_raft(bufnr)
+
+      local raft = keeper.rafts[bufnr]
+      assert.is_not_nil(raft.buffers.python, "should have python buffer")
+
+      local otter_bufnr = raft.buffers.python
+      local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
+
+      -- Find the line with 'print('hello world')' that's inside 'def hello():'
+      -- In 03.md, the function is at lines 43-44 (0-indexed: 42-43)
+      -- Line 43 should be "def hello():" and line 44 should be "    print('hello world')"
+      local found_indented_print = false
+      for i, line in ipairs(lines) do
+        -- Look for the indented print statement (should have leading spaces)
+        if line:match("^%s+print%('hello world'%)") then
+          found_indented_print = true
+          break
+        end
+      end
+
+      assert.is_true(found_indented_print,
+        "indented 'print('hello world')' should preserve its leading whitespace in otter buffer")
+
+      cleanup(bufnr)
+    end)
+
+    it("preserves indentation in nested code structures", function()
+      -- Create a test buffer with nested indentation
+      local test_content = [[
+# Test
+
+```python
+def outer():
+    def inner():
+        return 42
+    return inner()
+```
+]]
+      -- Create a scratch buffer with the content
+      local bufnr = api.nvim_create_buf(false, true)
+      api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(test_content, "\n"))
+      api.nvim_buf_set_option(bufnr, "filetype", "markdown")
+      api.nvim_set_current_buf(bufnr)
+
+      require("otter").activate(nil, false, false)
+
+      if not keeper.rafts[bufnr] then
+        -- Parser might not detect the code block in scratch buffer
+        api.nvim_buf_delete(bufnr, { force = true })
+        return
+      end
+
+      keeper.sync_raft(bufnr)
+
+      local raft = keeper.rafts[bufnr]
+      if raft.buffers.python then
+        local otter_bufnr = raft.buffers.python
+        local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
+
+        -- Check that nested indentation is preserved
+        local found_8_space_indent = false
+        for _, line in ipairs(lines) do
+          if line:match("^        return 42") then
+            found_8_space_indent = true
+            break
+          end
+        end
+
+        assert.is_true(found_8_space_indent,
+          "8-space indentation should be preserved for nested function")
+      end
+
+      require("otter").deactivate()
+      api.nvim_buf_delete(bufnr, { force = true })
+    end)
+  end)
+
   describe("otter buffer synchronization", function()
     it("creates otter buffers for detected languages", function()
       local bufnr = load_and_activate("minimal.md")

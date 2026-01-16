@@ -43,6 +43,9 @@ for key, _ in pairs(OtterConfig.extensions) do
 end
 
 ---trims the leading whitespace from text
+---Only removes whitespace that is common to ALL non-empty lines (minimum indentation).
+---This preserves relative indentation within code blocks while handling
+---entirely-indented code blocks (e.g., in norg nested structures).
 ---@param text string
 ---@param bufnr integer host buffer number
 ---@param starting_ln integer
@@ -52,21 +55,50 @@ local function trim_leading_whitespace(text, bufnr, starting_ln)
     return text, 0
   end
 
-  -- Assume the first line is least indented
-  -- the first line in the capture doesn't have its leading indent, so we grab from the buffer
   local split = vim.split(text, "\n", { trimempty = false })
   if #split == 0 then
     return text, 0
   end
-  local first_line = vim.api.nvim_buf_get_lines(bufnr, starting_ln, starting_ln + 1, false)
-  local leading = first_line[1]:match("^%s+")
-  if not leading then
+
+  -- Count non-empty lines
+  local non_empty_count = 0
+  for _, line in ipairs(split) do
+    if line ~= "" and not line:match("^%s*$") then
+      non_empty_count = non_empty_count + 1
+    end
+  end
+
+  -- Only strip leading whitespace if we have multiple non-empty lines
+  -- Single-line regions can't distinguish between document-level and code-level indentation
+  if non_empty_count <= 1 then
     return text, 0
   end
-  for i, line in ipairs(split) do
-    split[i] = line:gsub("^" .. leading, "")
+
+  -- Find minimum indentation across all non-empty lines in the text
+  local min_indent = nil
+  for _, line in ipairs(split) do
+    if line ~= "" and not line:match("^%s*$") then
+      local leading = line:match("^(%s*)")
+      local indent_len = leading and #leading or 0
+      if min_indent == nil or indent_len < min_indent then
+        min_indent = indent_len
+      end
+    end
   end
-  return table.concat(split, "\n"), #leading
+
+  -- If no indentation found or min is 0, return as-is
+  if not min_indent or min_indent == 0 then
+    return text, 0
+  end
+
+  -- Strip the common minimum indentation from each line
+  for i, line in ipairs(split) do
+    if #line >= min_indent then
+      split[i] = line:sub(min_indent + 1)
+    end
+  end
+
+  return table.concat(split, "\n"), min_indent
 end
 
 ---Recursively collect all injected language trees

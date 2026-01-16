@@ -53,6 +53,10 @@ function M.ensure_parsers()
 end
 
 function M.setup()
+  -- Disable netrw before it loads (avoids E919 error about missing packpath)
+  vim.g.loaded_netrw = 1
+  vim.g.loaded_netrwPlugin = 1
+
   vim.cmd([[set runtimepath=$VIMRUNTIME]])
   vim.opt.runtimepath:append(M.root())
   vim.opt.packpath = { M.root(".tests/site") }

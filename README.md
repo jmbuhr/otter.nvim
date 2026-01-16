@@ -303,3 +303,61 @@ replace the last line of the function with:
   end
 ```
 
+## Development
+
+### Project Structure
+
+```
+lua/otter/
+├── init.lua          # Main entry point, activate/deactivate functions
+├── config.lua        # Default configuration and extensions mapping
+├── keeper.lua        # Core logic: code extraction, raft management, buffer sync
+├── diagnostics.lua   # Diagnostics handling
+├── lsp/
+│   ├── init.lua      # otter-ls language server implementation
+│   └── handlers.lua  # LSP request/response handlers
+└── tools/
+    ├── functions.lua # Utility functions
+    └── contexts.lua  # Context detection utilities
+```
+
+### Running Tests
+
+Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) and run headlessly:
+
+```bash
+# Run all tests
+make test
+
+# Run a specific test file
+make test-file FILE=tests/core/extraction_spec.lua
+
+# Clean test artifacts
+make clean
+```
+
+On first run, required treesitter parsers are installed automatically.
+
+### Test Structure
+
+```
+tests/
+├── init.lua                 # Test environment setup
+├── run                      # Test runner script
+├── core/
+│   ├── init_spec.lua        # Environment validation
+│   ├── otter_spec.lua       # Module and API tests
+│   └── extraction_spec.lua  # Code extraction tests
+└── examples/                # Test documents (md, qmd, org, norg, etc.)
+```
+
+### Manual Testing
+
+For interactive debugging with a minimal config:
+
+```bash
+cd tests
+./minimal.sh
+```
+
+This opens `examples/minimal.md` with otter activated. Run twice on first use to install dependencies.

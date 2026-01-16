@@ -377,6 +377,48 @@ def outer():
 
       cleanup(bufnr)
     end)
+
+    it("combines javascript from fenced blocks and script tags in same otter buffer", function()
+      -- This test verifies that JavaScript from both fenced code blocks (```{javascript})
+      -- AND <script> tags within HTML all end up in the same otter buffer
+      local bufnr = load_and_activate("03.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      -- Verify we have all 3 JavaScript chunks (2 from <script> tags, 1 from fenced block)
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+      assert.is_not_nil(code_chunks.javascript, "should have javascript chunks")
+      assert.is_true(#code_chunks.javascript >= 3,
+        "should have at least 3 javascript chunks (2 from <script> tags + 1 from fenced block)")
+
+      -- Sync to otter buffer
+      keeper.sync_raft(bufnr)
+
+      local raft = keeper.rafts[bufnr]
+      assert.is_not_nil(raft.buffers.javascript, "should have javascript buffer")
+
+      local otter_bufnr = raft.buffers.javascript
+      local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
+      local all_text = table.concat(lines, "\n")
+
+      -- Check for content from <script> tags (indented)
+      local has_script_tag_js = false
+      for _, line in ipairs(lines) do
+        if line:match("^    console%.log") then
+          has_script_tag_js = true
+          break
+        end
+      end
+      assert.is_true(has_script_tag_js,
+        "otter buffer should contain indented console.log from <script> tags")
+
+      -- Check for content from fenced code block (line 42, not indented)
+      -- The fenced block content appears at line 42 in the source (0-indexed: 41)
+      local has_fenced_js = lines[42] ~= nil and lines[42]:match("^console%.log") ~= nil
+      assert.is_true(has_fenced_js,
+        "otter buffer should contain non-indented console.log from fenced code block at line 42")
+
+      cleanup(bufnr)
+    end)
   end)
 
   -- Tests using 03_html_only.md for reliable HTML-embedded JS/CSS extraction

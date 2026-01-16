@@ -102,11 +102,17 @@ local function trim_leading_whitespace(text, bufnr, starting_ln)
 end
 
 ---Recursively collect all injected language trees
+---Unlike the previous implementation that stored one tree per language,
+---this collects ALL trees in a list to handle cases where the same language
+---appears at multiple levels (e.g., JS in fenced code blocks AND in HTML <script> tags)
 ---@param lang_tree vim.treesitter.LanguageTree
----@param result table<string, vim.treesitter.LanguageTree>
+---@param result table<string, vim.treesitter.LanguageTree[]>
 local function collect_injected_trees(lang_tree, result)
   for lang, child_tree in pairs(lang_tree:children()) do
-    result[lang] = child_tree
+    if result[lang] == nil then
+      result[lang] = {}
+    end
+    table.insert(result[lang], child_tree)
     -- Recurse to find nested injections (e.g., JS inside HTML inside markdown)
     collect_injected_trees(child_tree, result)
   end
@@ -137,12 +143,14 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
   local code_chunks = {}
 
   -- Collect all injected language trees (including nested ones)
-  ---@type table<string, vim.treesitter.LanguageTree>
+  -- This now returns a list of trees per language to handle the same language
+  -- appearing at multiple levels (e.g., JS in fenced blocks AND in HTML <script> tags)
+  ---@type table<string, vim.treesitter.LanguageTree[]>
   local injected_trees = {}
   collect_injected_trees(parser, injected_trees)
 
   -- Process each injected language
-  for injected_lang, lang_tree in pairs(injected_trees) do
+  for injected_lang, lang_trees in pairs(injected_trees) do
     -- Skip if we're filtering for a specific language and this isn't it
     if lang ~= nil and injected_lang ~= lang then
       goto continue_lang
@@ -153,71 +161,74 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
       goto continue_lang
     end
 
-    -- Get the regions where this language is injected
-    -- included_regions returns a table mapping tree index to list of Range6
-    -- Each Range6 is: { start_row, start_col, start_bytes, end_row, end_col, end_bytes }
-    local regions = lang_tree:included_regions()
+    -- Process all trees for this language
+    for _, lang_tree in ipairs(lang_trees) do
+      -- Get the regions where this language is injected
+      -- included_regions returns a table mapping tree index to list of Range6
+      -- Each Range6 is: { start_row, start_col, start_bytes, end_row, end_col, end_bytes }
+      local regions = lang_tree:included_regions()
 
-    -- Get buffer line count for bounds checking
-    local line_count = api.nvim_buf_line_count(main_nr)
+      -- Get buffer line count for bounds checking
+      local line_count = api.nvim_buf_line_count(main_nr)
 
-    for _, region_list in pairs(regions) do
-      for _, region in ipairs(region_list) do
-        local start_row, start_col, _, end_row, end_col, _ = unpack(region)
+      for _, region_list in pairs(regions) do
+        for _, region in ipairs(region_list) do
+          local start_row, start_col, _, end_row, end_col, _ = unpack(region)
 
-        -- Bounds checking: skip regions that are out of bounds
-        -- This can happen when the parser has stale data during incomplete edits
-        if start_row < 0 or end_row < 0 or start_row >= line_count or end_row >= line_count then
-          goto continue_region
-        end
-
-        -- Clamp columns to valid ranges for the respective lines
-        local start_line = api.nvim_buf_get_lines(main_nr, start_row, start_row + 1, false)[1] or ""
-        local end_line = api.nvim_buf_get_lines(main_nr, end_row, end_row + 1, false)[1] or ""
-        start_col = math.max(0, math.min(start_col, #start_line))
-        end_col = math.max(0, math.min(end_col, #end_line))
-
-        -- Apply range filtering if specified
-        if range_start_row ~= nil and range_end_row ~= nil then
-          if (start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row then
+          -- Bounds checking: skip regions that are out of bounds
+          -- This can happen when the parser has stale data during incomplete edits
+          if start_row < 0 or end_row < 0 or start_row >= line_count or end_row >= line_count then
             goto continue_region
           end
+
+          -- Clamp columns to valid ranges for the respective lines
+          local start_line = api.nvim_buf_get_lines(main_nr, start_row, start_row + 1, false)[1] or ""
+          local end_line = api.nvim_buf_get_lines(main_nr, end_row, end_row + 1, false)[1] or ""
+          start_col = math.max(0, math.min(start_col, #start_line))
+          end_col = math.max(0, math.min(end_col, #end_line))
+
+          -- Apply range filtering if specified
+          if range_start_row ~= nil and range_end_row ~= nil then
+            if (start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row then
+              goto continue_region
+            end
+          end
+
+          -- Get the text for this region from the main buffer
+          local ok, lines = pcall(api.nvim_buf_get_text, main_nr, start_row, start_col, end_row, end_col, {})
+          if not ok then
+            -- Skip this region if we still can't get the text
+            goto continue_region
+          end
+          local text = table.concat(lines, "\n")
+
+          -- Remove surrounding quotes (workaround for some injection patterns)
+          text, _ = fn.strip_wrapping_quotes(text)
+
+          -- Handle eval: false exclusion
+          if exclude_eval_false and string.find(text, "| *eval: *false") then
+            text = ""
+          end
+
+          -- Trim leading whitespace
+          local leading_offset
+          text, leading_offset = trim_leading_whitespace(text, main_nr, start_row)
+
+          local result = {
+            range = { from = { start_row, start_col }, to = { end_row, end_col } },
+            lang = injected_lang,
+            node = nil, -- We don't have a single node anymore, but the range is what matters
+            text = fn.lines(text),
+            leading_offset = leading_offset,
+          }
+
+          if code_chunks[injected_lang] == nil then
+            code_chunks[injected_lang] = {}
+          end
+          table.insert(code_chunks[injected_lang], result)
+
+          ::continue_region::
         end
-
-        -- Get the text for this region from the main buffer
-        local ok, lines = pcall(api.nvim_buf_get_text, main_nr, start_row, start_col, end_row, end_col, {})
-        if not ok then
-          -- Skip this region if we still can't get the text
-          goto continue_region
-        end
-        local text = table.concat(lines, "\n")
-
-        -- Remove surrounding quotes (workaround for some injection patterns)
-        text, _ = fn.strip_wrapping_quotes(text)
-
-        -- Handle eval: false exclusion
-        if exclude_eval_false and string.find(text, "| *eval: *false") then
-          text = ""
-        end
-
-        -- Trim leading whitespace
-        local leading_offset
-        text, leading_offset = trim_leading_whitespace(text, main_nr, start_row)
-
-        local result = {
-          range = { from = { start_row, start_col }, to = { end_row, end_col } },
-          lang = injected_lang,
-          node = nil, -- We don't have a single node anymore, but the range is what matters
-          text = fn.lines(text),
-          leading_offset = leading_offset,
-        }
-
-        if code_chunks[injected_lang] == nil then
-          code_chunks[injected_lang] = {}
-        end
-        table.insert(code_chunks[injected_lang], result)
-
-        ::continue_region::
       end
     end
 

@@ -6,25 +6,31 @@ function M.root(root)
 end
 
 ---@param plugin string
-function M.load(plugin)
+---@param ref string|nil Git ref (branch or tag) to checkout
+function M.load(plugin, ref)
   local name = plugin:match(".*/(.*)")
   local package_root = M.root(".tests/site/pack/deps/start/")
   if not vim.uv.fs_stat(package_root .. name) then
-    print("Installing " .. plugin)
+    print("Installing " .. plugin .. (ref and (" @ " .. ref) or ""))
     vim.fn.mkdir(package_root, "p")
-    vim.fn.system({
+    local clone_cmd = {
       "git",
       "clone",
       "--depth=1",
-      "https://github.com/" .. plugin .. ".git",
-      package_root .. "/" .. name,
-    })
+    }
+    if ref then
+      table.insert(clone_cmd, "--branch")
+      table.insert(clone_cmd, ref)
+    end
+    table.insert(clone_cmd, "https://github.com/" .. plugin .. ".git")
+    table.insert(clone_cmd, package_root .. "/" .. name)
+    vim.fn.system(clone_cmd)
   end
 end
 
 --- Install treesitter parsers needed for tests
 function M.ensure_parsers()
-  local parsers = {
+  local parsers_to_install = {
     "markdown",
     "markdown_inline",
     "lua",
@@ -33,13 +39,11 @@ function M.ensure_parsers()
     "javascript",
     "html",
     "css",
-    "org",
-    "norg",
   }
 
   -- Check which parsers need to be installed
   local to_install = {}
-  for _, parser in ipairs(parsers) do
+  for _, parser in ipairs(parsers_to_install) do
     local ok = pcall(vim.treesitter.language.inspect, parser)
     if not ok then
       table.insert(to_install, parser)
@@ -57,16 +61,26 @@ function M.setup()
   vim.g.loaded_netrw = 1
   vim.g.loaded_netrwPlugin = 1
 
+  -- Disable swap files for tests to avoid conflicts in CI
+  vim.opt.swapfile = false
+
   vim.cmd([[set runtimepath=$VIMRUNTIME]])
   vim.opt.runtimepath:append(M.root())
   vim.opt.packpath = { M.root(".tests/site") }
-  M.load("nvim-lua/plenary.nvim")
-  M.load("nvim-treesitter/nvim-treesitter")
-  M.load("Saghen/blink.cmp")
+
+  -- Set XDG paths BEFORE loading plugins so stdpath() returns correct values
   vim.env.XDG_CONFIG_HOME = M.root(".tests/config")
   vim.env.XDG_DATA_HOME = M.root(".tests/data")
   vim.env.XDG_STATE_HOME = M.root(".tests/state")
   vim.env.XDG_CACHE_HOME = M.root(".tests/cache")
+
+  M.load("nvim-lua/plenary.nvim")
+  -- Pin nvim-treesitter to v0.9.3 for stable API (v0.10+ has breaking changes)
+  M.load("nvim-treesitter/nvim-treesitter", "v0.9.3")
+  M.load("Saghen/blink.cmp")
+
+  -- Load all plugins from the packpath (required for fresh CI installs)
+  vim.cmd([[packloadall]])
 
   -- Register markdown parser for quarto and rmd filetypes
   -- (normally done by quarto-nvim plugin)
@@ -77,3 +91,5 @@ function M.setup()
 end
 
 M.setup()
+
+return M

@@ -8,4 +8,9 @@ set -e
 
 TEST_DIR="${1:-tests/core/}"
 
+# First, ensure all dependencies and parsers are installed.
+# This must complete before running parallel test workers to avoid race conditions.
+nvim --headless -u tests/init.lua -c "qa"
+
+# Now run the actual tests (parsers will already be installed)
 nvim --headless -u tests/init.lua -c "PlenaryBustedDirectory $TEST_DIR {minimal_init = 'tests/init.lua'}"

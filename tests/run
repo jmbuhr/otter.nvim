@@ -1,3 +1,11 @@
 #!/bin/sh
 
-nvim --headless -u tests/init.lua -c "PlenaryBustedDirectory tests/ {minimal_init = 'tests/init.lua'}"
+# Run otter.nvim tests using plenary.nvim
+# Usage: ./tests/run [test_file]
+#   If no test file is specified, runs all tests in tests/core/
+
+set -e
+
+TEST_DIR="${1:-tests/core/}"
+
+nvim --headless -u tests/init.lua -c "PlenaryBustedDirectory $TEST_DIR {minimal_init = 'tests/init.lua'}"

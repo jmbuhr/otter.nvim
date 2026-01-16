@@ -22,6 +22,36 @@ function M.load(plugin)
   end
 end
 
+--- Install treesitter parsers needed for tests
+function M.ensure_parsers()
+  local parsers = {
+    "markdown",
+    "markdown_inline",
+    "lua",
+    "python",
+    "r",
+    "javascript",
+    "html",
+    "css",
+    "org",
+    "norg",
+  }
+
+  -- Check which parsers need to be installed
+  local to_install = {}
+  for _, parser in ipairs(parsers) do
+    local ok = pcall(vim.treesitter.language.inspect, parser)
+    if not ok then
+      table.insert(to_install, parser)
+    end
+  end
+
+  if #to_install > 0 then
+    print("Installing treesitter parsers: " .. table.concat(to_install, ", "))
+    require("nvim-treesitter.install").ensure_installed_sync(to_install)
+  end
+end
+
 function M.setup()
   vim.cmd([[set runtimepath=$VIMRUNTIME]])
   vim.opt.runtimepath:append(M.root())
@@ -32,6 +62,13 @@ function M.setup()
   vim.env.XDG_DATA_HOME = M.root(".tests/data")
   vim.env.XDG_STATE_HOME = M.root(".tests/state")
   vim.env.XDG_CACHE_HOME = M.root(".tests/cache")
+
+  -- Register markdown parser for quarto and rmd filetypes
+  -- (normally done by quarto-nvim plugin)
+  vim.treesitter.language.register("markdown", { "quarto", "rmd" })
+
+  -- Ensure treesitter parsers are installed
+  M.ensure_parsers()
 end
 
 M.setup()

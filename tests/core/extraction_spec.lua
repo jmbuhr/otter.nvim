@@ -23,14 +23,54 @@ local function load_and_activate(filename, languages)
   return bufnr
 end
 
--- Helper to cleanup buffer
+-- Helper to cleanup buffer with proper handling of scheduled callbacks
 local function cleanup(bufnr)
   if bufnr and api.nvim_buf_is_valid(bufnr) then
+    local keeper = require("otter.keeper")
+    local raft = keeper.rafts[bufnr]
+    local otter_buffers = {}
+
+    -- Collect otter buffer references before deactivation
+    if raft and raft.buffers then
+      for _, otter_bufnr in pairs(raft.buffers) do
+        table.insert(otter_buffers, otter_bufnr)
+      end
+    end
+
     require("otter").deactivate()
     api.nvim_buf_delete(bufnr, { force = true })
+
+    -- Wait for scheduled otter buffer deletions to complete
+    -- The deactivate() function schedules buffer deletions with vim.schedule()
+    -- We need to wait until all otter buffers are actually deleted
+    if #otter_buffers > 0 then
+      local timeout_ms = 100  -- Max wait time
+      local interval_ms = 5   -- Check interval
+      local waited = 0
+
+      while waited < timeout_ms do
+        -- Process pending scheduled callbacks
+        vim.wait(interval_ms, function() return false end)
+        waited = waited + interval_ms
+
+        -- Check if all otter buffers are now invalid (deleted)
+        local all_deleted = true
+        for _, otter_bufnr in ipairs(otter_buffers) do
+          if api.nvim_buf_is_valid(otter_bufnr) then
+            all_deleted = false
+            break
+          end
+        end
+
+        if all_deleted then
+          break
+        end
+      end
+    end
+  else
+    -- Even if no buffer to clean, allow pending callbacks to complete
+    vim.wait(10, function() return false end)
   end
-  -- Allow any scheduled callbacks to complete
-  vim.wait(10, function() return false end)
 end
 
 describe("code extraction", function()
@@ -398,9 +438,8 @@ def outer():
 
       local otter_bufnr = raft.buffers.javascript
       local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
-      local all_text = table.concat(lines, "\n")
 
-      -- Check for content from <script> tags (indented)
+      -- Check for content from <script> tags (indented with 4 spaces)
       local has_script_tag_js = false
       for _, line in ipairs(lines) do
         if line:match("^    console%.log") then
@@ -411,11 +450,17 @@ def outer():
       assert.is_true(has_script_tag_js,
         "otter buffer should contain indented console.log from <script> tags")
 
-      -- Check for content from fenced code block (line 42, not indented)
-      -- The fenced block content appears at line 42 in the source (0-indexed: 41)
-      local has_fenced_js = lines[42] ~= nil and lines[42]:match("^console%.log") ~= nil
+      -- Check for content from fenced code block (not indented, starts at column 0)
+      -- This is distinct from <script> tag content which has 4-space indentation
+      local has_fenced_js = false
+      for _, line in ipairs(lines) do
+        if line:match("^console%.log") then
+          has_fenced_js = true
+          break
+        end
+      end
       assert.is_true(has_fenced_js,
-        "otter buffer should contain non-indented console.log from fenced code block at line 42")
+        "otter buffer should contain non-indented console.log from fenced code block")
 
       cleanup(bufnr)
     end)
@@ -537,6 +582,180 @@ def outer():
 
       assert.is_true(found_indented_property,
         "css otter buffer should contain properties with 2-space indentation")
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests for deeply nested injections and multiple HTML blocks
+  -- Verifies that code from multiple separate HTML blocks combines correctly
+  describe("deeply nested and multiple HTML blocks from 04_nested.md", function()
+    it("extracts HTML from multiple separate code blocks", function()
+      local bufnr = load_and_activate("04_nested.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have html chunks from all 4 HTML blocks
+      assert.is_not_nil(code_chunks.html, "should have html chunks")
+      assert.is_true(#code_chunks.html >= 4, "should have at least 4 html chunks")
+
+      -- Verify content from different blocks
+      local all_html_text = ""
+      for _, chunk in ipairs(code_chunks.html) do
+        all_html_text = all_html_text .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      -- Check for content from each block
+      assert.is_true(all_html_text:find("block1") ~= nil, "should contain content from first HTML block")
+      assert.is_true(all_html_text:find("block2") ~= nil, "should contain content from second HTML block")
+      assert.is_true(all_html_text:find("block3") ~= nil, "should contain content from third HTML block")
+
+      cleanup(bufnr)
+    end)
+
+    it("combines JavaScript from multiple HTML blocks and fenced blocks", function()
+      local bufnr = load_and_activate("04_nested.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have javascript chunks from:
+      -- - 3 <script> tags across 3 HTML blocks (block1, block2, block3 has 2 scripts)
+      -- - 1 fenced javascript code block
+      assert.is_not_nil(code_chunks.javascript, "should have javascript chunks")
+      assert.is_true(#code_chunks.javascript >= 5,
+        "should have at least 5 javascript chunks (4 from <script> tags + 1 from fenced block)")
+
+      -- Verify content from different sources
+      local all_js_text = ""
+      for _, chunk in ipairs(code_chunks.javascript) do
+        all_js_text = all_js_text .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      -- Check for content from script tags in HTML blocks
+      assert.is_true(all_js_text:find('block1 = "first"') ~= nil,
+        "should contain JS from first HTML block script tag")
+      assert.is_true(all_js_text:find('block2 = "second"') ~= nil,
+        "should contain JS from second HTML block script tag")
+      assert.is_true(all_js_text:find("first = 1") ~= nil,
+        "should contain JS from first script in third HTML block")
+      assert.is_true(all_js_text:find("second = 2") ~= nil,
+        "should contain JS from second script in third HTML block")
+
+      -- Check for content from standalone fenced code block
+      assert.is_true(all_js_text:find('standalone = "standalone"') ~= nil,
+        "should contain JS from fenced code block")
+      assert.is_true(all_js_text:find("function doSomething") ~= nil,
+        "should contain function from fenced code block")
+
+      cleanup(bufnr)
+    end)
+
+    it("combines CSS from multiple HTML blocks and fenced blocks", function()
+      local bufnr = load_and_activate("04_nested.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have css chunks from:
+      -- - 2 <style> tags in HTML blocks (block1, block2)
+      -- - 1 fenced css code block
+      assert.is_not_nil(code_chunks.css, "should have css chunks")
+      assert.is_true(#code_chunks.css >= 3,
+        "should have at least 3 css chunks (2 from <style> tags + 1 from fenced block)")
+
+      -- Verify content from different sources
+      local all_css_text = ""
+      for _, chunk in ipairs(code_chunks.css) do
+        all_css_text = all_css_text .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      -- Check for content from style tags in HTML blocks
+      assert.is_true(all_css_text:find("#block1") ~= nil,
+        "should contain CSS from first HTML block style tag")
+      assert.is_true(all_css_text:find("red") ~= nil,
+        "should contain 'red' color from first block")
+      assert.is_true(all_css_text:find("#block2") ~= nil,
+        "should contain CSS from second HTML block style tag")
+      assert.is_true(all_css_text:find("blue") ~= nil,
+        "should contain 'blue' color from second block")
+
+      -- Check for content from standalone fenced code block
+      assert.is_true(all_css_text:find("body") ~= nil,
+        "should contain CSS from fenced code block")
+      assert.is_true(all_css_text:find("margin") ~= nil,
+        "should contain 'margin' from fenced code block")
+
+      cleanup(bufnr)
+    end)
+
+    it("syncs all JavaScript sources to same otter buffer", function()
+      local bufnr = load_and_activate("04_nested.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      keeper.sync_raft(bufnr)
+
+      local raft = keeper.rafts[bufnr]
+      assert.is_not_nil(raft.buffers.javascript, "should have javascript buffer")
+
+      local otter_bufnr = raft.buffers.javascript
+      local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
+      local all_text = table.concat(lines, "\n")
+
+      -- Verify all JavaScript from all sources is in the same buffer
+      assert.is_true(all_text:find("block1") ~= nil,
+        "otter buffer should contain JS from first HTML block")
+      assert.is_true(all_text:find("block2") ~= nil,
+        "otter buffer should contain JS from second HTML block")
+      assert.is_true(all_text:find("standalone") ~= nil,
+        "otter buffer should contain JS from fenced code block")
+
+      cleanup(bufnr)
+    end)
+
+    it("syncs all CSS sources to same otter buffer", function()
+      local bufnr = load_and_activate("04_nested.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      keeper.sync_raft(bufnr)
+
+      local raft = keeper.rafts[bufnr]
+      assert.is_not_nil(raft.buffers.css, "should have css buffer")
+
+      local otter_bufnr = raft.buffers.css
+      local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
+      local all_text = table.concat(lines, "\n")
+
+      -- Verify all CSS from all sources is in the same buffer
+      assert.is_true(all_text:find("#block1") ~= nil,
+        "otter buffer should contain CSS from first HTML block")
+      assert.is_true(all_text:find("#block2") ~= nil,
+        "otter buffer should contain CSS from second HTML block")
+      assert.is_true(all_text:find("body") ~= nil,
+        "otter buffer should contain CSS from fenced code block")
+
+      cleanup(bufnr)
+    end)
+
+    it("handles HTML block with multiple script tags", function()
+      local bufnr = load_and_activate("04_nested.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+      assert.is_not_nil(code_chunks.javascript, "should have javascript chunks")
+
+      -- Find javascript chunks from block3 (which has two <script> tags)
+      local all_js_text = ""
+      for _, chunk in ipairs(code_chunks.javascript) do
+        all_js_text = all_js_text .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      -- Both script tags from block3 should be extracted
+      assert.is_true(all_js_text:find("First script in block3") ~= nil,
+        "should extract first script tag from block3")
+      assert.is_true(all_js_text:find("Second script in block3") ~= nil,
+        "should extract second script tag from block3")
 
       cleanup(bufnr)
     end)

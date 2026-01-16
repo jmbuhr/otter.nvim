@@ -326,7 +326,8 @@ keeper.get_current_language_context = function(main_nr, position)
 end
 
 ---find the leading_offset of the given line number, and buffer number. Returns 0 if the line number
----isn't in a chunk.
+---isn't in a chunk. When multiple chunks contain the line (nested injections), returns the offset
+---of the innermost (smallest) chunk.
 ---@param line_nr number
 ---@param main_nr number
 keeper.get_leading_offset = function(line_nr, main_nr)
@@ -335,14 +336,23 @@ keeper.get_leading_offset = function(line_nr, main_nr)
   end
 
   local lang_chunks = keeper.rafts[main_nr].code_chunks
+  local best_match = nil
+  local best_size = math.huge -- Size of the smallest matching chunk
+
   for _, chunks in pairs(lang_chunks) do
     for _, chunk in ipairs(chunks) do
       if line_nr >= chunk.range.from[1] and line_nr <= chunk.range.to[1] then
-        return chunk.leading_offset
+        -- Calculate chunk size (number of lines)
+        local size = chunk.range.to[1] - chunk.range.from[1]
+        if size < best_size then
+          best_size = size
+          best_match = chunk
+        end
       end
     end
   end
-  return 0
+
+  return best_match and best_match.leading_offset or 0
 end
 
 ---adjusts IN PLACE the position to include the start and end
@@ -373,6 +383,24 @@ keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offse
     end
   end
 
+  -- Handle InsertReplaceEdit format used by some LSP servers for completions
+  -- InsertReplaceEdit has `insert` and `replace` ranges instead of `range`
+  if obj.insert then
+    offset = offset or keeper.get_leading_offset(obj.insert.start.line, main_nr) * sign
+    obj.insert.start.character = obj.insert.start.character + offset
+    if not exclude_end then
+      obj.insert["end"].character = obj.insert["end"].character + offset
+    end
+  end
+
+  if obj.replace then
+    offset = offset or keeper.get_leading_offset(obj.replace.start.line, main_nr) * sign
+    obj.replace.start.character = obj.replace.start.character + offset
+    if not exclude_end then
+      obj.replace["end"].character = obj.replace["end"].character + offset
+    end
+  end
+
   if obj.position then
     local pos = obj.position
     offset = offset or keeper.get_leading_offset(pos.line, main_nr) * sign
@@ -398,14 +426,17 @@ keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offse
   end
 
   if obj.newText then
-    offset = offset or keeper.get_leading_offset(obj.range.start, main_nr) * sign
-    local str = ""
-    for _ = 1, offset, 1 do
-      str = str .. " "
+    -- Get offset from range, insert, or replace (for InsertReplaceEdit compatibility)
+    local range_for_offset = obj.range or obj.insert or obj.replace
+    if range_for_offset then
+      offset = offset or keeper.get_leading_offset(range_for_offset.start.line, main_nr) * sign
     end
-    -- Put indents in front of newline, but ignore newlines that are followed by newlines
-    obj.newText = string.gsub(obj.newText, "(\n)([^\n])", "%1" .. str .. "%2")
-    obj.newText = string.gsub(obj.newText, "\n$", "\n" .. str) -- match a potential newline at the end
+    if offset and offset > 0 then
+      local str = string.rep(" ", offset)
+      -- Put indents in front of newline, but ignore newlines that are followed by newlines
+      obj.newText = string.gsub(obj.newText, "(\n)([^\n])", "%1" .. str .. "%2")
+      obj.newText = string.gsub(obj.newText, "\n$", "\n" .. str) -- match a potential newline at the end
+    end
   end
 end
 

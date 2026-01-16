@@ -13,8 +13,8 @@ end
 -- Helper to load a file into a buffer and activate otter
 local function load_and_activate(filename, languages)
   local filepath = examples_dir() .. filename
-  -- Create a new buffer with the file
-  vim.cmd("edit " .. filepath)
+  -- Use :edit! to ensure a fresh load even if file was previously opened
+  vim.cmd("edit! " .. filepath)
   local bufnr = api.nvim_get_current_buf()
 
   -- Activate with specific languages if provided
@@ -29,6 +29,8 @@ local function cleanup(bufnr)
     require("otter").deactivate()
     api.nvim_buf_delete(bufnr, { force = true })
   end
+  -- Allow any scheduled callbacks to complete
+  vim.wait(10, function() return false end)
 end
 
 describe("code extraction", function()
@@ -282,6 +284,219 @@ def outer():
 
       require("otter").deactivate()
       api.nvim_buf_delete(bufnr, { force = true })
+    end)
+  end)
+
+  describe("HTML and embedded JS extraction from 03.md", function()
+    it("extracts html code from 03.md", function()
+      local bufnr = load_and_activate("03.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have html chunks
+      assert.is_not_nil(code_chunks.html, "should have html chunks")
+      assert.is_true(#code_chunks.html > 0, "should have at least one html chunk")
+
+      -- Check html content contains the expected elements
+      local all_html_text = ""
+      for _, chunk in ipairs(code_chunks.html) do
+        all_html_text = all_html_text .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      assert.is_true(all_html_text:find("<body>") ~= nil, "html should contain '<body>'")
+      assert.is_true(all_html_text:find("<p>Hello</p>") ~= nil, "html should contain '<p>Hello</p>'")
+      assert.is_true(all_html_text:find('<div class="hello">world</div>') ~= nil,
+        "html should contain '<div class=\"hello\">world</div>'")
+
+      cleanup(bufnr)
+    end)
+
+    it("extracts javascript from script tags within html in 03.md", function()
+      local bufnr = load_and_activate("03.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have javascript chunks (from <script> tags within HTML or fenced code blocks)
+      assert.is_not_nil(code_chunks.javascript, "should have javascript chunks")
+      assert.is_true(#code_chunks.javascript > 0, "should have at least one javascript chunk")
+
+      -- Check javascript content
+      local all_js_text = ""
+      for _, chunk in ipairs(code_chunks.javascript) do
+        all_js_text = all_js_text .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      assert.is_true(all_js_text:find("console%.log") ~= nil, "javascript should contain 'console.log'")
+      assert.is_true(all_js_text:find("hello world") ~= nil, "javascript should contain 'hello world'")
+
+      cleanup(bufnr)
+    end)
+
+    it("extracts css from style tags within html in 03.md", function()
+      local bufnr = load_and_activate("03.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have css chunks (from <style> tags within HTML)
+      assert.is_not_nil(code_chunks.css, "should have css chunks")
+      assert.is_true(#code_chunks.css > 0, "should have at least one css chunk")
+
+      -- Check css content
+      local all_css_text = ""
+      for _, chunk in ipairs(code_chunks.css) do
+        all_css_text = all_css_text .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      assert.is_true(all_css_text:find("%.hello") ~= nil, "css should contain '.hello' selector")
+      assert.is_true(all_css_text:find("color") ~= nil, "css should contain 'color'")
+      assert.is_true(all_css_text:find("orange") ~= nil, "css should contain 'orange'")
+
+      cleanup(bufnr)
+    end)
+
+    it("syncs html to otter buffer with correct content", function()
+      local bufnr = load_and_activate("03.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      keeper.sync_raft(bufnr)
+
+      local raft = keeper.rafts[bufnr]
+      assert.is_not_nil(raft.buffers.html, "should have html buffer")
+
+      local otter_bufnr = raft.buffers.html
+      local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
+
+      -- Combine all lines to check for content
+      local all_text = table.concat(lines, "\n")
+
+      assert.is_true(all_text:find("<body>") ~= nil, "otter buffer should contain '<body>'")
+      assert.is_true(all_text:find("<p>Hello</p>") ~= nil, "otter buffer should contain '<p>Hello</p>'")
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests using 03_html_only.md for reliable HTML-embedded JS/CSS extraction
+  -- This file contains only HTML with embedded script/style tags (no fenced code blocks)
+  -- to avoid treesitter injection collection non-determinism
+  describe("HTML embedded language extraction from 03_html_only.md", function()
+    it("extracts javascript from script tags with correct indentation", function()
+      local bufnr = load_and_activate("03_html_only.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      assert.is_not_nil(code_chunks.javascript, "should have javascript chunks")
+      assert.is_true(#code_chunks.javascript >= 2, "should have at least 2 javascript chunks from <script> tags")
+
+      -- Verify javascript content and indentation
+      local found_indented_console = false
+      for _, chunk in ipairs(code_chunks.javascript) do
+        for _, line in ipairs(chunk.text) do
+          -- Check for indented console.log (4 spaces)
+          if line:match("^    console%.log") then
+            found_indented_console = true
+            break
+          end
+        end
+        if found_indented_console then break end
+      end
+
+      assert.is_true(found_indented_console,
+        "should find console.log with 4-space indentation from <script> tag")
+
+      cleanup(bufnr)
+    end)
+
+    it("extracts css from style tags with correct indentation", function()
+      local bufnr = load_and_activate("03_html_only.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      assert.is_not_nil(code_chunks.css, "should have css chunks")
+      assert.is_true(#code_chunks.css > 0, "should have at least one css chunk")
+
+      local all_css_text = ""
+      for _, chunk in ipairs(code_chunks.css) do
+        all_css_text = all_css_text .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      assert.is_true(all_css_text:find("%.greeting") ~= nil, "css should contain '.greeting' selector")
+      assert.is_true(all_css_text:find("color") ~= nil, "css should contain 'color' property")
+      assert.is_true(all_css_text:find("blue") ~= nil, "css should contain 'blue' value")
+
+      -- Verify indentation is preserved (2 spaces for properties inside selector)
+      local found_indented_property = false
+      for _, chunk in ipairs(code_chunks.css) do
+        for _, line in ipairs(chunk.text) do
+          if line:match("^  color") then
+            found_indented_property = true
+            break
+          end
+        end
+      end
+      assert.is_true(found_indented_property,
+        "css properties should preserve their 2-space indentation")
+
+      cleanup(bufnr)
+    end)
+
+    it("preserves javascript indentation in otter buffer", function()
+      local bufnr = load_and_activate("03_html_only.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      keeper.sync_raft(bufnr)
+
+      local raft = keeper.rafts[bufnr]
+      assert.is_not_nil(raft.buffers.javascript, "should have javascript buffer")
+
+      local otter_bufnr = raft.buffers.javascript
+      local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
+
+      -- Find indented console.log lines in the otter buffer
+      local found_indented_console = false
+      for _, line in ipairs(lines) do
+        if line:match("^    console%.log") then
+          found_indented_console = true
+          break
+        end
+      end
+
+      assert.is_true(found_indented_console,
+        "javascript otter buffer should contain console.log with 4-space indentation")
+
+      cleanup(bufnr)
+    end)
+
+    it("preserves css indentation in otter buffer", function()
+      local bufnr = load_and_activate("03_html_only.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      keeper.sync_raft(bufnr)
+
+      local raft = keeper.rafts[bufnr]
+      assert.is_not_nil(raft.buffers.css, "should have css buffer")
+
+      local otter_bufnr = raft.buffers.css
+      local lines = api.nvim_buf_get_lines(otter_bufnr, 0, -1, false)
+
+      -- Find indented css property lines in the otter buffer
+      local found_indented_property = false
+      for _, line in ipairs(lines) do
+        if line:match("^  color") then
+          found_indented_property = true
+          break
+        end
+      end
+
+      assert.is_true(found_indented_property,
+        "css otter buffer should contain properties with 2-space indentation")
+
+      cleanup(bufnr)
     end)
   end)
 

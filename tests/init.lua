@@ -78,6 +78,7 @@ function M.setup()
   -- Pin nvim-treesitter to v0.9.3 for stable API (v0.10+ has breaking changes)
   M.load("nvim-treesitter/nvim-treesitter", "v0.9.3")
   M.load("Saghen/blink.cmp")
+  M.load("nvim-orgmode/orgmode")
 
   -- Load all plugins from the packpath (required for fresh CI installs)
   vim.cmd([[packloadall]])
@@ -88,6 +89,8 @@ function M.setup()
 
   -- Ensure treesitter parsers are installed
   M.ensure_parsers()
+  require('orgmode').setup()
+
 end
 
 M.setup()

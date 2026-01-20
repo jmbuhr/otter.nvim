@@ -20,6 +20,11 @@ jobs:
             sudo apt install libfuse2
             sudo wget -q https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.appimage -O /usr/bin/nvim
             sudo chmod 0755 /usr/bin/nvim
+      - name: Install tree-sitter CLI
+        shell: bash
+        run: |
+            # tree-sitter CLI is required by nvim-treesitter to compile parsers
+            sudo npm install -g tree-sitter-cli
       - name: Run Tests
         run: |
           nvim --version

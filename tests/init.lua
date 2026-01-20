@@ -33,13 +33,6 @@ end
 
 --- Install treesitter parsers needed for tests
 function M.ensure_parsers()
-  -- Check if parsers were already installed by a previous nvim instance.
-  -- This prevents race conditions when plenary runs tests in parallel,
-  -- where multiple nvim processes would try to install parsers concurrently.
-  local marker_file = M.root(".tests/parsers_installed")
-  if vim.uv.fs_stat(marker_file) then
-    return
-  end
 
   local parsers_to_install = {
     "markdown",
@@ -66,98 +59,12 @@ function M.ensure_parsers()
     end
   end
 
-  local ts_config = require('nvim-treesitter.config')
-  local install_dir = ts_config.get_install_dir('parser')
+  require'nvim-treesitter'.install(to_install):wait(3000000)
 
-  if #to_install > 0 then
-    print("[test-init] Installing treesitter parsers: " .. table.concat(to_install, ", "))
-    print("[test-init] TS will install to: " .. install_dir)
 
-    -- Install parsers one at a time synchronously to ensure each completes
-    -- before moving to the next. This avoids issues with async operations
-    -- not completing properly in headless mode.
-    for _, parser in ipairs(to_install) do
-      print("[test-init] Installing parser: " .. parser)
-      local install_result = require("nvim-treesitter").install({ parser })
-      install_result:wait(120000) -- 2 minute timeout per parser
-
-      -- Verify the parser was actually installed
-      local parser_path = install_dir .. "/" .. parser .. ".so"
-      local max_verify_wait = 10000 -- 10 seconds to verify file exists
-      local verify_interval = 100
-      local verified = false
-      local waited = 0
-
-      while waited < max_verify_wait and not verified do
-        if vim.uv.fs_stat(parser_path) then
-          verified = true
-          print("[test-init] Verified: " .. parser .. " installed successfully")
-        else
-          vim.wait(verify_interval, function() return false end)
-          waited = waited + verify_interval
-        end
-      end
-
-      if not verified then
-        print("[test-init] WARNING: Could not verify " .. parser .. " installation")
-      end
-    end
-
-    -- Log the directory contents after install
-    local stat = vim.uv.fs_stat(install_dir)
-    if stat then
-      local handle = vim.uv.fs_scandir(install_dir)
-      local files = {}
-      if handle then
-        while true do
-          local name = vim.uv.fs_scandir_next(handle)
-          if not name then break end
-          table.insert(files, name)
-        end
-      end
-      print("[test-init] After install, " .. install_dir .. " contains: " .. table.concat(files, ", "))
-    else
-      print("[test-init] After install, " .. install_dir .. " DOES NOT EXIST!")
-    end
-
-    -- Final verification
-    local missing = {}
-    for _, parser in ipairs(to_install) do
-      local parser_path = install_dir .. "/" .. parser .. ".so"
-      if not vim.uv.fs_stat(parser_path) then
-        table.insert(missing, parser)
-      end
-    end
-
-    if #missing > 0 then
-      print("[test-init] ERROR: Missing parsers: " .. table.concat(missing, ", "))
-    else
-      print("[test-init] All " .. #to_install .. " parsers installed successfully")
-    end
-  else
-    print("[test-init] No parsers to install, all already available")
-  end
-
-  -- Mark installation complete so parallel test workers skip this step
-  local f = io.open(marker_file, "w")
-  if f then
-    f:write(os.date("%Y-%m-%d %H:%M:%S"))
-    f:close()
-  end
 end
 
 function M.setup()
-  -- Prevent multiple setup calls in the same nvim session
-  if setup_done then
-    return
-  end
-  setup_done = true
-
-  print("[test-init] Starting setup...")
-  print("[test-init] M.root() = " .. M.root())
-  print("[test-init] cwd = " .. vim.uv.cwd())
-  print("[test-init] stdpath('data') BEFORE env = " .. vim.fn.stdpath('data'))
-  print("[test-init] stdpath('cache') BEFORE env = " .. vim.fn.stdpath('cache'))
 
   -- Disable netrw before it loads (avoids E919 error about missing packpath)
   vim.g.loaded_netrw = 1

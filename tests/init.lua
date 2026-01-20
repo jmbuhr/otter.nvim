@@ -57,7 +57,7 @@ function M.ensure_parsers()
 
   if #to_install > 0 then
     print("Installing treesitter parsers: " .. table.concat(to_install, ", "))
-    require("nvim-treesitter").install(to_install):wait()
+    require("nvim-treesitter").install(to_install):wait(300000)
   end
 end
 

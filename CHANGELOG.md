@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.0](https://github.com/jmbuhr/otter.nvim/compare/v2.13.4...v2.14.0) (2026-01-20)
+
+
+### Features
+
+* detect nested injections ([#269](https://github.com/jmbuhr/otter.nvim/issues/269)) ([ddcd2ae](https://github.com/jmbuhr/otter.nvim/commit/ddcd2aea7092e1aa2568d380c6f180059c9b3f54))
+
 ## [2.13.4](https://github.com/jmbuhr/otter.nvim/compare/v2.13.3...v2.13.4) (2025-12-15)
 
 

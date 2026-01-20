@@ -358,7 +358,9 @@ M.deactivate = function(completion, diagnostics)
   for _, otter_bufnr in pairs(keeper.rafts[main_nr].buffers) do
     -- Avoid 'textlock' with schedule
     vim.schedule(function()
-      api.nvim_buf_delete(otter_bufnr, { force = true })
+      if api.nvim_buf_is_valid(otter_bufnr) then
+        api.nvim_buf_delete(otter_bufnr, { force = true })
+      end
     end)
   end
 

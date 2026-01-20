@@ -33,6 +33,12 @@ M[ms.textDocument_hover] = function(err, response, ctx)
   -- pretend the response is coming from the main buffer
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
 
+  -- Adjust range for highlighting if present
+  -- The hover response may include a range to highlight the hovered symbol
+  if response.range then
+    modify_position(response, ctx.params.otter.main_nr)
+  end
+
   -- pass modified response on to the default handler
   return err, response, ctx
 end
@@ -239,12 +245,25 @@ M[ms.textDocument_completion] = function(err, response, ctx)
   local is_completion_list = response.isIncomplete ~= nil
   ---@type lsp.CompletionItem[]
   local items = is_completion_list and response.items or response
+  local main_nr = ctx.params.otter.main_nr
+
   for _, item in ipairs(items) do
     if item.data ~= nil and item.data.uri ~= nil then
       item.data.uri = ctx.params.otter.main_uri
     end
-    -- not needed for now:
-    -- item.position = modify_position(item.position, ctx.params.otter.main_nr)
+
+    -- Adjust textEdit range for leading whitespace offset
+    -- This is needed for blink.cmp and other completion plugins that use textEdit
+    if item.textEdit then
+      modify_position(item.textEdit, main_nr)
+    end
+
+    -- Adjust additionalTextEdits (e.g., auto-imports)
+    if item.additionalTextEdits then
+      for _, edit in ipairs(item.additionalTextEdits) do
+        modify_position(edit, main_nr)
+      end
+    end
   end
   return err, response, ctx
 end
@@ -261,6 +280,20 @@ M[ms.completionItem_resolve] = function(err, response, ctx)
 
   if response.data ~= nil and response.data.uri ~= nil then
     response.data.uri = ctx.params.otter.main_uri
+  end
+
+  local main_nr = ctx.params.otter.main_nr
+
+  -- Adjust textEdit if present (may be added during resolve)
+  if response.textEdit then
+    modify_position(response.textEdit, main_nr)
+  end
+
+  -- Adjust additionalTextEdits (may be added during resolve, e.g., auto-imports)
+  if response.additionalTextEdits then
+    for _, edit in ipairs(response.additionalTextEdits) do
+      modify_position(edit, main_nr)
+    end
   end
 
   return err, response, ctx

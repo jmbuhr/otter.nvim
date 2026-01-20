@@ -15,18 +15,6 @@ M.replace_header_div = function(response)
   return response
 end
 
----strip wrapping quotes from a string
----@param s string
----@return string s, boolean stripped The stripped string and a boolean indicating whether the string was stripped
-M.strip_wrapping_quotes = function(s)
-  for _, c in ipairs(OtterConfig.strip_wrapping_quote_characters) do
-    if s:sub(1, 1) == c and s:sub(#s, #s) == c then
-      return s:sub(2, #s - 1), true
-    end
-  end
-  return s, false
-end
-
 ---split a string by newlines
 ---@param str string
 ---@return string[]

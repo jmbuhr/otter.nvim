@@ -66,18 +66,44 @@ function M.ensure_parsers()
     end
   end
 
+  local ts_config = require('nvim-treesitter.config')
+  local install_dir = ts_config.get_install_dir('parser')
+
   if #to_install > 0 then
     print("[test-init] Installing treesitter parsers: " .. table.concat(to_install, ", "))
-    -- Log where nvim-treesitter thinks it's installing
-    local ts_config = require('nvim-treesitter.config')
-    print("[test-init] TS will install to: " .. ts_config.get_install_dir('parser'))
-    print("[test-init] Calling nvim-treesitter.install()...")
-    local install_result = require("nvim-treesitter").install(to_install)
-    print("[test-init] Waiting for install to complete...")
-    install_result:wait(300000)
-    print("[test-init] Install wait() returned")
+    print("[test-init] TS will install to: " .. install_dir)
+
+    -- Install parsers one at a time synchronously to ensure each completes
+    -- before moving to the next. This avoids issues with async operations
+    -- not completing properly in headless mode.
+    for _, parser in ipairs(to_install) do
+      print("[test-init] Installing parser: " .. parser)
+      local install_result = require("nvim-treesitter").install({ parser })
+      install_result:wait(120000) -- 2 minute timeout per parser
+
+      -- Verify the parser was actually installed
+      local parser_path = install_dir .. "/" .. parser .. ".so"
+      local max_verify_wait = 10000 -- 10 seconds to verify file exists
+      local verify_interval = 100
+      local verified = false
+      local waited = 0
+
+      while waited < max_verify_wait and not verified do
+        if vim.uv.fs_stat(parser_path) then
+          verified = true
+          print("[test-init] Verified: " .. parser .. " installed successfully")
+        else
+          vim.wait(verify_interval, function() return false end)
+          waited = waited + verify_interval
+        end
+      end
+
+      if not verified then
+        print("[test-init] WARNING: Could not verify " .. parser .. " installation")
+      end
+    end
+
     -- Log the directory contents after install
-    local install_dir = ts_config.get_install_dir('parser')
     local stat = vim.uv.fs_stat(install_dir)
     if stat then
       local handle = vim.uv.fs_scandir(install_dir)
@@ -92,6 +118,21 @@ function M.ensure_parsers()
       print("[test-init] After install, " .. install_dir .. " contains: " .. table.concat(files, ", "))
     else
       print("[test-init] After install, " .. install_dir .. " DOES NOT EXIST!")
+    end
+
+    -- Final verification
+    local missing = {}
+    for _, parser in ipairs(to_install) do
+      local parser_path = install_dir .. "/" .. parser .. ".so"
+      if not vim.uv.fs_stat(parser_path) then
+        table.insert(missing, parser)
+      end
+    end
+
+    if #missing > 0 then
+      print("[test-init] ERROR: Missing parsers: " .. table.concat(missing, ", "))
+    else
+      print("[test-init] All " .. #to_install .. " parsers installed successfully")
     end
   else
     print("[test-init] No parsers to install, all already available")

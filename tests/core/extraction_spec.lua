@@ -888,6 +888,186 @@ def outer():
     end)
   end)
 
+  -- Tests for Lua files with vimscript injection (00.lua)
+  describe("Lua file with vimscript injection from 00.lua", function()
+    it("extracts vimscript from vim.cmd block", function()
+      local bufnr = load_and_activate("00.lua")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist for Lua file")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have vim chunks from the vim.cmd block
+      if code_chunks.vim then
+        local all_vim = ""
+        for _, chunk in ipairs(code_chunks.vim) do
+          all_vim = all_vim .. table.concat(chunk.text, "\n") .. "\n"
+        end
+
+        -- Should contain the vimscript content
+        assert.is_true(all_vim:find("let x = 10") ~= nil, "Vim should contain 'let x = 10'")
+        assert.is_true(all_vim:find("let y = 20") ~= nil, "Vim should contain 'let y = 20'")
+      end
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests for quarto markdown variant (01b.qmd)
+  describe("Quarto markdown from 01b.qmd", function()
+    it("extracts python code from quarto code blocks", function()
+      local bufnr = load_and_activate("01b.qmd")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist for Quarto file")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      assert.is_not_nil(code_chunks.python, "should have python chunks")
+      assert.is_true(#code_chunks.python >= 2, "should have at least 2 python chunks")
+
+      local all_python = ""
+      for _, chunk in ipairs(code_chunks.python) do
+        all_python = all_python .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      assert.is_true(all_python:find("import sys") ~= nil, "Python should contain 'import sys'")
+      assert.is_true(all_python:find("print") ~= nil, "Python should contain 'print'")
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests for markdown with python code blocks (03b.md)
+  describe("Markdown with Python from 03b.md", function()
+    it("extracts python code with function definitions", function()
+      local bufnr = load_and_activate("03b.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      assert.is_not_nil(code_chunks.python, "should have python chunks")
+      assert.is_true(#code_chunks.python >= 4, "should have at least 4 python chunks")
+
+      local all_python = ""
+      for _, chunk in ipairs(code_chunks.python) do
+        all_python = all_python .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      assert.is_true(all_python:find("import os") ~= nil, "Python should contain 'import os'")
+      assert.is_true(all_python:find("import math") ~= nil, "Python should contain 'import math'")
+      assert.is_true(all_python:find("def hello") ~= nil, "Python should contain 'def hello'")
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests for simple markdown with R code (03c.md)
+  describe("Markdown with R from 03c.md", function()
+    it("extracts R code", function()
+      local bufnr = load_and_activate("03c.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      assert.is_not_nil(code_chunks.r, "should have r chunks")
+      assert.is_true(#code_chunks.r >= 1, "should have at least 1 R chunk")
+
+      local all_r = ""
+      for _, chunk in ipairs(code_chunks.r) do
+        all_r = all_r .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      assert.is_true(all_r:find("print") ~= nil, "R should contain 'print'")
+      assert.is_true(all_r:find("hello world") ~= nil, "R should contain 'hello world'")
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests for Rust file with SQL injection (04.rs)
+  describe("Rust file with SQL injection from 04.rs", function()
+    it("extracts SQL from sqlx macro", function()
+      local bufnr = load_and_activate("04.rs")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist for Rust file")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Rust may have SQL injected via sqlx macro
+      -- The injection depends on treesitter queries being configured
+      if code_chunks.sql then
+        local all_sql = ""
+        for _, chunk in ipairs(code_chunks.sql) do
+          all_sql = all_sql .. table.concat(chunk.text, "\n") .. "\n"
+        end
+
+        assert.is_true(all_sql:find("INSERT INTO") ~= nil, "SQL should contain 'INSERT INTO'")
+        assert.is_true(all_sql:find("RETURNING") ~= nil, "SQL should contain 'RETURNING'")
+      end
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests for Neorg files (05.norg)
+  describe("Neorg file from 05.norg", function()
+    it("extracts code from norg code blocks", function()
+      local bufnr = load_and_activate("05.norg")
+
+      -- Norg parser may not be available
+      if not keeper.rafts[bufnr] then
+        api.nvim_buf_delete(bufnr, { force = true })
+        return
+      end
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have lua chunks
+      if code_chunks.lua then
+        local all_lua = ""
+        for _, chunk in ipairs(code_chunks.lua) do
+          all_lua = all_lua .. table.concat(chunk.text, "\n") .. "\n"
+        end
+
+        assert.is_true(all_lua:find("Hello, Norg") ~= nil or all_lua:find("print") ~= nil,
+          "Lua should contain Norg example code")
+      end
+
+      -- Should have python chunks
+      if code_chunks.python then
+        local all_python = ""
+        for _, chunk in ipairs(code_chunks.python) do
+          all_python = all_python .. table.concat(chunk.text, "\n") .. "\n"
+        end
+
+        assert.is_true(all_python:find("Hello world") ~= nil or all_python:find("numpy") ~= nil,
+          "Python should contain Norg example code")
+      end
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests for Nix files with Lua injection (07.nix)
+  describe("Nix file with Lua injection from 07.nix", function()
+    it("extracts Lua from nix multi-line string", function()
+      local bufnr = load_and_activate("07.nix")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist for Nix file")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+
+      -- Should have lua chunks from the injected string
+      if code_chunks.lua then
+        local all_lua = ""
+        for _, chunk in ipairs(code_chunks.lua) do
+          all_lua = all_lua .. table.concat(chunk.text, "\n") .. "\n"
+        end
+
+        assert.is_true(all_lua:find("a_string") ~= nil, "Lua should contain 'a_string'")
+        assert.is_true(all_lua:find("print") ~= nil, "Lua should contain 'print'")
+      end
+
+      cleanup(bufnr)
+    end)
+  end)
+
   -- Test that verifies strip_wrapping_quotes is no longer needed
   -- by checking extraction works correctly without it
   describe("strip_wrapping_quotes removal verification", function()

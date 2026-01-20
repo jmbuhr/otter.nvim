@@ -42,6 +42,8 @@ function M.ensure_parsers()
     "css",
     "rust",
     "nix",
+    "vim",
+    -- norg parser is provided by tree-sitter-norg plugin, not nvim-treesitter
   }
 
   -- Check which parsers need to be installed

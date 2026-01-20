@@ -117,8 +117,13 @@ function M.setup()
   vim.treesitter.language.register("markdown", { "quarto", "rmd" })
 
   require('orgmode').setup()
+
+  -- Use explicit path for parser installation directory.
+  -- We can't rely on stdpath('data') because XDG_DATA_HOME set via vim.env
+  -- doesn't affect stdpath() - it's determined at nvim startup.
+  local parser_install_dir = M.root(".tests/data/nvim/site")
   require'nvim-treesitter'.setup {
-    install_dir = vim.fn.stdpath('data') .. '/site'
+    install_dir = parser_install_dir
   }
 
   M.ensure_parsers()

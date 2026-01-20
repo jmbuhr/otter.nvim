@@ -37,8 +37,12 @@ function M.ensure_parsers()
     "python",
     "r",
     "javascript",
+    "typescript",
     "html",
     "css",
+    "rust",
+    "nix",
+    "norg"
   }
 
   -- Check which parsers need to be installed
@@ -79,6 +83,7 @@ function M.setup()
   M.load("nvim-treesitter/nvim-treesitter", "v0.9.3")
   M.load("Saghen/blink.cmp")
   M.load("nvim-orgmode/orgmode")
+  M.load("nvim-neorg/tree-sitter-norg")
 
   -- Load all plugins from the packpath (required for fresh CI installs)
   vim.cmd([[packloadall]])

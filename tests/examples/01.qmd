@@ -37,7 +37,7 @@ console.log('hello world')
 </html>
 
 <script>
-console
+console.
 </script>
 
 

@@ -6,3 +6,4 @@ debug
 *.log
 .venv
 .notes.md
+*.otter.*

@@ -47,10 +47,8 @@ end
 ---This preserves relative indentation within code blocks while handling
 ---entirely-indented code blocks (e.g., in norg nested structures).
 ---@param text string
----@param bufnr integer host buffer number
----@param starting_ln integer
 ---@return string, integer
-local function trim_leading_whitespace(text, bufnr, starting_ln)
+local function trim_leading_whitespace(text)
   if not OtterConfig.handle_leading_whitespace then
     return text, 0
   end
@@ -101,27 +99,25 @@ local function trim_leading_whitespace(text, bufnr, starting_ln)
   return table.concat(split, "\n"), min_indent
 end
 
----Recursively collect all injected language trees
----Unlike the previous implementation that stored one tree per language,
----this collects ALL trees in a list to handle cases where the same language
+---Recursively collect all injected language trees.
+---This collects ALL trees in a list to handle cases where the same language
 ---appears at multiple levels (e.g., JS in fenced code blocks AND in HTML <script> tags)
 ---@param lang_tree vim.treesitter.LanguageTree
----@param result table<string, vim.treesitter.LanguageTree[]>
-local function collect_injected_trees(lang_tree, result)
+---@param trees table<string, vim.treesitter.LanguageTree[]>
+local function collect_injected_trees(lang_tree, trees)
   for lang, child_tree in pairs(lang_tree:children()) do
-    if result[lang] == nil then
-      result[lang] = {}
+    if trees[lang] == nil then
+      trees[lang] = {}
     end
-    table.insert(result[lang], child_tree)
+    table.insert(trees[lang], child_tree)
     -- Recurse to find nested injections (e.g., JS inside HTML inside markdown)
-    collect_injected_trees(child_tree, result)
+    collect_injected_trees(child_tree, trees)
   end
 end
 
 ---@class CodeChunk
 ---@field range { from: [integer, integer], to: [integer, integer] }
 ---@field lang string
----@field node TSNode?
 ---@field text string[]
 ---@field leading_offset number
 
@@ -129,12 +125,12 @@ end
 ---This uses the LanguageTree's built-in injection handling which automatically parses
 ---all injected languages after a full parse, including nested injections.
 ---@param main_nr integer The main buffer number
----@param lang string? language to extract. All languages if nil.
+---@param target_lang string? language to extract. All languages if nil.
 ---@param exclude_eval_false boolean? Exclude code chunks with eval: false
 ---@param range_start_row integer? Row to start from, inclusive, 0-indexed.
 ---@param range_end_row integer? Row to end at, inclusive, 0-indexed.
 ---@return table<string, CodeChunk[]>
-keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_start_row, range_end_row)
+keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, range_start_row, range_end_row)
   local parser = keeper.rafts[main_nr].parser
   -- Full parse to ensure all injections are processed
   parser:parse(true)
@@ -142,27 +138,24 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
   ---@type table<string, CodeChunk[]>
   local code_chunks = {}
 
-  -- Collect all injected language trees (including nested ones)
-  -- This now returns a list of trees per language to handle the same language
-  -- appearing at multiple levels (e.g., JS in fenced blocks AND in HTML <script> tags)
   ---@type table<string, vim.treesitter.LanguageTree[]>
-  local injected_trees = {}
-  collect_injected_trees(parser, injected_trees)
+  local lang_trees = {}
+  collect_injected_trees(parser, lang_trees)
 
   -- Process each injected language
-  for injected_lang, lang_trees in pairs(injected_trees) do
+  for lang, tree in pairs(lang_trees) do
     -- Skip if we're filtering for a specific language and this isn't it
-    if lang ~= nil and injected_lang ~= lang then
+    if target_lang ~= nil and lang ~= target_lang then
       goto continue_lang
     end
 
     -- Skip if this language isn't in our injectable languages list
-    if not fn.contains(injectable_languages, injected_lang) then
+    if not fn.contains(injectable_languages, lang) then
       goto continue_lang
     end
 
     -- Process all trees for this language
-    for _, lang_tree in ipairs(lang_trees) do
+    for _, lang_tree in ipairs(tree) do
       -- Get the regions where this language is injected
       -- included_regions returns a table mapping tree index to list of Range6
       -- Each Range6 is: { start_row, start_col, start_bytes, end_row, end_col, end_bytes }
@@ -209,20 +202,19 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
 
           -- Trim leading whitespace
           local leading_offset
-          text, leading_offset = trim_leading_whitespace(text, main_nr, start_row)
+          text, leading_offset = trim_leading_whitespace(text)
 
           local result = {
             range = { from = { start_row, start_col }, to = { end_row, end_col } },
-            lang = injected_lang,
-            node = nil, -- We don't have a single node anymore, but the range is what matters
+            lang = lang,
             text = fn.lines(text),
             leading_offset = leading_offset,
           }
 
-          if code_chunks[injected_lang] == nil then
-            code_chunks[injected_lang] = {}
+          if code_chunks[lang] == nil then
+            code_chunks[lang] = {}
           end
-          table.insert(code_chunks[injected_lang], result)
+          table.insert(code_chunks[lang], result)
 
           ::continue_region::
         end
@@ -353,11 +345,11 @@ keeper.get_leading_offset = function(line_nr, main_nr)
 end
 
 ---adjusts IN PLACE the position to include the start and end
----@param obj table
----@param main_nr number
----@param invert boolean?
----@param exclude_end boolean?
----@param known_offset number?
+---@param obj table LSP request or response table
+---@param main_nr number bufnr of the parent buffer
+---@param invert boolean? whether to invert the offset (for requests vs responses)
+---@param exclude_end boolean? whether to exclude adjusting the end position
+---@param known_offset number? known offset to use instead of calculating it
 keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offset)
   if not OtterConfig.handle_leading_whitespace or known_offset == 0 then
     return
@@ -366,7 +358,6 @@ keeper.modify_position = function(obj, main_nr, invert, exclude_end, known_offse
   local sign = invert and -1 or 1
   local offset = known_offset
 
-  -- there are apparently a lot of ranges that different language servers can use
   local ranges = { "range", "targetSelectionRange", "targetRange", "originSelectionRange" }
   for _, range in ipairs(ranges) do
     if obj[range] then
@@ -518,9 +509,9 @@ keeper.sync_raft = function(main_nr, language)
           table.insert(ls, i, l)
         end
 
-        -- collect language lines
-        -- are allowed to overwrite the preamble
-        -- apply ignore_pattern filtering on read
+        -- Collect language lines.
+        -- They are allowed to overwrite the preamble.
+        -- Apply ignore_pattern filtering on read
         local pattern = keeper.rafts[main_nr].ignore_pattern[lang]
         for _, t in ipairs(code_chunks) do
           local start_index = t.range["from"][1]

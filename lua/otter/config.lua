@@ -1,4 +1,9 @@
 ---@class OtterConfig
+---@field lsp table
+---@field buffers table
+---@field handle_leading_whitespace boolean
+---@field extensions table<string, string>
+---@field debug boolean
 OtterConfig = {
   lsp = {
     -- `:h events` that cause the diagnostics to update. Set to:
@@ -63,6 +68,7 @@ OtterConfig = {
     javascript = "js",
     json = "json",
     julia = "jl",
+    latex = "tex",
     lua = "lua",
     markdown = "md",
     nim = "nim",

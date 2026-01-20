@@ -1,8 +1,5 @@
 local M = {}
 
--- Guard to prevent multiple setup calls in the same nvim session
-local setup_done = false
-
 function M.root(root)
   local f = debug.getinfo(1, "S").source:sub(2)
   return vim.fn.fnamemodify(f, ":p:h:h") .. "/" .. (root or "")
@@ -33,7 +30,6 @@ end
 
 --- Install treesitter parsers needed for tests
 function M.ensure_parsers()
-
   local parsers_to_install = {
     "markdown",
     "markdown_inline",
@@ -59,13 +55,10 @@ function M.ensure_parsers()
     end
   end
 
-  require'nvim-treesitter'.install(to_install):wait(3000000)
-
-
+  require("nvim-treesitter").install(to_install):wait(3000000)
 end
 
 function M.setup()
-
   -- Disable netrw before it loads (avoids E919 error about missing packpath)
   vim.g.loaded_netrw = 1
   vim.g.loaded_netrwPlugin = 1
@@ -96,23 +89,13 @@ function M.setup()
   -- (normally done by quarto-nvim plugin)
   vim.treesitter.language.register("markdown", { "quarto", "rmd" })
 
-  require('orgmode').setup()
+  require("orgmode").setup()
 
-  require'nvim-treesitter'.setup {
+  require("nvim-treesitter").setup({
     install_dir = vim.fn.stdpath("data") .. "/site",
-  }
-
+  })
 
   M.ensure_parsers()
-
-  -- Test if markdown parser is available after setup
-  local ok, result = pcall(vim.treesitter.language.inspect, "markdown")
-  print("[test-init] markdown parser available: " .. tostring(ok))
-  if not ok then
-    print("[test-init] markdown parser error: " .. tostring(result))
-  end
-
-  print("[test-init] Setup complete")
 end
 
 M.setup()

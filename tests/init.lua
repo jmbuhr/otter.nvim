@@ -68,7 +68,27 @@ function M.ensure_parsers()
 
   if #to_install > 0 then
     print("Installing treesitter parsers: " .. table.concat(to_install, ", "))
+    -- Log where nvim-treesitter thinks it's installing
+    local ts_config = require('nvim-treesitter.config')
+    print("[test-init] TS will install to: " .. ts_config.get_install_dir('parser'))
     require("nvim-treesitter").install(to_install):wait(300000)
+    -- Log the directory contents after install
+    local install_dir = ts_config.get_install_dir('parser')
+    local stat = vim.uv.fs_stat(install_dir)
+    if stat then
+      local handle = vim.uv.fs_scandir(install_dir)
+      local files = {}
+      if handle then
+        while true do
+          local name = vim.uv.fs_scandir_next(handle)
+          if not name then break end
+          table.insert(files, name)
+        end
+      end
+      print("[test-init] After install, " .. install_dir .. " contains: " .. table.concat(files, ", "))
+    else
+      print("[test-init] After install, " .. install_dir .. " DOES NOT EXIST!")
+    end
   end
 
   -- Mark installation complete so parallel test workers skip this step
@@ -157,6 +177,36 @@ function M.setup()
 
   M.ensure_parsers()
   
+  -- Check multiple possible parser locations
+  print("[test-init] Checking possible parser locations...")
+  local possible_locations = {
+    parser_install_dir .. "/parser",
+    vim.fn.stdpath('data') .. "/site/parser",
+    vim.fn.stdpath('data') .. "/parser",
+    M.root(".tests/site/parser"),
+  }
+  for _, loc in ipairs(possible_locations) do
+    local loc_stat = vim.uv.fs_stat(loc)
+    if loc_stat then
+      local handle = vim.uv.fs_scandir(loc)
+      local files = {}
+      if handle then
+        while true do
+          local name = vim.uv.fs_scandir_next(handle)
+          if not name then break end
+          table.insert(files, name)
+        end
+      end
+      print("[test-init] " .. loc .. " -> " .. #files .. " files: " .. table.concat(files, ", "))
+    else
+      print("[test-init] " .. loc .. " -> does not exist")
+    end
+  end
+  
+  -- Also check nvim-treesitter's actual config
+  local ts_config = require('nvim-treesitter.config')
+  print("[test-init] TS get_install_dir('parser') = " .. ts_config.get_install_dir('parser'))
+
   -- Test if markdown parser is available after setup
   local ok, result = pcall(vim.treesitter.language.inspect, "markdown")
   print("[test-init] markdown parser available: " .. tostring(ok))

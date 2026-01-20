@@ -98,71 +98,12 @@ function M.setup()
 
   require('orgmode').setup()
 
-  -- Use explicit path for parser installation directory.
-  -- We can't rely on stdpath('data') because XDG_DATA_HOME set via vim.env
-  -- doesn't affect stdpath() - it's determined at nvim startup.
-  local parser_install_dir = M.root(".tests/data/nvim/site")
-  print("[test-init] parser_install_dir = " .. parser_install_dir)
-  print("[test-init] stdpath('data') = " .. vim.fn.stdpath('data'))
-  
   require'nvim-treesitter'.setup {
-    install_dir = parser_install_dir
+    install_dir = vim.fn.stdpath("data") .. "/site",
   }
 
-  -- Log runtimepath after nvim-treesitter setup
-  print("[test-init] runtimepath after TS setup = " .. vim.o.runtimepath)
-  
-  -- Check if parser directory exists and list contents
-  local parser_dir = parser_install_dir .. "/parser"
-  print("[test-init] parser_dir = " .. parser_dir)
-  local stat = vim.uv.fs_stat(parser_dir)
-  if stat then
-    print("[test-init] parser_dir exists, type = " .. stat.type)
-    local handle = vim.uv.fs_scandir(parser_dir)
-    if handle then
-      local files = {}
-      while true do
-        local name, type = vim.uv.fs_scandir_next(handle)
-        if not name then break end
-        table.insert(files, name)
-      end
-      print("[test-init] parser files: " .. table.concat(files, ", "))
-    end
-  else
-    print("[test-init] parser_dir DOES NOT EXIST!")
-  end
 
   M.ensure_parsers()
-  
-  -- Check multiple possible parser locations
-  print("[test-init] Checking possible parser locations...")
-  local possible_locations = {
-    parser_install_dir .. "/parser",
-    vim.fn.stdpath('data') .. "/site/parser",
-    vim.fn.stdpath('data') .. "/parser",
-    M.root(".tests/site/parser"),
-  }
-  for _, loc in ipairs(possible_locations) do
-    local loc_stat = vim.uv.fs_stat(loc)
-    if loc_stat then
-      local handle = vim.uv.fs_scandir(loc)
-      local files = {}
-      if handle then
-        while true do
-          local name = vim.uv.fs_scandir_next(handle)
-          if not name then break end
-          table.insert(files, name)
-        end
-      end
-      print("[test-init] " .. loc .. " -> " .. #files .. " files: " .. table.concat(files, ", "))
-    else
-      print("[test-init] " .. loc .. " -> does not exist")
-    end
-  end
-  
-  -- Also check nvim-treesitter's actual config
-  local ts_config = require('nvim-treesitter.config')
-  print("[test-init] TS get_install_dir('parser') = " .. ts_config.get_install_dir('parser'))
 
   -- Test if markdown parser is available after setup
   local ok, result = pcall(vim.treesitter.language.inspect, "markdown")

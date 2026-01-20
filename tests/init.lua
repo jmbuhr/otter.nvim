@@ -67,11 +67,15 @@ function M.ensure_parsers()
   end
 
   if #to_install > 0 then
-    print("Installing treesitter parsers: " .. table.concat(to_install, ", "))
+    print("[test-init] Installing treesitter parsers: " .. table.concat(to_install, ", "))
     -- Log where nvim-treesitter thinks it's installing
     local ts_config = require('nvim-treesitter.config')
     print("[test-init] TS will install to: " .. ts_config.get_install_dir('parser'))
-    require("nvim-treesitter").install(to_install):wait(300000)
+    print("[test-init] Calling nvim-treesitter.install()...")
+    local install_result = require("nvim-treesitter").install(to_install)
+    print("[test-init] Waiting for install to complete...")
+    install_result:wait(300000)
+    print("[test-init] Install wait() returned")
     -- Log the directory contents after install
     local install_dir = ts_config.get_install_dir('parser')
     local stat = vim.uv.fs_stat(install_dir)
@@ -89,6 +93,8 @@ function M.ensure_parsers()
     else
       print("[test-init] After install, " .. install_dir .. " DOES NOT EXIST!")
     end
+  else
+    print("[test-init] No parsers to install, all already available")
   end
 
   -- Mark installation complete so parallel test workers skip this step
@@ -108,6 +114,9 @@ function M.setup()
 
   print("[test-init] Starting setup...")
   print("[test-init] M.root() = " .. M.root())
+  print("[test-init] cwd = " .. vim.uv.cwd())
+  print("[test-init] stdpath('data') BEFORE env = " .. vim.fn.stdpath('data'))
+  print("[test-init] stdpath('cache') BEFORE env = " .. vim.fn.stdpath('cache'))
 
   -- Disable netrw before it loads (avoids E919 error about missing packpath)
   vim.g.loaded_netrw = 1

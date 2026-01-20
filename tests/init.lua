@@ -86,6 +86,9 @@ function M.setup()
   end
   setup_done = true
 
+  print("[test-init] Starting setup...")
+  print("[test-init] M.root() = " .. M.root())
+
   -- Disable netrw before it loads (avoids E919 error about missing packpath)
   vim.g.loaded_netrw = 1
   vim.g.loaded_netrwPlugin = 1
@@ -122,12 +125,46 @@ function M.setup()
   -- We can't rely on stdpath('data') because XDG_DATA_HOME set via vim.env
   -- doesn't affect stdpath() - it's determined at nvim startup.
   local parser_install_dir = M.root(".tests/data/nvim/site")
+  print("[test-init] parser_install_dir = " .. parser_install_dir)
+  print("[test-init] stdpath('data') = " .. vim.fn.stdpath('data'))
+  
   require'nvim-treesitter'.setup {
     install_dir = parser_install_dir
   }
 
-  M.ensure_parsers()
+  -- Log runtimepath after nvim-treesitter setup
+  print("[test-init] runtimepath after TS setup = " .. vim.o.runtimepath)
+  
+  -- Check if parser directory exists and list contents
+  local parser_dir = parser_install_dir .. "/parser"
+  print("[test-init] parser_dir = " .. parser_dir)
+  local stat = vim.uv.fs_stat(parser_dir)
+  if stat then
+    print("[test-init] parser_dir exists, type = " .. stat.type)
+    local handle = vim.uv.fs_scandir(parser_dir)
+    if handle then
+      local files = {}
+      while true do
+        local name, type = vim.uv.fs_scandir_next(handle)
+        if not name then break end
+        table.insert(files, name)
+      end
+      print("[test-init] parser files: " .. table.concat(files, ", "))
+    end
+  else
+    print("[test-init] parser_dir DOES NOT EXIST!")
+  end
 
+  M.ensure_parsers()
+  
+  -- Test if markdown parser is available after setup
+  local ok, result = pcall(vim.treesitter.language.inspect, "markdown")
+  print("[test-init] markdown parser available: " .. tostring(ok))
+  if not ok then
+    print("[test-init] markdown parser error: " .. tostring(result))
+  end
+
+  print("[test-init] Setup complete")
 end
 
 M.setup()

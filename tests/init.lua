@@ -30,6 +30,14 @@ end
 
 --- Install treesitter parsers needed for tests
 function M.ensure_parsers()
+  -- Check if parsers were already installed by a previous nvim instance.
+  -- This prevents race conditions when plenary runs tests in parallel,
+  -- where multiple nvim processes would try to install parsers concurrently.
+  local marker_file = M.root(".tests/parsers_installed")
+  if vim.uv.fs_stat(marker_file) then
+    return
+  end
+
   local parsers_to_install = {
     "markdown",
     "markdown_inline",
@@ -58,6 +66,13 @@ function M.ensure_parsers()
   if #to_install > 0 then
     print("Installing treesitter parsers: " .. table.concat(to_install, ", "))
     require("nvim-treesitter").install(to_install):wait(300000)
+  end
+
+  -- Mark installation complete so parallel test workers skip this step
+  local f = io.open(marker_file, "w")
+  if f then
+    f:write(os.date("%Y-%m-%d %H:%M:%S"))
+    f:close()
   end
 end
 

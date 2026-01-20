@@ -1,5 +1,8 @@
 local M = {}
 
+-- Guard to prevent multiple setup calls in the same nvim session
+local setup_done = false
+
 function M.root(root)
   local f = debug.getinfo(1, "S").source:sub(2)
   return vim.fn.fnamemodify(f, ":p:h:h") .. "/" .. (root or "")
@@ -77,6 +80,12 @@ function M.ensure_parsers()
 end
 
 function M.setup()
+  -- Prevent multiple setup calls in the same nvim session
+  if setup_done then
+    return
+  end
+  setup_done = true
+
   -- Disable netrw before it loads (avoids E919 error about missing packpath)
   vim.g.loaded_netrw = 1
   vim.g.loaded_netrwPlugin = 1

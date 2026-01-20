@@ -42,7 +42,6 @@ function M.ensure_parsers()
     "css",
     "rust",
     "nix",
-    "norg"
   }
 
   -- Check which parsers need to be installed
@@ -56,7 +55,7 @@ function M.ensure_parsers()
 
   if #to_install > 0 then
     print("Installing treesitter parsers: " .. table.concat(to_install, ", "))
-    require("nvim-treesitter.install").ensure_installed_sync(to_install)
+    require("nvim-treesitter").install(to_install):wait()
   end
 end
 
@@ -79,8 +78,7 @@ function M.setup()
   vim.env.XDG_CACHE_HOME = M.root(".tests/cache")
 
   M.load("nvim-lua/plenary.nvim")
-  -- Pin nvim-treesitter to v0.9.3 for stable API (v0.10+ has breaking changes)
-  M.load("nvim-treesitter/nvim-treesitter", "v0.9.3")
+  M.load("nvim-treesitter/nvim-treesitter", "main")
   M.load("Saghen/blink.cmp")
   M.load("nvim-orgmode/orgmode")
   M.load("nvim-neorg/tree-sitter-norg")
@@ -92,9 +90,12 @@ function M.setup()
   -- (normally done by quarto-nvim plugin)
   vim.treesitter.language.register("markdown", { "quarto", "rmd" })
 
-  -- Ensure treesitter parsers are installed
-  M.ensure_parsers()
   require('orgmode').setup()
+  require'nvim-treesitter'.setup {
+    install_dir = vim.fn.stdpath('data') .. '/site'
+  }
+
+  M.ensure_parsers()
 
 end
 

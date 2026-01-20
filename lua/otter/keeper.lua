@@ -202,9 +202,6 @@ keeper.extract_code_chunks = function(main_nr, lang, exclude_eval_false, range_s
           end
           local text = table.concat(lines, "\n")
 
-          -- Remove surrounding quotes (workaround for some injection patterns)
-          text, _ = fn.strip_wrapping_quotes(text)
-
           -- Handle eval: false exclusion
           if exclude_eval_false and string.find(text, "| *eval: *false") then
             text = ""

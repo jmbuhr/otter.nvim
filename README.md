@@ -172,8 +172,6 @@ otter.setup{
       python = "^(%s*[%%!].*)",
     },
   },
-  -- list of characters that should be stripped from the beginning and end of the code chunks
-  strip_wrapping_quote_characters = { "'", '"', "`" },
   -- remove whitespace from the beginning of the code chunks when writing to the otter buffers
   -- and calculate it back in when handling lsp requests
   handle_leading_whitespace = true,

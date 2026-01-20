@@ -798,4 +798,48 @@ def outer():
       cleanup(bufnr)
     end)
   end)
+
+  -- Test that verifies strip_wrapping_quotes is no longer needed
+  -- by checking extraction works correctly without it
+  describe("strip_wrapping_quotes removal verification", function()
+    it("all existing test files extract correctly without quote issues", function()
+      -- Test all markdown files to ensure no spurious quotes appear
+      local test_files = { "minimal.md", "03.md", "03_html_only.md", "04_nested.md" }
+
+      for _, filename in ipairs(test_files) do
+        local bufnr = load_and_activate(filename)
+        if keeper.rafts[bufnr] then
+          local code_chunks = keeper.extract_code_chunks(bufnr)
+
+          for lang, chunks in pairs(code_chunks) do
+            for i, chunk in ipairs(chunks) do
+              local text = table.concat(chunk.text, "\n")
+              -- No chunk should be entirely wrapped in quotes
+              local first = text:sub(1, 1)
+              local last = text:sub(-1)
+
+              -- If text starts and ends with same quote character, that's suspicious
+              if (first == '"' or first == "'" or first == "`") and first == last and #text > 2 then
+                -- Check if the ENTIRE text is just a quoted string
+                local inner = text:sub(2, -2)
+                -- This would only be a problem if the inner content looks like code
+                -- and the quotes are from injection capture issues
+                if inner:match("[%w_]") then
+                  -- This is likely a bug - code shouldn't be wrapped in quotes
+                  assert.fail(
+                    "Chunk " .. i .. " of " .. lang .. " in " .. filename ..
+                    " appears to be incorrectly wrapped in quotes: " .. text:sub(1, 50)
+                  )
+                end
+              end
+            end
+          end
+
+          cleanup(bufnr)
+        else
+          api.nvim_buf_delete(bufnr, { force = true })
+        end
+      end
+    end)
+  end)
 end)

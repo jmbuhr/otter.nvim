@@ -119,20 +119,6 @@ describe("otter", function()
       end
     end)
 
-    it("strip_wrapping_quotes handles quoted strings", function()
-      local result, stripped = fn.strip_wrapping_quotes('"hello"')
-      assert.equals("hello", result)
-      assert.is_true(stripped)
-
-      result, stripped = fn.strip_wrapping_quotes("'world'")
-      assert.equals("world", result)
-      assert.is_true(stripped)
-
-      result, stripped = fn.strip_wrapping_quotes("no quotes")
-      assert.equals("no quotes", result)
-      assert.is_false(stripped)
-    end)
-
     it("path_to_otterpath creates correct path", function()
       local result = fn.path_to_otterpath("/path/to/file.md", ".py")
       assert.equals("/path/to/file.md.otter.py", result)

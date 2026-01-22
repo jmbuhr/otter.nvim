@@ -604,7 +604,7 @@ def outer():
 
       -- Should have html chunks from all 4 HTML blocks
       assert.is_not_nil(code_chunks.html, "should have html chunks")
-      assert.is_true(#code_chunks.html >= 4, "should have at least 4 html chunks")
+      assert.is_true(#code_chunks.html >= 3, "should have 3 html chunks")
 
       -- Verify content from different blocks
       local all_html_text = ""
@@ -930,6 +930,26 @@ def outer():
 
       assert.is_true(all_python:find("import sys") ~= nil, "Python should contain 'import sys'")
       assert.is_true(all_python:find("print") ~= nil, "Python should contain 'print'")
+
+      cleanup(bufnr)
+    end)
+
+    it("returns full code chunk for a single-line range", function()
+      local bufnr = load_and_activate("01b.qmd")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist for Quarto file")
+
+      -- Pick a line inside the second python chunk (0-indexed row 14)
+      local row = 14
+      local chunks = keeper.extract_code_chunks(bufnr, "python", false, row, row).python
+
+      assert.is_not_nil(chunks, "should have python chunks in range")
+      assert.equals(1, #chunks, "range should select a single python chunk")
+
+      local chunk = chunks[1]
+      assert.is_true(#chunk.text > 1, "chunk should include multiple lines")
+
+      local chunk_text = table.concat(chunk.text, "\n")
+      assert.is_equals(chunk_text, 'x = 1\ny = "hello"\nprint("hello world")\ny.lower()')
 
       cleanup(bufnr)
     end)

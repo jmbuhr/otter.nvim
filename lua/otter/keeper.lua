@@ -180,35 +180,20 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
           start_col = math.max(0, math.min(start_col, #start_line))
           end_col = math.max(0, math.min(end_col, #end_line))
 
-          -- Apply range filtering if specified
-          if range_start_row ~= nil and range_end_row ~= nil then
-            if (start_row >= range_end_row and range_end_row > 0) or end_row < range_start_row then
-              goto continue_region
-            end
-          end
-
           -- Get the text for this region from the main buffer
           local ok, lines = pcall(api.nvim_buf_get_text, main_nr, start_row, start_col, end_row, end_col, {})
           if not ok then
             -- Skip this region if we still can't get the text
             goto continue_region
           end
-          local text = table.concat(lines, "\n")
-
-          -- Handle eval: false exclusion
-          if exclude_eval_false and string.find(text, "| *eval: *false") then
-            text = ""
+          if end_col == 0 and #lines > 0 and lines[#lines] == "" then
+            table.remove(lines, #lines)
           end
-
-          -- Trim leading whitespace
-          local leading_offset
-          text, leading_offset = trim_leading_whitespace(text)
 
           local result = {
             range = { from = { start_row, start_col }, to = { end_row, end_col } },
             lang = lang,
-            text = fn.lines(text),
-            leading_offset = leading_offset,
+            text = lines,
           }
 
           if code_chunks[lang] == nil then
@@ -224,14 +209,63 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
     ::continue_lang::
   end
 
-  -- Sort chunks by start position for each language
-  for _, chunks in pairs(code_chunks) do
+  -- Sort, merge, and normalize chunks by start position for each language
+  for lang, chunks in pairs(code_chunks) do
     table.sort(chunks, function(a, b)
       if a.range.from[1] == b.range.from[1] then
         return a.range.from[2] < b.range.from[2]
       end
       return a.range.from[1] < b.range.from[1]
     end)
+
+    local merged = {}
+    for _, chunk in ipairs(chunks) do
+      local last = merged[#merged]
+      if last and chunk.range.from[1] == last.range.to[1] and chunk.range.from[2] == last.range.to[2] then
+        if chunk.range.from[2] > 0 and #chunk.text > 0 and #last.text > 0 then
+          last.text[#last.text] = last.text[#last.text] .. chunk.text[1]
+          for i = 2, #chunk.text do
+            table.insert(last.text, chunk.text[i])
+          end
+        else
+          for _, line in ipairs(chunk.text) do
+            table.insert(last.text, line)
+          end
+        end
+        last.range.to = { chunk.range.to[1], chunk.range.to[2] }
+      else
+        table.insert(merged, chunk)
+      end
+    end
+
+    local normalized = {}
+    for _, chunk in ipairs(merged) do
+      if range_start_row ~= nil and range_end_row ~= nil then
+        if (chunk.range.from[1] >= range_end_row and range_end_row > 0) or chunk.range.to[1] < range_start_row then
+          goto continue_chunk
+        end
+      end
+
+      local text = table.concat(chunk.text, "\n")
+      if exclude_eval_false and string.find(text, "| *eval: *false") then
+        text = ""
+      end
+
+      local leading_offset
+      text, leading_offset = trim_leading_whitespace(text)
+
+      chunk.text = fn.lines(text)
+      chunk.leading_offset = leading_offset
+      table.insert(normalized, chunk)
+
+      ::continue_chunk::
+    end
+
+    if #normalized > 0 then
+      code_chunks[lang] = normalized
+    else
+      code_chunks[lang] = nil
+    end
   end
 
   return code_chunks

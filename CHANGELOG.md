@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.1](https://github.com/jmbuhr/otter.nvim/compare/v2.14.0...v2.14.1) (2026-01-22)
+
+
+### Bug Fixes
+
+* fix [#272](https://github.com/jmbuhr/otter.nvim/issues/272) ([89d81b8](https://github.com/jmbuhr/otter.nvim/commit/89d81b84b3422c1704bd75700a3145cbbeb56eeb))
+
 ## [2.14.0](https://github.com/jmbuhr/otter.nvim/compare/v2.13.4...v2.14.0) (2026-01-20)
 
 

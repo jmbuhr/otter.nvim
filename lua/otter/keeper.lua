@@ -34,14 +34,6 @@ local api = vim.api
 ---stored in the rafts table
 keeper.rafts = {}
 
---- table of languages that can be injected
---- generated from the lanaguages
---- for which we have extensions
-local injectable_languages = {}
-for key, _ in pairs(OtterConfig.extensions) do
-  table.insert(injectable_languages, key)
-end
-
 ---trims the leading whitespace from text
 ---Only removes whitespace that is common to ALL non-empty lines (minimum indentation).
 ---This preserves relative indentation within code blocks while handling
@@ -150,7 +142,7 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
     end
 
     -- Skip if this language isn't in our injectable languages list
-    if not fn.contains(injectable_languages, lang) then
+    if not fn.contains(OtterConfig.injectable_languages, lang) then
       goto continue_lang
     end
 
@@ -306,7 +298,7 @@ keeper.get_current_language_context = function(main_nr, position)
   end
 
   -- Check if this language is in our injectable languages list
-  if not fn.contains(injectable_languages, lang) then
+  if not fn.contains(OtterConfig.injectable_languages, lang) then
     return nil
   end
 

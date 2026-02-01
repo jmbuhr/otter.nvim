@@ -1,7 +1,7 @@
 local M = {}
 
 -- make OtterConfig globally available
-require("otter.config")
+local config = require("otter.config")
 
 local api = vim.api
 local ts = vim.treesitter
@@ -21,6 +21,7 @@ M.setup = function(opts)
   end
 
   OtterConfig = vim.tbl_deep_extend("force", OtterConfig, opts or {})
+  config.update_injectable_languages()
 end
 
 -- expose some functions from the otter keeper directly

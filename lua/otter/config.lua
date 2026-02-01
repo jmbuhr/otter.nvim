@@ -1,9 +1,27 @@
+local M = {}
+
+---@class OtterLSPConfig
+---@field diagnostic_update_events string[]
+---@field root_dir fun(fname: string, bufnr: number): string
+
+---@class OtterBufferConfig
+---@field set_filetype boolean 
+---@field write_to_disk boolean
+---@field preambles table<string, string[]>
+---@field postambles table<string, string[]>
+---@field ignore_pattern table<string, string>
+
+---@class OtterVerboseConfig
+---@field no_code_found boolean
+
 ---@class OtterConfig
----@field lsp table
----@field buffers table
+---@field lsp OtterLSPConfig
+---@field buffers OtterBufferConfig
 ---@field handle_leading_whitespace boolean
 ---@field extensions table<string, string>
 ---@field debug boolean
+---@field verbose OtterVerboseConfig|boolean
+---@field injectable_languages string[]
 OtterConfig = {
   lsp = {
     -- `:h events` that cause the diagnostics to update. Set to:
@@ -100,4 +118,19 @@ OtterConfig = {
   verbose = { -- set to false to disable all verbose messages
     no_code_found = false, -- warn if otter.activate is called, but no injected code was found
   },
+  injectable_languages = {},
 }
+
+--- Table of languages that can be injected.
+--- Generated from the languages
+--- for which we have extensions
+M.update_injectable_languages = function()
+  OtterConfig.injectable_languages = {}
+  for key, _ in pairs(OtterConfig.extensions) do
+    table.insert(OtterConfig.injectable_languages, key)
+  end
+end
+
+M.update_injectable_languages()
+
+return M

@@ -301,7 +301,7 @@ def outer():
       -- Create a scratch buffer with the content
       local bufnr = api.nvim_create_buf(false, true)
       api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(test_content, "\n"))
-      api.nvim_set_option_value("filetype", "markdown", {buf = bufnr})
+      api.nvim_set_option_value("filetype", "markdown", { buf = bufnr })
       api.nvim_set_current_buf(bufnr)
 
       require("otter").activate(nil, false, false)
@@ -1046,8 +1046,10 @@ def outer():
           all_lua = all_lua .. table.concat(chunk.text, "\n") .. "\n"
         end
 
-        assert.is_true(all_lua:find("Hello, Norg") ~= nil or all_lua:find("print") ~= nil,
-          "Lua should contain Norg example code")
+        assert.is_true(
+          all_lua:find("Hello, Norg") ~= nil or all_lua:find("print") ~= nil,
+          "Lua should contain Norg example code"
+        )
       end
 
       -- Should have python chunks
@@ -1057,8 +1059,10 @@ def outer():
           all_python = all_python .. table.concat(chunk.text, "\n") .. "\n"
         end
 
-        assert.is_true(all_python:find("Hello world") ~= nil or all_python:find("numpy") ~= nil,
-          "Python should contain Norg example code")
+        assert.is_true(
+          all_python:find("Hello world") ~= nil or all_python:find("numpy") ~= nil,
+          "Python should contain Norg example code"
+        )
       end
 
       cleanup(bufnr)
@@ -1083,6 +1087,33 @@ def outer():
         assert.is_true(all_lua:find("a_string") ~= nil, "Lua should contain 'a_string'")
         assert.is_true(all_lua:find("print") ~= nil, "Lua should contain 'print'")
       end
+
+      cleanup(bufnr)
+    end)
+  end)
+
+  -- Tests for rust with macros from markdown (09.md)
+  describe("Rust with macros from markdown (09.md)", function()
+    it("extracts complete rust code cell", function()
+      local bufnr = load_and_activate("09.md")
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist md file")
+
+      local code_chunks = keeper.extract_code_chunks(bufnr)
+      assert.is_not_nil(code_chunks.rust, "should have rust chunks")
+
+      -- Should have rust chunks from the injected string
+      local all_rust = ""
+      for _, chunk in ipairs(code_chunks.rust) do
+        all_rust = all_rust .. table.concat(chunk.text, "\n") .. "\n"
+      end
+
+      local target_code = [[
+fn main() {
+    println!("Hello world");
+    let v = vec![1, 2, 3];
+}
+]]
+      assert.equals(target_code, all_rust)
 
       cleanup(bufnr)
     end)

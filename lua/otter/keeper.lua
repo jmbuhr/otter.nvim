@@ -8,6 +8,24 @@ local keeper = {}
 local fn = require("otter.tools.functions")
 local api = vim.api
 
+local function pos_lt(a, b)
+  if a[1] == b[1] then
+    return a[2] < b[2]
+  end
+  return a[1] < b[1]
+end
+
+local function pos_le(a, b)
+  if a[1] == b[1] then
+    return a[2] <= b[2]
+  end
+  return a[1] <= b[1]
+end
+
+local function range_contains(outer, inner)
+  return pos_le(outer.from, inner.from) and pos_le(inner.to, outer.to)
+end
+
 ---@class Raft
 ---@field languages string[]
 ---@field buffers table<string, integer>
@@ -203,15 +221,37 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
 
   -- Sort, merge, and normalize chunks by start position for each language
   for lang, chunks in pairs(code_chunks) do
+    -- Sort by start position; for identical starts, prefer the larger (outer) range first.
+    -- Some parsers emit self-injection ranges (same language nested inside itself), which
+    -- are fully contained within the outer range and would otherwise be duplicated.
     table.sort(chunks, function(a, b)
       if a.range.from[1] == b.range.from[1] then
+        if a.range.from[2] == b.range.from[2] then
+          if a.range.to[1] == b.range.to[1] then
+            return a.range.to[2] > b.range.to[2]
+          end
+          return a.range.to[1] > b.range.to[1]
+        end
         return a.range.from[2] < b.range.from[2]
       end
       return a.range.from[1] < b.range.from[1]
     end)
 
-    local merged = {}
+    -- Drop chunks that are fully contained in a previous chunk of the same language.
+    -- This prevents duplicate extraction (and later overwrites during sync) when
+    -- Tree-sitter provides multiple included regions that overlap.
+    local pruned = {}
     for _, chunk in ipairs(chunks) do
+      local last = pruned[#pruned]
+      if last and range_contains({ from = last.range.from, to = last.range.to }, { from = chunk.range.from, to = chunk.range.to }) then
+        goto continue_prune
+      end
+      table.insert(pruned, chunk)
+      ::continue_prune::
+    end
+
+    local merged = {}
+    for _, chunk in ipairs(pruned) do
       local last = merged[#merged]
       if last and chunk.range.from[1] == last.range.to[1] and chunk.range.from[2] == last.range.to[2] then
         if chunk.range.from[2] > 0 and #chunk.text > 0 and #last.text > 0 then

@@ -60,11 +60,17 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     query = ts.query.get(parsername, "injections")
   end
   if query == nil then
-    vim.notify_once(
-      "[otter] No explicit query provided and no injections found for current buffer. Can't activate.",
-      vim.log.levels.WARN,
-      {}
-    )
+    -- This happens for filetypes without an injections query. Treat as a quiet no-op by default
+    -- to avoid noisy notifications (especially in non-injected buffers).
+    local verbose = OtterConfig.verbose
+    local should_notify = verbose == true or (type(verbose) == "table" and verbose.no_code_found)
+    if should_notify then
+      vim.notify_once(
+        "[otter] No injections query found for this buffer's filetype. Can't activate.",
+        vim.log.levels.INFO,
+        {}
+      )
+    end
     return
   end
   local parser = ts.get_parser(main_nr, parsername)

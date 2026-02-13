@@ -704,7 +704,7 @@ keeper.get_language_lines_around_cursor = function()
   end
 
   -- Check if this language is in our injectable languages list
-  if not fn.contains(injectable_languages, lang) then
+  if not fn.contains(OtterConfig.injectable_languages, lang) then
     return nil
   end
 

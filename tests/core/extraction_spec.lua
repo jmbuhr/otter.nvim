@@ -251,6 +251,25 @@ describe("code extraction", function()
 
       cleanup(bufnr)
     end)
+
+    it("returns code when cursor is inside a code block", function()
+      local bufnr = load_and_activate("minimal.md")
+
+      -- Move cursor inside lua code block (line 9 in minimal.md)
+      api.nvim_win_set_cursor(0, { 9, 5 })
+
+      local code = keeper.get_language_lines_around_cursor()
+      assert.is_not_nil(code, "should return code when cursor is in code block")
+      assert.is_true(code:find("greet") ~= nil, "should contain expected code")
+
+      -- Move cursor outside code block (line 3)
+      api.nvim_win_set_cursor(0, { 3, 0 })
+
+      code = keeper.get_language_lines_around_cursor()
+      assert.is_nil(code, "should return nil when cursor is outside code block")
+
+      cleanup(bufnr)
+    end)
   end)
 
   describe("indentation preservation", function()

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.4](https://github.com/jmbuhr/otter.nvim/compare/v2.14.3...v2.14.4) (2026-02-13)
+
+
+### Bug Fixes
+
+* missing OtterConfig on injectable_languages in get_language_lines_around_cursor function ([#278](https://github.com/jmbuhr/otter.nvim/issues/278)) ([555d1be](https://github.com/jmbuhr/otter.nvim/commit/555d1bed46764db882ffcd2ca01dd27ee72cf7c2))
+
 ## [2.14.3](https://github.com/jmbuhr/otter.nvim/compare/v2.14.2...v2.14.3) (2026-02-10)
 
 

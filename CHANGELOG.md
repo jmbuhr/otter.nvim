@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.5](https://github.com/jmbuhr/otter.nvim/compare/v2.14.4...v2.14.5) (2026-03-27)
+
+
+### Bug Fixes
+
+* fix OtterActivate and OtterDeactivate user commands ([#282](https://github.com/jmbuhr/otter.nvim/issues/282)) ([fb07b02](https://github.com/jmbuhr/otter.nvim/commit/fb07b02507deacf9519c0eb6c045e27e21c40fbd))
+
 ## [2.14.4](https://github.com/jmbuhr/otter.nvim/compare/v2.14.3...v2.14.4) (2026-02-13)
 
 

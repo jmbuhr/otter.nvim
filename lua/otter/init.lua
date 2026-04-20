@@ -38,14 +38,15 @@ M.export_otter_as = keeper.export_otter_as
 ---@paramr preambles table? A table of preambles for each language. The key is the language and the value is a table of strings that will be written to the otter buffer starting on the first line.
 ---@paramr postambles table? A table of postambles for each language. The key is the language and the value is a table of strings that will be written to the end of the otter buffer.
 ---@paramr ignore_pattern table? A table of patterns to ignore for each language. The key is the languang and the value is a regular expression string to match patterns to ignore.
-M.activate = function(languages, completion, diagnostics, tsquery, preambles, postambles, ignore_pattern)
+---@param bufnr integer? The buffer to activate on
+M.activate = function(languages, completion, diagnostics, tsquery, preambles, postambles, ignore_pattern, bufnr)
   languages = languages or vim.tbl_keys(OtterConfig.extensions)
   completion = completion ~= false
   diagnostics = diagnostics ~= false
   preambles = preambles or OtterConfig.buffers.preambles
   postambles = postambles or OtterConfig.buffers.postambles
   ignore_pattern = ignore_pattern or OtterConfig.buffers.ignore_pattern
-  local main_nr = api.nvim_get_current_buf()
+  local main_nr = bufnr or api.nvim_get_current_buf()
   local main_path = api.nvim_buf_get_name(main_nr)
   local main_lang = api.nvim_get_option_value("filetype", { buf = main_nr })
   local parsername = vim.treesitter.language.get_lang(main_lang)

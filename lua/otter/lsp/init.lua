@@ -94,6 +94,14 @@ otterls.start = function(main_nr, completion)
             return
           end
 
+          -- Neovim keeps a reference to the params table of a request
+          -- (ctx.params) and compares its position against the current
+          -- cursor when the response arrives (ctx_is_valid in vim.lsp.buf,
+          -- since Neovim 0.12). Mutating params in place makes that check
+          -- fail, so hover/definition responses get silently dropped.
+          -- Work on a copy instead.
+          params = vim.deepcopy(params)
+
           -- container to pass additional information to otter and the handlers
           if params.otter == nil then
             ---@type OtterParams

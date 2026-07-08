@@ -78,6 +78,7 @@ function M.setup()
 
   M.load("nvim-lua/plenary.nvim")
   M.load("nvim-treesitter/nvim-treesitter", "main")
+  M.load("Saghen/blink.lib")
   M.load("Saghen/blink.cmp")
   M.load("nvim-orgmode/orgmode")
   M.load("nvim-neorg/tree-sitter-norg")

@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.14.6](https://github.com/jmbuhr/otter.nvim/compare/v2.14.5...v2.14.6) (2026-07-08)
+
+
+### Bug Fixes
+
+* **ci:** failing GitHub Actions job tests (ubuntu-latest) ([#289](https://github.com/jmbuhr/otter.nvim/issues/289)) ([76fdf43](https://github.com/jmbuhr/otter.nvim/commit/76fdf43b5ebf3f70ca51795bb452398051dfaa4b))
+* don't mutate request params in place ([#288](https://github.com/jmbuhr/otter.nvim/issues/288)) ([fee5441](https://github.com/jmbuhr/otter.nvim/commit/fee544194ceff2ca6604ad6f70f40c8b9d566873))
+
 ## [2.14.5](https://github.com/jmbuhr/otter.nvim/compare/v2.14.4...v2.14.5) (2026-03-27)
 
 

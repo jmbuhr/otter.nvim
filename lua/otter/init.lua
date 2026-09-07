@@ -31,8 +31,15 @@ local function stop_otterls(main_nr)
     return
   end
 
-  vim.lsp.stop_client(id, true)
-  pcall(vim.lsp.buf_detach_client, main_nr, id)
+  local client = vim.lsp.get_client_by_id(id)
+  if client and client.stop then
+    client:stop(true)
+  else
+    vim.lsp.stop_client(id, true)
+  end
+  if vim.lsp.buf_is_attached(main_nr, id) then
+    vim.lsp.buf_detach_client(main_nr, id)
+  end
   raft.otterls.client_id = nil
 end
 

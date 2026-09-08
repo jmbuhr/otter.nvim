@@ -10,6 +10,39 @@ local otterls = require("otter.lsp")
 
 local path_to_otterpath = require("otter.tools.functions").path_to_otterpath
 
+---@param main_nr integer
+local function stop_otterls(main_nr)
+  local raft = keeper.rafts[main_nr]
+  if raft == nil then
+    return
+  end
+
+  local id = raft.otterls.client_id
+  if id == nil then
+    for _, client in ipairs(vim.lsp.get_clients()) do
+      if client.name == "otter-ls" .. "[" .. main_nr .. "]" then
+        id = client.id
+        break
+      end
+    end
+  end
+
+  if id == nil then
+    return
+  end
+
+  local client = vim.lsp.get_client_by_id(id)
+  if client and client.stop then
+    client:stop(true)
+  else
+    vim.lsp.stop_client(id, true)
+  end
+  if vim.lsp.buf_is_attached(main_nr, id) then
+    vim.lsp.buf_detach_client(main_nr, id)
+  end
+  raft.otterls.client_id = nil
+end
+
 M.setup = function(opts)
   if M.did_setup then
     return vim.notify("[otter] otter.nvim is already setup", vim.log.levels.ERROR)
@@ -203,6 +236,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
     buffer = main_nr,
     group = api.nvim_create_augroup("OtterRaftCleanup" .. main_nr, {}),
     callback = function()
+      stop_otterls(main_nr)
       keeper.rafts[main_nr] = nil
     end,
   })
@@ -281,6 +315,7 @@ M.activate = function(languages, completion, diagnostics, tsquery, preambles, po
       if vim.lsp.buf_is_attached(main_nr, client.id) then
         -- already running otter-ls and attached to
         -- this buffer
+        keeper.rafts[main_nr].otterls.client_id = client.id
         return
       else
         -- already running otter-ls but detached
@@ -347,20 +382,7 @@ M.deactivate = function(completion, diagnostics)
   end
 
   -- stop otter-ls
-  local id = keeper.rafts[main_nr].otterls.client_id
-  if id ~= nil then
-    -- since our server is just a function
-    -- we don't need it do anything special
-    -- on exit
-    -- but how to we actually stop it?
-    vim.lsp.stop_client(id, true)
-    -- it's still running
-
-    -- at least detach it
-    vim.lsp.buf_detach_client(main_nr, id)
-
-    keeper.rafts[main_nr].otterls.client_id = nil
-  end
+  stop_otterls(main_nr)
 
   for _, otter_bufnr in pairs(keeper.rafts[main_nr].buffers) do
     -- Avoid 'textlock' with schedule

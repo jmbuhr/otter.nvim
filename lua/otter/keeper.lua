@@ -253,13 +253,44 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
     local merged = {}
     for _, chunk in ipairs(pruned) do
       local last = merged[#merged]
-      if last and chunk.range.from[1] == last.range.to[1] and chunk.range.from[2] == last.range.to[2] then
+
+      local is_same_block = last and chunk.range.from[1] == last.range.to[1] and chunk.range.from[2] == last.range.to[2]
+
+      -- Check for interpolation using treesitter
+      local gap_line_count = 0
+      if not is_same_block and last and main_nr then
+        local gap_row, gap_col = last.range.to[1], last.range.to[2]
+        if gap_row >= 0 and chunk.range.from[1] >= 0 then
+          local gap_lang_tree = parser:language_for_range({ gap_row, gap_col, gap_row, gap_col })
+          if gap_lang_tree and gap_lang_tree:lang() == lang then
+            is_same_block = true
+            gap_line_count = math.max(0, chunk.range.from[1] - gap_row)
+          end
+        end
+      end
+
+      if is_same_block then
         if chunk.range.from[2] > 0 and #chunk.text > 0 and #last.text > 0 then
           last.text[#last.text] = last.text[#last.text] .. chunk.text[1]
+
+          -- Take into account lines lost inside the interpolation
+          if gap_line_count > 0 then
+            for _ = 1, gap_line_count do
+              table.insert(last.text, "")
+            end
+          end
+
           for i = 2, #chunk.text do
             table.insert(last.text, chunk.text[i])
           end
         else
+          -- Take into account lines lost inside the interpolation
+          if gap_line_count > 0 then
+            for _ = 1, gap_line_count do
+              table.insert(last.text, "")
+            end
+          end
+
           for _, line in ipairs(chunk.text) do
             table.insert(last.text, line)
           end

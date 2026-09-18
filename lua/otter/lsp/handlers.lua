@@ -248,7 +248,7 @@ M[ms.textDocument_completion] = function(err, response, ctx)
   local main_nr = ctx.params.otter.main_nr
 
   for _, item in ipairs(items) do
-    if item.data ~= nil and item.data.uri ~= nil then
+    if type(item.data) == "table" and item.data.uri ~= nil then
       item.data.uri = ctx.params.otter.main_uri
     end
 
@@ -278,7 +278,7 @@ M[ms.completionItem_resolve] = function(err, response, ctx)
   ctx.params.textDocument.uri = ctx.params.otter.main_uri
   ctx.bufnr = ctx.params.otter.main_nr
 
-  if response.data ~= nil and response.data.uri ~= nil then
+  if type(response.data) == "table" and response.data.uri ~= nil then
     response.data.uri = ctx.params.otter.main_uri
   end
 

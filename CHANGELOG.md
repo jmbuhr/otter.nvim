@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.7](https://github.com/jmbuhr/otter.nvim/compare/v2.14.6...v2.14.7) (2026-09-22)
+
+
+### Bug Fixes
+
+* **handlers:** guard CompletionItem.data access when data is not a table ([#294](https://github.com/jmbuhr/otter.nvim/issues/294)) ([0fb6d04](https://github.com/jmbuhr/otter.nvim/commit/0fb6d04b1afea1a814310c6393a4a07374e22e31))
+
 ## [2.14.6](https://github.com/jmbuhr/otter.nvim/compare/v2.14.5...v2.14.6) (2026-07-08)
 
 

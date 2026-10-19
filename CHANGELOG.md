@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.8](https://github.com/jmbuhr/otter.nvim/compare/v2.14.7...v2.14.8) (2026-10-19)
+
+
+### Bug Fixes
+
+* **keeper:** sync again instead of replaying a stale callback after E565 ([#298](https://github.com/jmbuhr/otter.nvim/issues/298)) ([8bdbbcb](https://github.com/jmbuhr/otter.nvim/commit/8bdbbcbf8477f10fa3ae177316e7d93bf52c6ed7))
+
 ## [2.14.7](https://github.com/jmbuhr/otter.nvim/compare/v2.14.6...v2.14.7) (2026-09-22)
 
 

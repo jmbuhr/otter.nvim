@@ -539,7 +539,16 @@ keeper.sync_raft = function(main_nr, language)
 
     result = tostring(result)
     if result:match(texlock_err_msg) then
-      vim.schedule(callback)
+      -- Don't replay `callback`: it holds this otter buffer and this text. By the time it runs the
+      -- buffer may be gone, or a newer sync may have written newer text. Sync again from the
+      -- current text instead.
+      local raft = keeper.rafts[main_nr]
+      raft.last_changetick = nil
+      vim.schedule(function()
+        if keeper.rafts[main_nr] == raft and api.nvim_buf_is_valid(main_nr) then
+          keeper.sync_raft(main_nr, language)
+        end
+      end)
       return "textlock_active"
     else
       return "error"

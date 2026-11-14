@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.14.8](https://github.com/jmbuhr/otter.nvim/compare/v2.14.7...v2.14.8) (2026-10-19)
+
+
+### Bug Fixes
+
+* **keeper:** sync again instead of replaying a stale callback after E565 ([#298](https://github.com/jmbuhr/otter.nvim/issues/298)) ([8bdbbcb](https://github.com/jmbuhr/otter.nvim/commit/8bdbbcbf8477f10fa3ae177316e7d93bf52c6ed7))
+
+## [2.14.7](https://github.com/jmbuhr/otter.nvim/compare/v2.14.6...v2.14.7) (2026-09-22)
+
+
+### Bug Fixes
+
+* **handlers:** guard CompletionItem.data access when data is not a table ([#294](https://github.com/jmbuhr/otter.nvim/issues/294)) ([0fb6d04](https://github.com/jmbuhr/otter.nvim/commit/0fb6d04b1afea1a814310c6393a4a07374e22e31))
+
+## [2.14.6](https://github.com/jmbuhr/otter.nvim/compare/v2.14.5...v2.14.6) (2026-07-08)
+
+
+### Bug Fixes
+
+* **ci:** failing GitHub Actions job tests (ubuntu-latest) ([#289](https://github.com/jmbuhr/otter.nvim/issues/289)) ([76fdf43](https://github.com/jmbuhr/otter.nvim/commit/76fdf43b5ebf3f70ca51795bb452398051dfaa4b))
+* don't mutate request params in place ([#288](https://github.com/jmbuhr/otter.nvim/issues/288)) ([fee5441](https://github.com/jmbuhr/otter.nvim/commit/fee544194ceff2ca6604ad6f70f40c8b9d566873))
+
 ## [2.14.5](https://github.com/jmbuhr/otter.nvim/compare/v2.14.4...v2.14.5) (2026-03-27)
 
 

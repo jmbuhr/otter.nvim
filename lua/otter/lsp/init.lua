@@ -27,7 +27,7 @@ otterls.start = function(main_nr, completion)
     name = "otter-ls" .. "[" .. main_nr .. "]",
     capabilities = capabilities,
     cmd = function(dispatchers)
-      local _ = dispatchers
+      local is_closing = false
       local members = {
         --- Send a request to the otter buffers and handle the response.
         --- The response can optionally be filtered through a function.
@@ -93,6 +93,14 @@ otterls.start = function(main_nr, completion)
             handler(nil, nil, params.context)
             return
           end
+
+          -- Neovim keeps a reference to the params table of a request
+          -- (ctx.params) and compares its position against the current
+          -- cursor when the response arrives (ctx_is_valid in vim.lsp.buf,
+          -- since Neovim 0.12). Mutating params in place makes that check
+          -- fail, so hover/definition responses get silently dropped.
+          -- Work on a copy instead.
+          params = vim.deepcopy(params)
 
           -- container to pass additional information to otter and the handlers
           if params.otter == nil then
@@ -189,8 +197,16 @@ otterls.start = function(main_nr, completion)
           -- via nvim's clients attached to
           -- the buffers when we sync their text
         end,
-        is_closing = function() end,
-        terminate = function() end,
+        is_closing = function() return is_closing end,
+        terminate = function()
+          if is_closing then
+            return
+          end
+          is_closing = true
+          if dispatchers.on_exit then
+            dispatchers.on_exit(0, 0)
+          end
+        end,
       }
       return members
     end,

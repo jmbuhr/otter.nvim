@@ -73,6 +73,17 @@ local function find_line_with_offset(bufnr)
   return nil, 0
 end
 
+local function get_otter_clients(main_nr)
+  local clients = {}
+  local name = "otter-ls" .. "[" .. main_nr .. "]"
+  for _, client in ipairs(vim.lsp.get_clients()) do
+    if client.name == name then
+      table.insert(clients, client)
+    end
+  end
+  return clients
+end
+
 describe("LSP position translation", function()
 
   describe("modify_position function", function()
@@ -440,6 +451,37 @@ describe("LSP position translation", function()
 
       cleanup(bufnr)
     end)
+  end)
+end)
+
+describe("otter-ls lifecycle", function()
+  it("keeps client_id when activate runs repeatedly on same buffer", function()
+    local bufnr = load_and_activate("03.md")
+    assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+
+    local first_client_id = keeper.rafts[bufnr].otterls.client_id
+    assert.is_not_nil(first_client_id, "otter-ls client id should exist after first activate")
+
+    require("otter").activate(nil, false, false)
+
+    local second_client_id = keeper.rafts[bufnr].otterls.client_id
+    assert.equals(first_client_id, second_client_id, "otter-ls client id should be preserved")
+    assert.equals(1, #get_otter_clients(bufnr), "activate should not create duplicate otter-ls clients")
+
+    cleanup(bufnr)
+  end)
+
+  it("stops otter-ls when the main buffer is wiped out", function()
+    local bufnr = load_and_activate("03.md")
+    assert.is_not_nil(keeper.rafts[bufnr], "raft should exist")
+    assert.is_not_nil(keeper.rafts[bufnr].otterls.client_id, "otter-ls client id should exist")
+    assert.equals(1, #get_otter_clients(bufnr), "otter-ls client should be running")
+
+    api.nvim_buf_delete(bufnr, { force = true })
+
+    local closed = vim.wait(500, function() return #get_otter_clients(bufnr) == 0 end, 10)
+    assert.is_true(closed, "otter-ls client should be removed after main buffer closes")
+    assert.is_nil(keeper.rafts[bufnr], "raft should be removed after main buffer closes")
   end)
 end)
 

@@ -37,6 +37,70 @@ describe("otter", function()
       assert.is_not_nil(keeper)
     end)
 
+    describe("deactivate lsp shutdown", function()
+      it("uses client:stop and avoids detach when already detached", function()
+        local otter = require("otter")
+        local keeper = require("otter.keeper")
+        local api = vim.api
+
+        local bufnr = api.nvim_create_buf(false, true)
+        api.nvim_set_current_buf(bufnr)
+        keeper.rafts[bufnr] = {
+          buffers = {},
+          diagnostics_namespaces = {},
+          diagnostics_group = nil,
+          otterls = { client_id = 42 },
+        }
+
+        local orig_get_client_by_id = vim.lsp.get_client_by_id
+        local orig_stop_client = vim.lsp.stop_client
+        local orig_buf_is_attached = vim.lsp.buf_is_attached
+        local orig_buf_detach_client = vim.lsp.buf_detach_client
+
+        local stop_called = false
+        local deprecated_called = false
+        local detach_called = false
+
+        vim.lsp.get_client_by_id = function(id)
+          if id ~= 42 then
+            return nil
+          end
+          return {
+            stop = function(_, force)
+              stop_called = force == true
+            end,
+          }
+        end
+        vim.lsp.stop_client = function()
+          deprecated_called = true
+        end
+        vim.lsp.buf_is_attached = function(_, _)
+          return false
+        end
+        vim.lsp.buf_detach_client = function(_, _)
+          detach_called = true
+        end
+
+        local ok, err = pcall(function()
+          otter.deactivate(false, false)
+        end)
+
+        vim.lsp.get_client_by_id = orig_get_client_by_id
+        vim.lsp.stop_client = orig_stop_client
+        vim.lsp.buf_is_attached = orig_buf_is_attached
+        vim.lsp.buf_detach_client = orig_buf_detach_client
+
+        if api.nvim_buf_is_valid(bufnr) then
+          api.nvim_buf_delete(bufnr, { force = true })
+        end
+
+        assert.is_true(ok, tostring(err))
+        assert.is_true(stop_called, "client:stop should be used")
+        assert.is_false(deprecated_called, "deprecated vim.lsp.stop_client should not be used")
+        assert.is_false(detach_called, "buf_detach_client should not be called if not attached")
+      end)
+    end)
+
     it("has rafts table", function()
       local keeper = require("otter.keeper")
       assert.is_table(keeper.rafts)

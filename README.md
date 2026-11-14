@@ -106,15 +106,26 @@ handler --> defaultHandler
 
 ### Dependencies
 
-`otter.nvim` requires the following plugins:
+`otter.nvim` requires the latest [Neovim stable version](https://github.com/neovim/neovim/releases/tag/stable) (>= `v0.10.0`).
+
+You'll likely also want a collection of treesitter parsers and queries on top of the ones bundled with Neovim.
+
+Add
 
 ```lua
 {
-  'nvim-treesitter/nvim-treesitter'
+    'nvim-treesitter/nvim-treesitter',
+    -- or
+    {
+      'neovim-treesitter/nvim-treesitter',
+      dependencies = { 'neovim-treesitter/treesitter-parser-registry' },
+      lazy = false,
+      build = ':TSUpdate',
+    }
 }
 ```
 
-and the latest [Neovim stable version](https://github.com/neovim/neovim/releases/tag/stable) (>= `v0.10.0`).
+as a dependency.
 
 ### Minimal lazy.nvim spec:
 
@@ -133,8 +144,8 @@ and the latest [Neovim stable version](https://github.com/neovim/neovim/releases
 If you want to use the default config below you don't need to call `setup`.
 
 ```lua
-local otter = require'otter'
-otter.setup{
+local otter = require("otter")
+otter.setup({
   lsp = {
     -- `:h events` that cause the diagnostics to update. Set to:
     -- { "BufWritePost", "InsertLeave", "TextChanged" } for less performant
@@ -177,14 +188,13 @@ otter.setup{
   handle_leading_whitespace = true,
   -- mapping of filetypes to extensions for those not already included in otter.tools.extensions
   -- e.g. ["bash"] = "sh"
-  extensions = {
-  },
+  extensions = {},
   -- add event listeners for LSP events for debugging
   debug = false,
   verbose = { -- set to false to disable all verbose messages
-    no_code_found = false -- warn if otter.activate is called, but no injected code was found
+    no_code_found = false, -- warn if otter.activate is called, but no injected code was found
   },
-}
+})
 ```
 
 ### Activate otter
@@ -265,11 +275,11 @@ regardless of if your cursor is currently in a code chunk of that language:
 ```lua
 local ms = vim.lsp.protocol.Methods
 local function get_otter_symbols_lang()
-  local otterkeeper = require'otter.keeper'
+  local otterkeeper = require("otter.keeper")
   local main_nr = vim.api.nvim_get_current_buf()
   local langs = {}
-  for i,l in ipairs(otterkeeper.rafts[main_nr].languages) do
-    langs[i] = i .. ': ' .. l
+  for i, l in ipairs(otterkeeper.rafts[main_nr].languages) do
+    langs[i] = i .. ": " .. l
   end
   -- promt to choose one of langs
   local i = vim.fn.inputlist(langs)
@@ -277,14 +287,14 @@ local function get_otter_symbols_lang()
   local params = {
     textDocument = vim.lsp.util.make_text_document_params(),
     otter = {
-      lang = lang
-    }
+      lang = lang,
+    },
   }
   -- don't pass a handler, as we want otter to use its own handlers
   vim.lsp.buf_request(main_nr, ms.textDocument_documentSymbol, params, nil)
 end
 
-vim.keymap.set("n", "<leader>os", get_otter_symbols_lang, {desc = "otter [s]ymbols"})
+vim.keymap.set("n", "<leader>os", get_otter_symbols_lang, { desc = "otter [s]ymbols" })
 ```
 
 To explicitly request only from the `otter-ls` and avoid other language servers jumping in,
@@ -292,8 +302,8 @@ replace the last line of the function with:
 
 ```lua
   local clients = vim.lsp.get_clients({
-      -- the client is always named otter-ls[<buffnr>]
-      name = 'otter-ls'.. '[' .. main_nr .. ']'
+    -- the client is always named otter-ls[<buffnr>]
+    name = "otter-ls" .. "[" .. main_nr .. "]",
   })
   if #clients == 1 then
     local otter_client = clients[1]

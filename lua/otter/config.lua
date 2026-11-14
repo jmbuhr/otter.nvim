@@ -10,6 +10,7 @@ local M = {}
 ---@field preambles table<string, string[]>
 ---@field postambles table<string, string[]>
 ---@field ignore_pattern table<string, string>
+---@field interpolation_placeholder string|table<string, string>
 
 ---@class OtterVerboseConfig
 ---@field no_code_found boolean
@@ -59,6 +60,12 @@ OtterConfig = {
       -- ipython cell magic (lines starting with %) and shell commands (lines starting with !)
       python = "^(%s*[%%!].*)",
     },
+    -- Character used to mask interpolations of the host language inside injected code,
+    -- e.g. the `${ ... }` in a nix string injected as bash. The interpolation is replaced
+    -- by this character repeated to the same width, so the injected code stays valid and
+    -- positions line up with the main buffer. Either a single character, or a table
+    -- mapping languages to characters (with an optional `default` key).
+    interpolation_placeholder = "_",
   },
   -- remove whitespace from the beginning of the code chunks when writing to the otter buffers
   -- and calculate it back in when handling lsp requests

@@ -109,6 +109,100 @@ local function trim_leading_whitespace(text)
   return table.concat(split, "\n"), min_indent
 end
 
+---Get the placeholder character used to mask interpolations for a language.
+---@param lang string
+---@return string
+local function interpolation_placeholder(lang)
+  local opt = OtterConfig.buffers.interpolation_placeholder
+  if type(opt) == "table" then
+    opt = opt[lang] or opt.default
+  end
+  if type(opt) ~= "string" or #opt ~= 1 then
+    return "_"
+  end
+  return opt
+end
+
+---Mask the text of an interpolation (e.g. nix `${ ... }` inside an injected string)
+---so that it keeps its exact byte width and line count, but no longer contains
+---host-language code. Leading whitespace of continuation lines is kept so the
+---chunk's common indentation is not affected.
+---@param lines string[] text of the interpolation as returned by nvim_buf_get_text
+---@param lang string the injected language
+---@return string[]
+local function mask_interpolation(lines, lang)
+  local ph = interpolation_placeholder(lang)
+  local masked = {}
+  for i, line in ipairs(lines) do
+    local indent = ""
+    if i > 1 then
+      indent = line:match("^%s*")
+    end
+    masked[i] = indent .. string.rep(ph, #line - #indent)
+  end
+  return masked
+end
+
+---Whether the text between two extracted regions is an interpolation of the host
+---language (e.g. `${ ... }` in a nix string, `${ ... }` in a JS template literal),
+---as opposed to unrelated host text between two separate injections (e.g. prose
+---between two html blocks of a markdown document).
+---
+---It is an interpolation when both regions come from the same injection and a
+---single host-language node spans exactly the gap between them.
+---@param last table chunk before the gap
+---@param chunk table chunk after the gap
+---@return boolean
+local function is_interpolation_gap(last, chunk)
+  if chunk.host == nil or last.groups == nil or chunk.groups == nil then
+    return false
+  end
+  local shared_group = false
+  for group in pairs(chunk.groups) do
+    if last.groups[group] then
+      shared_group = true
+      break
+    end
+  end
+  if not shared_group then
+    return false
+  end
+  local sr, sc = last.range.to[1], last.range.to[2]
+  local er, ec = chunk.range.from[1], chunk.range.from[2]
+  if sr < 0 or er < sr or (er == sr and ec <= sc) then
+    return false
+  end
+  local range = { sr, sc, er, ec }
+  local host_tree = chunk.host:tree_for_range(range, { ignore_injections = true })
+  if host_tree == nil then
+    return false
+  end
+  local node = host_tree:root():named_descendant_for_range(sr, sc, er, ec)
+  if node == nil then
+    return false
+  end
+  local nsr, nsc, ner, nec = node:range()
+  return nsr == sr and nsc == sc and ner == er and nec == ec
+end
+
+---Append `src` lines to `dst`, joining the first line of `src` onto the
+---last line of `dst` (both represent consecutive text in the buffer).
+---@param dst string[]
+---@param src string[]
+local function join_lines(dst, src)
+  if #src == 0 then
+    return
+  end
+  if #dst == 0 then
+    table.insert(dst, src[1])
+  else
+    dst[#dst] = dst[#dst] .. src[1]
+  end
+  for i = 2, #src do
+    table.insert(dst, src[i])
+  end
+end
+
 ---Recursively collect all injected language trees.
 ---This collects ALL trees in a list to handle cases where the same language
 ---appears at multiple levels (e.g., JS in fenced code blocks AND in HTML <script> tags)
@@ -175,6 +269,8 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
       local line_count = api.nvim_buf_line_count(main_nr)
 
       for _, region_list in pairs(regions) do
+        -- regions of one list belong to a single (possibly combined) injection
+        local region_group = {}
         for _, region in ipairs(region_list) do
           local start_row, start_col, _, end_row, end_col, _ = unpack(region)
 
@@ -204,6 +300,8 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
             range = { from = { start_row, start_col }, to = { end_row, end_col } },
             lang = lang,
             text = lines,
+            groups = { [region_group] = true },
+            host = lang_tree:parent(),
           }
 
           if code_chunks[lang] == nil then
@@ -244,6 +342,13 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
     for _, chunk in ipairs(chunks) do
       local last = pruned[#pruned]
       if last and range_contains({ from = last.range.from, to = last.range.to }, { from = chunk.range.from, to = chunk.range.to }) then
+        -- The same region can be reported by several region lists; remember all of
+        -- the injections it belongs to.
+        if vim.deep_equal(last.range, chunk.range) and last.groups and chunk.groups then
+          for group in pairs(chunk.groups) do
+            last.groups[group] = true
+          end
+        end
         goto continue_prune
       end
       table.insert(pruned, chunk)
@@ -253,17 +358,40 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
     local merged = {}
     for _, chunk in ipairs(pruned) do
       local last = merged[#merged]
-      if last and chunk.range.from[1] == last.range.to[1] and chunk.range.from[2] == last.range.to[2] then
-        if chunk.range.from[2] > 0 and #chunk.text > 0 and #last.text > 0 then
-          last.text[#last.text] = last.text[#last.text] .. chunk.text[1]
-          for i = 2, #chunk.text do
-            table.insert(last.text, chunk.text[i])
-          end
-        else
-          for _, line in ipairs(chunk.text) do
-            table.insert(last.text, line)
-          end
+
+      local is_same_block = last and chunk.range.from[1] == last.range.to[1] and chunk.range.from[2] == last.range.to[2]
+
+      -- Check for interpolation using treesitter: the gap between two regions of the
+      -- same injection is a single host-language node (e.g. `${ ... }` in a nix
+      -- string). Keep the gap as a same-width placeholder instead of dropping it,
+      -- so the injected code stays syntactically sound and positions stay aligned.
+      local gap = nil
+      if not is_same_block and last and is_interpolation_gap(last, chunk) then
+        local ok, gap_text = pcall(
+          api.nvim_buf_get_text,
+          main_nr,
+          last.range.to[1],
+          last.range.to[2],
+          chunk.range.from[1],
+          chunk.range.from[2],
+          {}
+        )
+        if ok then
+          is_same_block = true
+          gap = mask_interpolation(gap_text, lang)
         end
+      end
+
+      if is_same_block then
+        -- A region ending at column 0 had its trailing empty line dropped during
+        -- extraction; restore it so the following text starts on its own line.
+        if last.range.to[2] == 0 then
+          table.insert(last.text, "")
+        end
+        if gap then
+          join_lines(last.text, gap)
+        end
+        join_lines(last.text, chunk.text)
         last.range.to = { chunk.range.to[1], chunk.range.to[2] }
       else
         table.insert(merged, chunk)
@@ -288,6 +416,8 @@ keeper.extract_code_chunks = function(main_nr, target_lang, exclude_eval_false, 
 
       chunk.text = fn.lines(text)
       chunk.leading_offset = leading_offset
+      chunk.groups = nil
+      chunk.host = nil
       table.insert(normalized, chunk)
 
       ::continue_chunk::

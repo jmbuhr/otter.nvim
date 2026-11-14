@@ -1187,4 +1187,40 @@ fn main() {
       end
     end)
   end)
+
+  -- Tests for Nix strings injected as bash containing `${ ... }` interpolations (10.nix)
+  describe("Nix file with bash injection and interpolations from 10.nix", function()
+    it("masks interpolations with same-width placeholders", function()
+      local bufnr = load_and_activate("10.nix", { "bash" })
+      assert.is_not_nil(keeper.rafts[bufnr], "raft should exist for Nix file")
+
+      local chunks = keeper.extract_code_chunks(bufnr).bash
+      assert.is_not_nil(chunks, "should have bash chunks")
+      assert.equals(1, #chunks, "interpolated string should be a single chunk")
+
+      local chunk = chunks[1]
+      local expected = {
+        "",
+        "for i in ________________; do",
+        '  echo "$i" _____________/bin/hello',
+        "done",
+        "x=__",
+        "  __________________________________",
+        "_",
+        'echo "$x"',
+        "    ",
+      }
+      assert.same(expected, chunk.text)
+
+      -- Rows and (offset-adjusted) columns must line up with the main buffer
+      local buf_lines = api.nvim_buf_get_lines(bufnr, chunk.range.from[1], chunk.range.to[1] + 1, false)
+      assert.equals(#buf_lines, #chunk.text)
+      local hello_row = 3
+      local col_in_chunk = chunk.text[hello_row]:find("/bin/hello", 1, true)
+      local col_in_buf = buf_lines[hello_row]:find("/bin/hello", 1, true)
+      assert.equals(col_in_buf, col_in_chunk + chunk.leading_offset)
+
+      cleanup(bufnr)
+    end)
+  end)
 end)

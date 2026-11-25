@@ -1,7 +1,7 @@
 local api = vim.api
 local keeper = require("otter.keeper")
 
-M = {}
+local M = {}
 M.setup = function(main_nr)
   ---@type integer[]
   local nss = {}
